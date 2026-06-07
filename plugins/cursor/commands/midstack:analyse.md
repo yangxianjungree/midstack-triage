@@ -2,6 +2,10 @@
 
 Use the `midstack-triage` MCP tools to run MongoDB triage analysis.
 
+If the user just ran `/midstack:start` and does not provide an incident directory, call `midstack_analyse_current`.
+
+If the user provides an incident directory from `/midstack:start`, call `midstack_analyse_incident`.
+
 Default fixture smoke:
 
 - Call `midstack_analyse_fixture` with `input_dir=tests/fixtures/mongodb/connection-failure-sample` and `output_dir=.local/incidents/cursor-connection-failure`.

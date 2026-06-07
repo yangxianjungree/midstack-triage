@@ -34,10 +34,42 @@ TOOLS = [
             "properties": {
                 "middleware": {"type": "string", "default": "mongodb"},
                 "customer_clue": {"type": "string"},
+                "environment_ips": {"type": "array", "items": {"type": "string"}, "default": []},
+                "username": {"type": "string", "default": ""},
+                "password": {"type": "string", "default": ""},
+                "port": {"type": "integer", "default": 22},
                 "namespace": {"type": "string", "default": ""},
                 "cluster_id": {"type": "string", "default": ""},
                 "incident_id": {"type": "string", "default": ""},
                 "output_root": {"type": "string", "default": ".local/incidents"},
+            },
+        },
+    },
+    {
+        "name": "midstack_analyse_incident",
+        "description": "Run MongoDB triage analysis from a started incident directory containing remote-config.yaml.",
+        "inputSchema": {
+            "type": "object",
+            "required": ["incident_dir"],
+            "properties": {
+                "incident_dir": {"type": "string"},
+                "output_dir": {"type": "string", "default": ""},
+                "scenario": {"type": "string", "default": "unknown"},
+                "customer_clue": {"type": "string", "default": ""},
+                "remote_namespace": {"type": "string", "default": ""},
+            },
+        },
+    },
+    {
+        "name": "midstack_analyse_current",
+        "description": "Run MongoDB triage analysis from the latest ready incident created by midstack_start.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "output_root": {"type": "string", "default": ".local/incidents"},
+                "scenario": {"type": "string", "default": "unknown"},
+                "customer_clue": {"type": "string", "default": ""},
+                "remote_namespace": {"type": "string", "default": ""},
             },
         },
     },
@@ -178,8 +210,50 @@ def tool_call(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
             "--output-root",
             resolve_output_path(str(arguments.get("output_root") or ".local/incidents")),
         ]
+        for ip in arguments.get("environment_ips") or []:
+            command.extend(["--environment-ip", str(ip)])
+        if arguments.get("username"):
+            command.extend(["--username", str(arguments["username"])])
+        if arguments.get("password"):
+            command.extend(["--password", str(arguments["password"])])
+        if arguments.get("port"):
+            command.extend(["--port", str(arguments["port"])])
         if arguments.get("incident_id"):
             command.extend(["--incident-id", str(arguments["incident_id"])])
+        return run_command(command)
+
+    if name == "midstack_analyse_incident":
+        command = [
+            sys.executable,
+            "tools/plugin/midstack-local.py",
+            "analyse",
+            "--incident-dir",
+            resolve_input_path(str(arguments.get("incident_dir") or "")),
+        ]
+        if arguments.get("output_dir"):
+            command.extend(["--output-dir", resolve_output_path(str(arguments["output_dir"]))])
+        if arguments.get("scenario"):
+            command.extend(["--scenario", str(arguments["scenario"])])
+        if arguments.get("customer_clue"):
+            command.extend(["--customer-clue", str(arguments["customer_clue"])])
+        if arguments.get("remote_namespace"):
+            command.extend(["--remote-namespace", str(arguments["remote_namespace"])])
+        return run_command(command)
+
+    if name == "midstack_analyse_current":
+        command = [
+            sys.executable,
+            "tools/plugin/midstack-local.py",
+            "analyse",
+            "--output-root",
+            resolve_output_path(str(arguments.get("output_root") or ".local/incidents")),
+        ]
+        if arguments.get("scenario"):
+            command.extend(["--scenario", str(arguments["scenario"])])
+        if arguments.get("customer_clue"):
+            command.extend(["--customer-clue", str(arguments["customer_clue"])])
+        if arguments.get("remote_namespace"):
+            command.extend(["--remote-namespace", str(arguments["remote_namespace"])])
         return run_command(command)
 
     if name == "midstack_analyse_fixture":

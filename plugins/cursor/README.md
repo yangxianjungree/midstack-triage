@@ -65,6 +65,8 @@ MCP server 暴露以下 tools：
 
 - `midstack_validate`
 - `midstack_start`
+- `midstack_analyse_incident`
+- `midstack_analyse_current`
 - `midstack_analyse_fixture`
 - `midstack_analyse_remote_run`
 - `midstack_analyse_remote_config`

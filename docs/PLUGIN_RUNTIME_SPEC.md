@@ -19,8 +19,8 @@
 
 说明：
 
-- `/xx` 仅作为插件名称前缀占位
-- 实际命令形态应替换为真实插件名
+- `/<plugin_name>` 仅作为插件名称前缀占位
+- 实际命令形态应替换为真实插件名；当前 Cursor 集成使用 `/midstack`
 
 ## 2. 命令与流程映射
 
@@ -997,28 +997,29 @@ MongoDB 认证来源原则：
 
 #### MongoDB 第一批脚本清单
 
-当前 `/plugin:analyse` 的 MongoDB MVP 已完成以下 10 个第 3 段脚本的合同级实现：
+当前 `/plugin:analyse` 的 MongoDB MVP 已完成以下 11 个第 3 段脚本的合同级实现：
 
 1. `mongodb.collect.pods.state`
 2. `mongodb.collect.statefulsets.yaml`
 3. `mongodb.collect.services.yaml`
 4. `mongodb.collect.nodes.state`
-5. `mongodb.collect.mongos.get_shard_map`
-6. `mongodb.collect.replicaset.rs_status`
-7. `mongodb.collect.logs.current`
-8. `mongodb.collect.logs.previous`
-9. `mongodb.normalize.logs.highlights`
-10. `mongodb.normalize.signals.bundle`
+5. `mongodb.collect.events.yaml`
+6. `mongodb.collect.mongos.get_shard_map`
+7. `mongodb.collect.replicaset.rs_status`
+8. `mongodb.collect.logs.current`
+9. `mongodb.collect.logs.previous`
+10. `mongodb.normalize.logs.highlights`
+11. `mongodb.normalize.signals.bundle`
 
 当前收敛原则：
 
-- 先覆盖对象盘点、分片拓扑确认、成员状态、当前日志、重启前日志和基础信号治理
+- 先覆盖对象盘点、Kubernetes Events、分片拓扑确认、成员状态、当前日志、重启前日志和基础信号治理
 - 先保证 `/plugin:analyse` 的主路径闭环
 - 更复杂的事件、指标、节点系统日志和高级诊断脚本放后续版本补充
 
 真实环境验证状态：
 
-- 以上 10 个脚本已通过真实 K8s 环境 smoke test
+- 以上 11 个脚本已通过真实 K8s 环境 smoke test
 - 测试环境为 3 节点 Kubernetes 集群
 - 目标 namespace 为 `psmdb-test`
 - 验证对象包括：

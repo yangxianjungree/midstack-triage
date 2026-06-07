@@ -40,6 +40,16 @@ scripts:
     default_packaged: true
     mvp: true
 
+  - script_id: mongodb.collect.events.yaml
+    source: collect/collect-events-yaml.sh
+    phase: collect
+    target: events
+    action: yaml
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: true
+
   - script_id: mongodb.collect.mongos.get_shard_map
     source: collect/collect-mongos-get-shard-map.sh
     phase: collect

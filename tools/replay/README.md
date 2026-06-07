@@ -4,6 +4,26 @@
 
 ## MongoDB Fixture Replay
 
+从已完成的 remote run 冻结 fixture：
+
+```bash
+python3 tools/replay/mongodb-freeze-fixture.py \
+  --remote-run-dir .local/remote-runs/<incident_id> \
+  --fixture-dir .local/fixtures/mongodb/<case_id> \
+  --case-id <case_id> \
+  --scenario baseline
+```
+
+从已完成的 incident 冻结 fixture：
+
+```bash
+python3 tools/replay/mongodb-freeze-fixture.py \
+  --incident-dir .local/incidents/<incident_id> \
+  --fixture-dir .local/fixtures/mongodb/<case_id> \
+  --case-id <case_id> \
+  --scenario baseline
+```
+
 当前第一版支持 fixture 读取、回放摘要，以及调用本地 MongoDB analyse runner 生成分析结果。
 
 ```bash

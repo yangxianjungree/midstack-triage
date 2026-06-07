@@ -15,3 +15,5 @@
 - `mongodb/baseline-sharded-cluster`
 - `mongodb/replica-inconsistency-sample`
 - `mongodb/connection-failure-sample`
+
+可使用 [tools/replay/mongodb-freeze-fixture.py](/home/stephen/AI/midstack-triage/tools/replay/mongodb-freeze-fixture.py) 将 `.local` 中的 remote run 或 incident 冻结成新的 replay fixture。默认建议先输出到 `.local/fixtures/`，确认内容不包含敏感信息或大段原始日志后再决定是否纳入仓库。

@@ -1,0 +1,22 @@
+collection_actions:
+  - action_id: mongodb-collect-pods-state
+    name: collect pods state
+    target: psmdb-test
+    method: kubectl get pods -o json
+    status: success
+    performed_at: "2026-06-07T00:00:00+08:00"
+successful_items:
+  - item: pod/bnmongo-shard1-data-2
+    source: kubectl get pods -o json
+    note: phase=Pending ready=False
+failed_items:
+  - item: pod/bnmongo-shard1-data-2
+    reason: "Error from server (BadRequest): pod bnmongo-shard1-data-2 does not have a host assigned"
+    impact: missing replica set state from this member
+blank_items: []
+evidence_gaps:
+  - gap: rs.status not collected from pod/bnmongo-shard1-data-2
+    related_stage: signal_collection
+    why_important: missing member state may hide role, health or replication issues
+generated_at: "2026-06-07T00:00:00+08:00"
+updated_at: "2026-06-07T00:00:00+08:00"

@@ -15,18 +15,27 @@ python3 tools/validators/validate-repo.py
 - MongoDB 资产与接口合同校验
 - MongoDB fixture replay
 - MongoDB replay score gate，默认要求所有评分维度至少达到 `medium`
+- Kubernetes runtime 通用分类检查，防止故障分类点对点实现
+- Cursor MCP smoke test
 
 可跳过 replay 或 score：
 
 ```bash
 python3 tools/validators/validate-repo.py --skip-replay
 python3 tools/validators/validate-repo.py --skip-score
+python3 tools/validators/validate-repo.py --skip-cursor
 ```
 
 校验 MongoDB 脚本 manifest、插件运行时映射、插件接口示例和知识资产 metadata：
 
 ```bash
 python3 tools/validators/validate-mongodb-scripts.py
+```
+
+校验 golden path 与首个 collect 脚本合同：
+
+```bash
+python3 tools/validators/validate-golden-paths.py
 ```
 
 当前校验范围：
@@ -59,3 +68,4 @@ python3 tools/validators/validate-mongodb-scripts.py
 - skill `required_assets` 指向的资产目录是否存在
 - `tests/fixtures/mongodb/*` 是否包含最小 replay fixture 文件集
 - `adapter-output.example.yaml` 是否满足插件命令输出最小合同
+- Kubernetes runtime signal 是否全部登记在通用 taxonomy，且 normalizer 不能发出未登记的点对点 signal

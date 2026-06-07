@@ -29,7 +29,8 @@ fields:
   outputs:
     type: list[string]
   required_assets:
-    type: list[string]
+    type: list[asset_reference]
+    note: See core/models/asset-reference.schema.yaml and docs/ASSET_REFERENCE_SPEC.md
   safety_constraints:
     type: list[string]
 

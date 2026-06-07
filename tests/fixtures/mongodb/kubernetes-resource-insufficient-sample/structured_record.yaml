@@ -1,0 +1,9 @@
+summary:
+  middleware: mongodb
+  topology_type: sharded_cluster
+  deployment_architecture: kubernetes
+  namespace: mongo
+  cluster_id: fixture
+details: {}
+generated_at: "2026-06-07T00:00:00+08:00"
+updated_at: "2026-06-07T00:00:00+08:00"

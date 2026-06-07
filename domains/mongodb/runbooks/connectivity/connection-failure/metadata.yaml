@@ -23,3 +23,12 @@ verification_steps:
   - classify the issue into service routing, Pod readiness, network, authentication, or middleware process state
 rollback_or_safety_notes:
   - do not restart Pods, change Services, rotate credentials, or modify network policy during diagnosis without explicit approval
+workflow_phases:
+  - 3
+  - 4
+related_scripts:
+  - mongodb.collect.pods.state
+  - mongodb.collect.services.yaml
+  - mongodb.collect.logs.current
+related_skills:
+  - mongodb-triage-connection-failure

@@ -143,6 +143,21 @@ def container_status_summary(container_statuses: List[Dict[str, Any]]) -> str:
     return "unknown"
 
 
+def pod_conditions(pod: Dict[str, Any]) -> List[Dict[str, Any]]:
+    result: List[Dict[str, Any]] = []
+    for condition in pod.get("status", {}).get("conditions") or []:
+        result.append(
+            {
+                "type": condition.get("type"),
+                "status": condition.get("status"),
+                "reason": condition.get("reason"),
+                "message": condition.get("message"),
+                "last_transition_time": condition.get("lastTransitionTime"),
+            }
+        )
+    return result
+
+
 def infer_statefulset_ref(pod: Dict[str, Any]) -> Optional[str]:
     metadata = pod.get("metadata") or {}
     owner_refs = metadata.get("ownerReferences") or []
@@ -181,9 +196,11 @@ def pod_record(pod: Dict[str, Any], collected_at: str) -> Dict[str, Any]:
         "component_ref": None,
         "statefulset_ref": infer_statefulset_ref(pod),
         "node_ref": spec.get("nodeName"),
+        "node_selector": spec.get("nodeSelector") or {},
         "pod_ip": status.get("podIP"),
         "phase": phase,
         "ready": ready,
+        "conditions": pod_conditions(pod),
         "created_at": metadata.get("creationTimestamp"),
         "restart_count": restarts,
         "last_restart_at": last_restart_at(container_statuses),

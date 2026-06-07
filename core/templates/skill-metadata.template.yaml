@@ -8,7 +8,13 @@ inputs:
 outputs:
   - <expected output>
 required_assets:
-  - domains/<middleware>/commands/<component>/<command-id>
-  - domains/<middleware>/runbooks/<component>/<runbook-id>
+  - type: scenario
+    id: <scenario>
+  - type: runbook
+    id: <runbook-id>
+  - type: command
+    id: <command-id>
+  - type: script
+    id: <middleware>.collect.<target>.<action>
 safety_constraints:
   - <safety boundary>

@@ -79,7 +79,34 @@ def hypothesis(hid: str, statement: str, evidence: List[Dict[str, str]], gaps: L
     }
 
 
-def knowledge_candidates_for_scenario(scenario: str) -> List[Dict[str, str]]:
+def hypothesis_with_actions(
+    hid: str,
+    statement: str,
+    evidence: List[Dict[str, str]],
+    gaps: List[str],
+    status: str,
+    actions: List[Dict[str, Any]],
+    causal_path: List[str],
+    disconfirming_conditions: List[str],
+) -> Dict[str, Any]:
+    item = hypothesis(hid, statement, evidence, gaps, status)
+    item["validation_actions"] = actions
+    item["causal_path"] = causal_path
+    item["disconfirming_conditions"] = disconfirming_conditions
+    return item
+
+
+def knowledge_candidates_for_scenario(scenario: str, primary_cause_category: str = "") -> List[Dict[str, str]]:
+    runtime_categories = {
+        "kubernetes-scheduling",
+        "kubernetes-storage-binding",
+        "kubernetes-resource-scheduling",
+        "kubernetes-image-pull",
+        "container-restart",
+        "kubernetes-runtime",
+    }
+    if scenario in ("", "unknown") and primary_cause_category in runtime_categories:
+        scenario = "resource-exhaustion"
     if scenario in ("", "unknown", "baseline"):
         return []
 
@@ -108,13 +135,187 @@ def knowledge_candidates_for_scenario(scenario: str) -> List[Dict[str, str]]:
     return candidates
 
 
+def kubernetes_runtime_conclusion(ids: set, evidence: List[Dict[str, str]], gaps: List[str]) -> Dict[str, Any]:
+    rules = [
+        (
+            "pod-node-selector-mismatch",
+            "kubernetes-scheduling",
+            "high",
+            "Kubernetes scheduling failure: a MongoDB member Pod is Pending because node selector or affinity does not match available nodes.",
+            "MongoDB shard member Pod cannot be scheduled because its node selector or affinity does not match available Kubernetes nodes.",
+        ),
+        (
+            "pod-volume-binding-failed",
+            "kubernetes-storage-binding",
+            "high",
+            "Kubernetes storage binding failure: a MongoDB member Pod is Pending because PVC or volume binding failed.",
+            "MongoDB member Pod cannot be scheduled because required storage is not bound or attachable.",
+        ),
+        (
+            "pod-resource-insufficient",
+            "kubernetes-resource-scheduling",
+            "high",
+            "Kubernetes resource scheduling failure: a MongoDB member Pod is Pending because available nodes do not satisfy requested resources.",
+            "MongoDB member Pod cannot be scheduled because CPU, memory or ephemeral-storage requests cannot be satisfied.",
+        ),
+        (
+            "pod-image-pull-failed",
+            "kubernetes-image-pull",
+            "high",
+            "Kubernetes image pull failure: a MongoDB member Pod cannot start because its container image cannot be pulled.",
+            "MongoDB member Pod cannot start because image pulling failed.",
+        ),
+        (
+            "pod-crashloop",
+            "container-restart",
+            "high",
+            "MongoDB container restart loop: a member Pod is repeatedly restarting.",
+            "MongoDB member Pod is unavailable because its container is repeatedly restarting.",
+        ),
+        (
+            "pod-unschedulable",
+            "kubernetes-scheduling",
+            "medium",
+            "Kubernetes scheduling failure: a MongoDB member Pod is Pending and unschedulable.",
+            "MongoDB member Pod is unavailable because Kubernetes cannot schedule it.",
+        ),
+        (
+            "pod-not-ready",
+            "kubernetes-runtime",
+            "medium",
+            "Kubernetes runtime availability issue: a MongoDB member Pod is not ready.",
+            "MongoDB member Pod is unavailable because Kubernetes reports it not ready.",
+        ),
+    ]
+    for signal_id, category, confidence, conclusion_statement, hypothesis_statement in rules:
+        if signal_id not in ids:
+            continue
+        hypotheses = [
+            hypothesis_with_actions(
+                "H1",
+                hypothesis_statement,
+                evidence,
+                gaps,
+                "supported",
+                [
+                    {
+                        "action": "Inspect Kubernetes Pod status, conditions and related workload controller status.",
+                        "result": "Supported by %s signal." % signal_id,
+                        "risk_level": "read-only",
+                    },
+                    {
+                        "action": "Compare affected MongoDB component readiness with StatefulSet desired and ready replicas.",
+                        "result": "Supported when statefulset-replicas-not-ready or pod-level unavailability is present.",
+                        "risk_level": "read-only",
+                    },
+                ],
+                [
+                    "Kubernetes reports a Pod-level runtime or scheduling abnormality",
+                    "The affected Pod belongs to a MongoDB component",
+                    "MongoDB component availability is reduced or cannot be fully verified",
+                ],
+                [
+                    "Affected Pod is Running and Ready",
+                    "Workload controller has desired ready replicas",
+                    "Pod condition does not support the inferred Kubernetes runtime category",
+                ],
+            ),
+            hypothesis_with_actions(
+                "H2",
+                "MongoDB internal replica set state caused the unavailable member symptom.",
+                evidence,
+                gaps,
+                "insufficient",
+                [
+                    {
+                        "action": "Collect rs.status from all schedulable members and compare member states.",
+                        "result": "Evidence is insufficient when the affected Pod is not schedulable or not reachable.",
+                        "risk_level": "read-only",
+                    }
+                ],
+                [],
+                ["All Kubernetes Pod and StatefulSet signals are healthy while rs.status shows an internal member state issue"],
+            ),
+        ]
+        if signal_id == "pod-node-selector-mismatch":
+            hypotheses[1]["statement"] = "MongoDB shard member is unavailable because of storage binding failure."
+            hypotheses[1]["validation_result"] = "refuted"
+            hypotheses[1]["status"] = "refuted"
+            hypotheses[1]["disconfirming_conditions"] = ["PVC is unbound or scheduler event reports volume binding failure"]
+            hypotheses[0]["causal_path"] = [
+                "StatefulSet creates MongoDB member Pod",
+                "Pod has nodeSelector or affinity constraint",
+                "No available node matches the scheduling constraint",
+                "Pod remains Pending and the StatefulSet stays below desired replicas",
+                "rs.status cannot be collected from the unscheduled member",
+            ]
+        next_actions_by_category = {
+            "kubernetes-scheduling": [
+                "Check affected Pod spec.nodeSelector, affinity, tolerations, and scheduler FailedScheduling events.",
+                "List node labels and verify whether any node satisfies the Pod scheduling constraints.",
+                "Check the owning StatefulSet rollout status and ready/desired replicas.",
+            ],
+            "kubernetes-storage-binding": [
+                "Check PVC phase, bound PV, StorageClass, access mode, and volume binding events.",
+                "Inspect FailedScheduling or FailedMount events for the affected Pod.",
+                "Verify whether the MongoDB member data volume can be attached to a schedulable node.",
+            ],
+            "kubernetes-resource-scheduling": [
+                "Compare Pod resource requests with node allocatable CPU, memory, and ephemeral storage.",
+                "Inspect scheduler FailedScheduling events for Insufficient cpu, memory, or ephemeral-storage.",
+                "Check whether existing workload placement or taints reduce usable node capacity.",
+            ],
+            "kubernetes-image-pull": [
+                "Inspect container waiting reason, image name, imagePullSecret, and image pull events.",
+                "Verify registry reachability and credentials from the Kubernetes node network.",
+                "Check whether the image tag exists and is accessible to the cluster runtime.",
+            ],
+            "container-restart": [
+                "Inspect current and previous Pod logs around restart timestamps.",
+                "Check container lastState termination reason, exit code, and OOMKilled status.",
+                "Compare liveness/readiness probe failures with MongoDB startup logs.",
+            ],
+            "kubernetes-runtime": [
+                "Inspect Pod conditions, readiness probe status, and recent warning events.",
+                "Check current and previous logs for the affected MongoDB member.",
+                "Verify whether the owning StatefulSet has fewer ready replicas than desired.",
+            ],
+        }
+        next_actions = [
+            {
+                "action": action,
+                "risk_level": "read-only",
+                "requires_confirmation": False,
+            }
+            for action in next_actions_by_category.get(category, next_actions_by_category["kubernetes-runtime"])
+        ]
+        return {
+            "hypotheses": hypotheses,
+            "conclusion": {
+                "statement": conclusion_statement,
+                "confidence": confidence,
+                "impact_scope": "MongoDB replica or shard availability; affected workload may have fewer ready members than desired.",
+                "primary_cause_category": category,
+                "evidence": [item["detail"] for item in evidence],
+                "limitations": gaps,
+            },
+            "next_actions": next_actions,
+        }
+    return {}
+
+
 def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collection_report: Dict[str, Any]) -> Dict[str, Any]:
     scenario = str(input_data.get("scenario") or "unknown")
     ids = set(signal_ids(signal_bundle))
     evidence = evidence_from_signals(signal_bundle)
     gaps = collection_gaps(collection_report)
 
-    if scenario == "baseline":
+    runtime_result = kubernetes_runtime_conclusion(ids, evidence, gaps)
+    if runtime_result:
+        hypotheses = runtime_result["hypotheses"]
+        conclusion = runtime_result["conclusion"]
+        next_actions = runtime_result["next_actions"]
+    elif scenario == "baseline":
         hypotheses = [
             hypothesis("H1", "MongoDB baseline fixture does not show incident-specific abnormal signals.", evidence, gaps, "supported")
         ]
@@ -126,6 +327,13 @@ def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collectio
             "evidence": ["no abnormal signals in baseline fixture"],
             "limitations": gaps,
         }
+        next_actions = [
+            {
+                "action": "Review evidence gaps and run the scenario-specific runbook.",
+                "risk_level": "read-only",
+                "requires_confirmation": False,
+            }
+        ]
     elif scenario == "connection-failure":
         supported = "service-endpoints-not-ready" in ids or "mongos-pod-not-ready" in ids
         hypotheses = [
@@ -152,6 +360,13 @@ def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collectio
             "evidence": [item["detail"] for item in evidence],
             "limitations": gaps,
         }
+        next_actions = [
+            {
+                "action": "Review evidence gaps and run the scenario-specific runbook.",
+                "risk_level": "read-only",
+                "requires_confirmation": False,
+            }
+        ]
     elif scenario == "replica-inconsistency":
         supported = "replica-member-recovering" in ids
         hypotheses = [
@@ -178,6 +393,13 @@ def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collectio
             "evidence": [item["detail"] for item in evidence],
             "limitations": gaps,
         }
+        next_actions = [
+            {
+                "action": "Review evidence gaps and run the scenario-specific runbook.",
+                "risk_level": "read-only",
+                "requires_confirmation": False,
+            }
+        ]
     else:
         hypotheses = [
             hypothesis("H1", "The incident requires scenario-specific analysis rules.", evidence, gaps, "insufficient")
@@ -190,18 +412,19 @@ def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collectio
             "evidence": [item["detail"] for item in evidence],
             "limitations": gaps,
         }
-
-    return {
-        "hypotheses": hypotheses,
-        "conclusion_summary": conclusion,
-        "next_actions": [
+        next_actions = [
             {
                 "action": "Review evidence gaps and run the scenario-specific runbook.",
                 "risk_level": "read-only",
                 "requires_confirmation": False,
             }
-        ],
-        "knowledge_candidates": knowledge_candidates_for_scenario(scenario),
+        ]
+
+    return {
+        "hypotheses": hypotheses,
+        "conclusion_summary": conclusion,
+        "next_actions": next_actions,
+        "knowledge_candidates": knowledge_candidates_for_scenario(scenario, str(conclusion.get("primary_cause_category") or "")),
         "generated_at": "generated-by-mongodb-analyse",
         "updated_at": "generated-by-mongodb-analyse",
     }

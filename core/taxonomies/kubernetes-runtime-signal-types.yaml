@@ -1,0 +1,39 @@
+taxonomy_id: midstack.kubernetes_runtime_signal_types.v1
+scope: kubernetes-runtime
+principles:
+  - Signal types must describe Kubernetes runtime or orchestration symptoms, not one middleware product.
+  - Middleware analysers may consume these signals, but must not redefine them as product-specific cases.
+  - New signal types require a fixture or documented real incident evidence before being treated as stable.
+values:
+  - id: pod-unschedulable
+    category: scheduling
+    middleware_agnostic: true
+    description: Pod is Pending because Kubernetes scheduler cannot place it on any node.
+  - id: pod-node-selector-mismatch
+    category: scheduling
+    middleware_agnostic: true
+    description: Pod is unschedulable because nodeSelector or affinity does not match available nodes.
+  - id: pod-volume-binding-failed
+    category: storage-binding
+    middleware_agnostic: true
+    description: Pod is unschedulable because PVC or volume binding cannot be satisfied.
+  - id: pod-resource-insufficient
+    category: resource-scheduling
+    middleware_agnostic: true
+    description: Pod is unschedulable because requested CPU, memory, or ephemeral storage cannot be satisfied.
+  - id: pod-image-pull-failed
+    category: image
+    middleware_agnostic: true
+    description: Pod container image cannot be pulled.
+  - id: pod-crashloop
+    category: restart
+    middleware_agnostic: true
+    description: Pod container is repeatedly restarting.
+  - id: pod-not-ready
+    category: readiness
+    middleware_agnostic: true
+    description: Pod is not ready or not running, but does not match a more specific runtime category yet.
+  - id: statefulset-replicas-not-ready
+    category: workload-controller
+    middleware_agnostic: true
+    description: StatefulSet has fewer ready replicas than desired replicas.

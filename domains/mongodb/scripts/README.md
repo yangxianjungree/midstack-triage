@@ -225,25 +225,26 @@ MongoDB 服务端命令通常需要认证信息。
 
 ## MVP Script Set
 
-当前 MongoDB 第一版已实现以下 10 个脚本：
+当前 MongoDB 第一版已实现以下 11 个脚本：
 
 1. `mongodb.collect.pods.state`
 2. `mongodb.collect.statefulsets.yaml`
 3. `mongodb.collect.services.yaml`
 4. `mongodb.collect.nodes.state`
-5. `mongodb.collect.mongos.get_shard_map`
-6. `mongodb.collect.replicaset.rs_status`
-7. `mongodb.collect.logs.current`
-8. `mongodb.collect.logs.previous`
-9. `mongodb.normalize.logs.highlights`
-10. `mongodb.normalize.signals.bundle`
+5. `mongodb.collect.events.yaml`
+6. `mongodb.collect.mongos.get_shard_map`
+7. `mongodb.collect.replicaset.rs_status`
+8. `mongodb.collect.logs.current`
+9. `mongodb.collect.logs.previous`
+10. `mongodb.normalize.logs.highlights`
+11. `mongodb.normalize.signals.bundle`
 
 收敛理由：
 
 - 覆盖第 2 段和第 3 段所需的最小对象盘点
 - 覆盖 MongoDB 分片集群 / 副本集基础 topology 判断
 - 覆盖 `mongos` 视角的 shard map 采集
-- 覆盖当前日志和重启前日志
+- 覆盖 Kubernetes Events、当前日志和重启前日志
 - 覆盖第一轮日志降噪和信号打包
 
 当前暂不放入第一批的能力包括：

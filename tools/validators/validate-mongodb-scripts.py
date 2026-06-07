@@ -9,6 +9,16 @@ from typing import Any, Dict, List
 
 import yaml
 
+VALIDATORS_DIR = Path(__file__).resolve().parent
+if str(VALIDATORS_DIR) not in sys.path:
+    sys.path.insert(0, str(VALIDATORS_DIR))
+
+from asset_refs import (
+    load_metadata_index,
+    load_scenario_ids,
+    validate_required_asset_ref,
+)
+
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_ID_RE = re.compile(r"^mongodb\.(collect|normalize)\.[a-z0-9_]+\.[a-z0-9_]+$")
@@ -313,8 +323,8 @@ def validate_manifest(manifest_path: Path, errors: List[str]) -> Dict[str, Dict[
             fail(errors, "%s phase does not match script_id" % script_id)
 
     mvp_count = sum(1 for item in by_id.values() if item.get("mvp") is True)
-    if mvp_count != 10:
-        fail(errors, "MongoDB MVP script count must be 10, got %d" % mvp_count)
+    if mvp_count != 11:
+        fail(errors, "MongoDB MVP script count must be 11, got %d" % mvp_count)
     return by_id
 
 
@@ -542,7 +552,17 @@ def validate_command_metadata(metadata_path: Path, taxonomies: Dict[str, set], s
         fail(errors, "%s companion command.md does not exist" % metadata_path)
 
 
-def validate_skill_metadata(metadata_path: Path, taxonomies: Dict[str, set], scenarios: Dict[str, Dict[str, Any]], errors: List[str]) -> None:
+def validate_skill_metadata(
+    metadata_path: Path,
+    taxonomies: Dict[str, set],
+    scenarios: Dict[str, Dict[str, Any]],
+    manifest_by_id: Dict[str, Dict[str, Any]],
+    runbooks: Dict[str, Path],
+    commands: Dict[str, Path],
+    skills: Dict[str, Path],
+    scenario_ids: set,
+    errors: List[str],
+) -> None:
     data = load_yaml(metadata_path)
     missing = REQUIRED_SKILL_FIELDS - set(data)
     if missing:
@@ -554,13 +574,26 @@ def validate_skill_metadata(metadata_path: Path, taxonomies: Dict[str, set], sce
     if scenario_types and data.get("primary_scenario") not in scenario_types:
         fail(errors, "%s primary_scenario must be one of %s" % (metadata_path, sorted(scenario_types)))
     validate_scenario_reference(metadata_path, str(data.get("primary_scenario") or ""), scenarios, errors)
-    for field in ("inputs", "outputs", "required_assets", "safety_constraints"):
+    for field in ("inputs", "outputs", "safety_constraints"):
         if field in data:
             require_list_of_strings(data, field, metadata_path, errors)
-    for ref in data.get("required_assets") or []:
-        ref_path = ROOT / ref
-        if not ref_path.exists() or not ref_path.is_dir():
-            fail(errors, "%s required asset does not exist or is not a directory: %s" % (metadata_path, ref))
+    required_assets = data.get("required_assets") or []
+    if not isinstance(required_assets, list) or not required_assets:
+        fail(errors, "%s required_assets must be a non-empty list" % metadata_path)
+    for index, ref in enumerate(required_assets):
+        if not isinstance(ref, (str, dict)):
+            fail(errors, "%s required_assets[%d] must be a string or object" % (metadata_path, index))
+            continue
+        validate_required_asset_ref(
+            ref,
+            "%s required_assets[%d]" % (metadata_path, index),
+            manifest_by_id,
+            runbooks,
+            commands,
+            skills,
+            scenario_ids,
+            errors,
+        )
     skill_path = metadata_path.with_name("skill.md")
     if not skill_path.exists():
         fail(errors, "%s companion skill.md does not exist" % metadata_path)
@@ -585,17 +618,36 @@ def validate_adapter_output(output_path: Path, taxonomies: Dict[str, set], error
         require_list_of_strings(data, "next_actions", output_path, errors)
 
 
-def validate_domain_assets(taxonomies: Dict[str, set], scenarios: Dict[str, Dict[str, Any]], errors: List[str]) -> None:
+def validate_domain_assets(
+    taxonomies: Dict[str, set],
+    scenarios: Dict[str, Dict[str, Any]],
+    manifest_by_id: Dict[str, Dict[str, Any]],
+    errors: List[str],
+) -> None:
     runbook_root = ROOT / "domains" / "mongodb" / "runbooks"
     command_root = ROOT / "domains" / "mongodb" / "commands"
     skill_root = ROOT / "domains" / "mongodb" / "skills"
+    runbooks = load_metadata_index("mongodb", "runbooks")
+    commands = load_metadata_index("mongodb", "commands")
+    skills = load_metadata_index("mongodb", "skills")
+    scenario_ids = load_scenario_ids()
 
     for metadata_path in sorted(runbook_root.glob("**/metadata.yaml")):
         validate_runbook_metadata(metadata_path, taxonomies, scenarios, errors)
     for metadata_path in sorted(command_root.glob("**/metadata.yaml")):
         validate_command_metadata(metadata_path, taxonomies, scenarios, errors)
     for metadata_path in sorted(skill_root.glob("**/metadata.yaml")):
-        validate_skill_metadata(metadata_path, taxonomies, scenarios, errors)
+        validate_skill_metadata(
+            metadata_path,
+            taxonomies,
+            scenarios,
+            manifest_by_id,
+            runbooks,
+            commands,
+            skills,
+            scenario_ids,
+            errors,
+        )
 
 
 def validate_fixtures(errors: List[str]) -> None:
@@ -635,7 +687,7 @@ def main() -> int:
     validate_output_example(ROOT / args.output_example, manifest_by_id, taxonomies, errors)
     validate_remote_request(ROOT / args.remote_request, manifest_by_id, runtime_by_id, errors)
     validate_remote_result(ROOT / args.remote_result, manifest_by_id, taxonomies, errors)
-    validate_domain_assets(taxonomies, scenarios, errors)
+    validate_domain_assets(taxonomies, scenarios, manifest_by_id, errors)
     validate_fixtures(errors)
     validate_adapter_output(ROOT / args.adapter_output, taxonomies, errors)
     if errors:

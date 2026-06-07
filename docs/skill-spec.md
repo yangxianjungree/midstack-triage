@@ -21,16 +21,26 @@ outputs:
   - string
 required_assets:
   - string
+  - type: string
+    id: string
 safety_constraints:
   - string
 ```
 
+`required_assets` 支持：
+
+- 路径字符串（过渡期）
+- 结构化引用：`type` + `id`，见 [docs/ASSET_REFERENCE_SPEC.md](ASSET_REFERENCE_SPEC.md)
+
 ## 组织规则
 
 - skill 是给 Agent 的工作流封装，不是 runbook 的复制版
-- skill 可以引用 command 和 runbook，但不重复粘贴全部内容
+- skill 可以引用 command、runbook 和 script，但不重复粘贴全部内容
 - skill 应明确输入、输出和停止条件
+- 第 3 段 analyse 脚本通过 `type: script` 引用 `script_id`
 
 ## 模型
 
-- [core/models/skill.schema.yaml](/home/stephen/AI/midstack-triage/core/models/skill.schema.yaml)
+- [core/models/skill.schema.yaml](../core/models/skill.schema.yaml)
+- [core/models/asset-reference.schema.yaml](../core/models/asset-reference.schema.yaml)
+- [docs/ASSET_REFERENCE_SPEC.md](ASSET_REFERENCE_SPEC.md)

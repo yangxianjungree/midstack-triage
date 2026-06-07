@@ -1,0 +1,17 @@
+---
+description: Use Midstack Triage Cursor MCP tools for MongoDB middleware incident analysis.
+globs: ["**/*"]
+alwaysApply: false
+---
+
+When the user asks to triage MongoDB or middleware incidents in this repository:
+
+- Prefer the `midstack-triage` MCP tools over manually invoking shell commands.
+- Use `midstack_start` to create a local incident record when the user provides incident context.
+- Use `midstack_analyse_fixture` for offline replay fixtures.
+- Use `midstack_analyse_remote_run` for completed `.local/remote-runs/...` directories.
+- Use `midstack_analyse_remote_config` when the user explicitly wants to run against a `.local` remote environment config.
+- Use `midstack_review` after analyse to generate quality feedback.
+- Use `midstack_validate` before reporting that the Cursor integration works.
+
+Do not expose credentials from `.local/` in chat output.

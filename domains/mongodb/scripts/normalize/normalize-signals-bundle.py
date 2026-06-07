@@ -116,7 +116,10 @@ def inventory_signals(outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
                     "phase": item.get("phase"),
                     "ready": item.get("ready"),
                     "restart_count": item.get("restart_count"),
+                    "container_status": item.get("container_status"),
                     "status_hint": item.get("status_hint"),
+                    "node_selector": item.get("node_selector") or {},
+                    "conditions": item.get("conditions") or [],
                 }
                 for item in pods
                 if item.get("status_hint") != "healthy"
@@ -125,6 +128,19 @@ def inventory_signals(outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         "statefulsets": {
             "count": len(statefulsets),
             "by_status_hint": dict(Counter(str(item.get("status_hint") or "unknown") for item in statefulsets)),
+            "not_healthy": [
+                {
+                    "statefulset_ref": item.get("name"),
+                    "replicas": item.get("replicas"),
+                    "ready_replicas": item.get("ready_replicas"),
+                    "current_replicas": item.get("current_replicas"),
+                    "updated_replicas": item.get("updated_replicas"),
+                    "available_replicas": item.get("available_replicas"),
+                    "status_hint": item.get("status_hint"),
+                }
+                for item in statefulsets
+                if item.get("status_hint") != "healthy"
+            ],
         },
         "services": {
             "count": len(services),
@@ -145,6 +161,165 @@ def inventory_signals(outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
             ],
         },
     }
+
+
+def event_signals(outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    events = detail(outputs, "mongodb.collect.events.yaml", "events") or []
+    warning_events = [item for item in events if item.get("type") == "Warning"]
+    return {
+        "count": len(events),
+        "warning_count": len(warning_events),
+        "by_reason": dict(Counter(str(item.get("reason") or "unknown") for item in events)),
+        "warnings": [
+            {
+                "object_ref": "%s/%s" % (((item.get("involved_object") or {}).get("kind") or "Object").lower(), (item.get("involved_object") or {}).get("name")),
+                "reason": item.get("reason"),
+                "message": item.get("message"),
+                "count": item.get("count"),
+                "last_timestamp": item.get("last_timestamp"),
+            }
+            for item in warning_events
+        ],
+    }
+
+
+def scheduling_condition(pod: Dict[str, Any]) -> Dict[str, Any]:
+    for condition in pod.get("conditions") or []:
+        if condition.get("type") == "PodScheduled":
+            return condition
+    return {}
+
+
+def is_selector_mismatch(message: str) -> bool:
+    lowered = message.lower()
+    return "node affinity/selector" in lowered or "node selector" in lowered or "didn't match pod" in lowered
+
+
+def is_volume_binding_failure(message: str) -> bool:
+    lowered = message.lower()
+    return "persistentvolumeclaim" in lowered or "volume binding" in lowered or "unbound immediate persistentvolumeclaims" in lowered
+
+
+def is_resource_shortage(message: str) -> bool:
+    lowered = message.lower()
+    return "insufficient cpu" in lowered or "insufficient memory" in lowered or "insufficient ephemeral-storage" in lowered
+
+
+def abnormal_signals_from_inventory(inventory: Dict[str, Any], events: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[str]]:
+    signals: List[Dict[str, Any]] = []
+    links: List[Dict[str, Any]] = []
+    timeline: List[str] = []
+    seen = set()
+
+    def add(signal_id: str, severity: str, object_ref: str, detail_text: str) -> None:
+        key = (signal_id, object_ref)
+        if key in seen:
+            return
+        seen.add(key)
+        signals.append(
+            {
+                "signal_id": signal_id,
+                "severity": severity,
+                "object_ref": object_ref,
+                "detail": detail_text,
+            }
+        )
+        links.append({"object_ref": object_ref, "signal_refs": [signal_id]})
+        timeline.append("%s observed on %s" % (signal_id, object_ref))
+
+    for pod in ((inventory.get("pods") or {}).get("not_healthy") or []):
+        pod_ref = "pod/%s" % pod.get("pod_ref")
+        phase = str(pod.get("phase") or "")
+        ready = pod.get("ready")
+        container_status = str(pod.get("container_status") or "")
+        condition = scheduling_condition(pod)
+        reason = str(condition.get("reason") or "")
+        message = str(condition.get("message") or "")
+        node_selector = pod.get("node_selector") or {}
+        if phase == "Pending" and reason == "Unschedulable":
+            add(
+                "pod-unschedulable",
+                "high",
+                pod_ref,
+                "Pod is Pending/Unschedulable; scheduler_message=%s" % message,
+            )
+        if phase == "Pending" and reason == "Unschedulable" and is_selector_mismatch(message):
+            add(
+                "pod-node-selector-mismatch",
+                "high",
+                pod_ref,
+                "Pod is Pending/Unschedulable because node selector or affinity does not match available nodes; node_selector=%s; scheduler_message=%s"
+                % (node_selector, message),
+            )
+        elif phase == "Pending" and reason == "Unschedulable" and is_volume_binding_failure(message):
+            add(
+                "pod-volume-binding-failed",
+                "high",
+                pod_ref,
+                "Pod is Pending/Unschedulable because volume binding or PVC resolution failed; scheduler_message=%s" % message,
+            )
+        elif phase == "Pending" and reason == "Unschedulable" and is_resource_shortage(message):
+            add(
+                "pod-resource-insufficient",
+                "high",
+                pod_ref,
+                "Pod is Pending/Unschedulable because available nodes do not have enough requested resources; scheduler_message=%s" % message,
+            )
+        elif container_status in ("ImagePullBackOff", "ErrImagePull"):
+            add(
+                "pod-image-pull-failed",
+                "high",
+                pod_ref,
+                "Pod container image pull failed; container_status=%s phase=%s ready=%s" % (container_status, phase, ready),
+            )
+        elif container_status == "restarting":
+            add(
+                "pod-crashloop",
+                "high",
+                pod_ref,
+                "Pod container is restarting; restart_count=%s phase=%s ready=%s" % (pod.get("restart_count"), phase, ready),
+            )
+        elif phase != "Running" or ready is False:
+            add(
+                "pod-not-ready",
+                "high",
+                pod_ref,
+                "Pod phase=%s ready=%s status_hint=%s" % (phase, ready, pod.get("status_hint")),
+            )
+
+    for event in events.get("warnings") or []:
+        object_ref = str(event.get("object_ref") or "")
+        reason = str(event.get("reason") or "")
+        message = str(event.get("message") or "")
+        if not object_ref.startswith("pod/"):
+            continue
+        if reason == "FailedScheduling":
+            add("pod-unschedulable", "high", object_ref, "Scheduler warning event: %s" % message)
+            if is_selector_mismatch(message):
+                add("pod-node-selector-mismatch", "high", object_ref, "Scheduler warning event indicates node selector or affinity mismatch: %s" % message)
+            elif is_volume_binding_failure(message):
+                add("pod-volume-binding-failed", "high", object_ref, "Scheduler warning event indicates PVC or volume binding failure: %s" % message)
+            elif is_resource_shortage(message):
+                add("pod-resource-insufficient", "high", object_ref, "Scheduler warning event indicates insufficient node resources: %s" % message)
+        elif reason in ("Failed", "FailedMount") and is_volume_binding_failure(message):
+            add("pod-volume-binding-failed", "high", object_ref, "Kubernetes warning event indicates PVC or volume failure: %s" % message)
+        elif reason in ("Failed", "ErrImagePull", "ImagePullBackOff"):
+            add("pod-image-pull-failed", "high", object_ref, "Kubernetes warning event indicates image pull failure: %s" % message)
+        elif reason == "BackOff" and "restart" in message.lower():
+            add("pod-crashloop", "high", object_ref, "Kubernetes warning event indicates container restart backoff: %s" % message)
+        elif reason == "Unhealthy":
+            add("pod-not-ready", "high", object_ref, "Kubernetes warning event indicates probe or readiness failure: %s" % message)
+
+    for sts in ((inventory.get("statefulsets") or {}).get("not_healthy") or []):
+        add(
+            "statefulset-replicas-not-ready",
+            "high",
+            "statefulset/%s" % sts.get("statefulset_ref"),
+            "StatefulSet ready_replicas=%s desired_replicas=%s current_replicas=%s updated_replicas=%s"
+            % (sts.get("ready_replicas"), sts.get("replicas"), sts.get("current_replicas"), sts.get("updated_replicas")),
+        )
+
+    return signals, links, timeline
 
 
 def topology_signals(outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
@@ -220,9 +395,19 @@ def main() -> int:
         "script_statuses": output_statuses(outputs),
         "inventory": inventory_signals(outputs),
         "topology": topology_signals(outputs),
+        "events": event_signals(outputs),
         "logs": log_signals(outputs),
         "evidence_gaps": evidence_gaps,
     }
+    abnormal_signals, object_signal_links, timeline_summary = abnormal_signals_from_inventory(bundle["inventory"], bundle["events"])
+    if abnormal_signals:
+        bundle["signal_overview"] = {
+            "status": "abnormal",
+            "abnormal_signal_count": len(abnormal_signals),
+        }
+        bundle["abnormal_signals"] = abnormal_signals
+        bundle["object_signal_links"] = object_signal_links
+        bundle["timeline_summary"] = timeline_summary
 
     processed_relpath = os.path.join("processed", "signal-bundle.json")
     with open(os.path.join(artifact_dir, processed_relpath), "w", encoding="utf-8") as fh:

@@ -1,0 +1,51 @@
+schema_id: midstack.incident_patch_merge.v1
+kind: incident_patch_merge
+description: Rules for merging stage-3 script output patches into incident records.
+
+targets:
+  structured_record:
+    patch_field: structured_record_patch
+    rules:
+      - summary: deep_merge_object
+      - details: deep_merge_object_with_list_policies
+      - default: last_write_wins
+  signal_bundle:
+    patch_field: signal_bundle_patch
+    rules:
+      - abnormal_signals: append_list
+      - object_signal_links: append_list
+      - timeline_summary: append_list
+      - processed_log_highlights: append_list
+      - default: deep_merge_object
+  collection_report:
+    patch_field: collection_report_patch
+    rules:
+      - collection_actions: append_list
+      - successful_items: append_list
+      - failed_items: append_list
+      - blank_items: append_list
+      - evidence_gaps: append_list
+      - default: deep_merge_object
+
+details_list_merge_by_key:
+  pods: name
+  statefulsets: name
+  services: name
+  nodes: name
+  replica_members: source_pod_ref
+  components: component_id
+
+details_list_append:
+  - raw_logs
+  - processed_logs
+
+principles:
+  - Script outputs patch incident records; they do not replace the full record.
+  - collection_report list fields always append across scripts.
+  - structured_record.details list fields merge by stable object keys when configured.
+  - Unconfigured list fields under structured_record use last-write-wins.
+  - Merge order follows analyse script execution order.
+
+implementation:
+  python_module: tools/lib/patch_merge.py
+  spec: docs/INCIDENT_PATCH_MERGE_SPEC.md

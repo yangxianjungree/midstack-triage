@@ -1,0 +1,5 @@
+conclusion_summary:
+  statement: MongoDB member Pod cannot be scheduled because node resources are insufficient.
+  confidence: high
+  impact_scope: MongoDB member availability
+  primary_cause_category: kubernetes-resource-scheduling

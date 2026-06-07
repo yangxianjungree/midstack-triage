@@ -1,0 +1,15 @@
+incident_id: mongodb-kubernetes-image-pull-failure-sample
+middleware: mongodb
+signal_overview:
+  status: abnormal
+  abnormal_signal_count: 1
+abnormal_signals:
+  - signal_id: pod-image-pull-failed
+    severity: high
+    object_ref: pod/mongo-shard-0
+    detail: Pod image pull failed with ImagePullBackOff.
+object_signal_links: []
+timeline_summary: []
+processed_log_highlights: []
+generated_at: "2026-06-07T00:00:00+08:00"
+updated_at: "2026-06-07T00:00:00+08:00"

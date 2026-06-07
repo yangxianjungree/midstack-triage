@@ -26,7 +26,7 @@
 
 - 输入来源：最近一次 `/start` 生成或确认的 incident
 - 前置条件：incident 已 `ready`
-- 执行范围：MongoDB 第一批 10 个第 3 段脚本
+- 执行范围：MongoDB 第一批 11 个第 3 段脚本
 - 第 3 段输出：`structured_record`、`signal_bundle`、`collection_report`
 - 第 4 段输出：多假设、支持证据、反证条件、证据不足项、验证结果
 - 第 5 段输出：初步结论、置信度、影响范围、下一步建议、知识沉淀候选
@@ -237,7 +237,7 @@
 
 验收条件：
 
-- 当前 10 个脚本不强制重构
+- 当前 11 个脚本不强制重构
 - 新脚本有明确 helper 使用边界
 
 当前状态：
@@ -293,7 +293,7 @@
 - `/plugin:analyse --scope`
 - `/plugin:analyse --force_recollect`
 - 自动修复和高风险处置动作
-- Claude Code、Codex、Cursor 适配器仓库拆分
+- Claude Code、Codex、Cursor 适配器是否从 `plugins/<agent>/` 进一步拆成独立仓库
 - `review` 人工反馈系统正式实现
 
 ## P4: 更多中间件扩展
@@ -317,6 +317,8 @@
 
 - 已补充本地插件命令原型用于验证 `start/analyse/review` 文件流转
 - 本地插件 `review` 已能基于 `analysis.yaml` 生成五维评分和改进建议
+- 已补充 `plugins/cursor/` Cursor 集成源实现，可安装到临时 Cursor 项目并自动化 smoke test
+- Cursor 安装投影已明确写入目标项目 `.cursor/`，源码仓库只保留 `plugins/cursor/` 源实现
 
 扩展原则：
 
@@ -347,7 +349,7 @@
 
 验收条件：
 
-- 能稳定跑通 MongoDB MVP 10 个脚本
+- 能稳定跑通 MongoDB MVP 11 个脚本
 - 能生成一次完整 remote smoke 结果目录
 
 ### 2. Baseline fixture
@@ -376,6 +378,7 @@ tests/fixtures/mongodb/baseline-sharded-cluster/
 当前状态：
 
 - 已补充 `tests/fixtures/mongodb/baseline-sharded-cluster/`
+- 已补充 `tools/replay/mongodb-freeze-fixture.py`，可将 remote run 或 incident 冻结为离线 fixture
 
 ### 3. Incident replay
 
@@ -409,6 +412,7 @@ tests/fixtures/mongodb/<case_id>/
 
 - 已补充 baseline、replica-inconsistency、connection-failure 三个 fixture
 - 已补充最小 fixture replay 摘要工具
+- 已补充 remote run / incident 到 fixture 的冻结工具
 - 已补充最小 MongoDB 本地 analyse runner
 - replay 已支持生成 analysis 输出并对比 expected/actual 一级归因
 - 本地插件 analyse 原型已支持消费已完成的 remote smoke 结果目录
@@ -468,3 +472,7 @@ tests/scores/mongodb/
 当前状态：
 
 - 已补充 `tools/validators/validate-repo.py` 作为本地最小回归入口
+- 已补充 `plugins/cursor/test-mcp-server.py`，在 `/home/stephen/AI/` 下创建临时 Cursor 项目并自动化验证 MCP analyse/review
+- 已补充 `plugins/cursor/test-sandbox.py`，在 `/home/stephen/AI/midstack-cursor-sandbox` 安装并保留一个可被 Cursor 打开的测试项目
+- 已补充 Kubernetes runtime 通用分类检查，要求 normalizer 发出的 K8s runtime signal 必须登记在 middleware-agnostic taxonomy
+- 已补充 MongoDB Kubernetes scheduling 故障 fixture，用于回归验证未知场景下的通用运行时故障归因

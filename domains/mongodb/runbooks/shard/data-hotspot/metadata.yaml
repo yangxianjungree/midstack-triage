@@ -23,3 +23,12 @@ verification_steps:
   - classify the issue into data distribution, request routing, resource, or topology direction
 rollback_or_safety_notes:
   - do not move chunks, enable or disable balancer, reshard, or change shard keys during diagnosis without explicit approval
+workflow_phases:
+  - 3
+  - 4
+related_scripts:
+  - mongodb.collect.mongos.get_shard_map
+  - mongodb.collect.replicaset.rs_status
+  - mongodb.collect.pods.state
+related_skills:
+  - mongodb-triage-data-hotspot

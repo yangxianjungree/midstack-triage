@@ -23,3 +23,12 @@ verification_steps:
   - classify latency into query workload, routing, replication, resource, storage, or hotspot direction
 rollback_or_safety_notes:
   - do not kill queries, restart Pods, change indexes, or modify balancer settings during diagnosis without explicit approval
+workflow_phases:
+  - 3
+  - 4
+related_scripts:
+  - mongodb.collect.pods.state
+  - mongodb.collect.logs.current
+  - mongodb.normalize.logs.highlights
+related_skills:
+  - mongodb-triage-latency-spike

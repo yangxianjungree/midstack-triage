@@ -13,8 +13,18 @@ outputs:
   - evidence and evidence gaps
   - next recommended runbook step
 required_assets:
-  - domains/mongodb/commands/shard/check-shard-distribution
-  - domains/mongodb/runbooks/shard/data-hotspot
+  - type: scenario
+    id: data-hotspot
+  - type: runbook
+    id: mongodb-data-hotspot
+  - type: command
+    id: mongodb-check-shard-distribution
+  - type: script
+    id: mongodb.collect.mongos.get_shard_map
+  - type: script
+    id: mongodb.collect.replicaset.rs_status
+  - type: script
+    id: mongodb.collect.pods.state
 safety_constraints:
   - default to read-only commands
   - do not move chunks, reshard, change shard keys, modify balancer settings, or restart shard members without explicit confirmation

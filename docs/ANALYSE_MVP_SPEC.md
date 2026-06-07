@@ -58,18 +58,19 @@
   - 通过 `kubectl` 和 `kubectl exec` 执行采集
   - MongoDB 客户端工具默认在 Pod 内执行
 
-第一版 MongoDB 第 3 段执行范围固定为 10 个 MVP 脚本：
+第一版 MongoDB 第 3 段执行范围固定为 11 个 MVP 脚本：
 
 1. `mongodb.collect.pods.state`
 2. `mongodb.collect.statefulsets.yaml`
 3. `mongodb.collect.services.yaml`
 4. `mongodb.collect.nodes.state`
-5. `mongodb.collect.mongos.get_shard_map`
-6. `mongodb.collect.replicaset.rs_status`
-7. `mongodb.collect.logs.current`
-8. `mongodb.collect.logs.previous`
-9. `mongodb.normalize.logs.highlights`
-10. `mongodb.normalize.signals.bundle`
+5. `mongodb.collect.events.yaml`
+6. `mongodb.collect.mongos.get_shard_map`
+7. `mongodb.collect.replicaset.rs_status`
+8. `mongodb.collect.logs.current`
+9. `mongodb.collect.logs.previous`
+10. `mongodb.normalize.logs.highlights`
+11. `mongodb.normalize.signals.bundle`
 
 ## 4. 输入
 
@@ -243,7 +244,7 @@
 
 - 能说明第一版 analyse 的输入来源
 - 能说明前置条件不足时如何 blocked
-- 能列出 MongoDB 第一版执行的 10 个脚本
+- 能列出 MongoDB 第一版执行的 11 个脚本
 - 能说明第 3 段的三个主要输出
 - 能说明第 4 段假设结构
 - 能说明第 5 段结论结构

@@ -22,3 +22,11 @@ verification_steps:
   - classify the issue into memory, disk, IO, file descriptor, Node, or scheduling pressure
 rollback_or_safety_notes:
   - do not delete data, restart Pods, resize volumes, or change resource limits during diagnosis without explicit approval
+workflow_phases:
+  - 3
+  - 4
+related_scripts:
+  - mongodb.collect.pods.state
+  - mongodb.collect.nodes.state
+related_skills:
+  - mongodb-triage-resource-exhaustion

@@ -1,0 +1,15 @@
+incident_id: mongodb-kubernetes-resource-insufficient-sample
+middleware: mongodb
+signal_overview:
+  status: abnormal
+  abnormal_signal_count: 1
+abnormal_signals:
+  - signal_id: pod-resource-insufficient
+    severity: high
+    object_ref: pod/mongo-shard-0
+    detail: Pod is Pending because nodes have insufficient memory.
+object_signal_links: []
+timeline_summary: []
+processed_log_highlights: []
+generated_at: "2026-06-07T00:00:00+08:00"
+updated_at: "2026-06-07T00:00:00+08:00"

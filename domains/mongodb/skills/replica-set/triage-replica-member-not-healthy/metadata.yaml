@@ -12,8 +12,16 @@ outputs:
   - likely cause category
   - next recommended runbook step
 required_assets:
-  - domains/mongodb/commands/replica-set/check-rs-status
-  - domains/mongodb/runbooks/replica-set/replica-member-not-healthy
+  - type: scenario
+    id: replica-inconsistency
+  - type: runbook
+    id: mongodb-replica-member-not-healthy
+  - type: command
+    id: mongodb-check-rs-status
+  - type: script
+    id: mongodb.collect.pods.state
+  - type: script
+    id: mongodb.collect.replicaset.rs_status
 safety_constraints:
   - default to read-only commands
   - do not trigger stepdown, reconfig, or restart without explicit confirmation

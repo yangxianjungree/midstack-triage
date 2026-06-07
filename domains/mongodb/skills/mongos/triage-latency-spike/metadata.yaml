@@ -13,8 +13,18 @@ outputs:
   - likely latency category
   - evidence and evidence gaps
 required_assets:
-  - domains/mongodb/commands/mongos/check-latency-signals
-  - domains/mongodb/runbooks/mongos/latency-spike
+  - type: scenario
+    id: latency-spike
+  - type: runbook
+    id: mongodb-latency-spike
+  - type: command
+    id: mongodb-check-latency-signals
+  - type: script
+    id: mongodb.collect.pods.state
+  - type: script
+    id: mongodb.collect.logs.current
+  - type: script
+    id: mongodb.normalize.logs.highlights
 safety_constraints:
   - default to read-only commands
   - do not kill operations, restart Pods, change indexes, or modify balancer settings without explicit confirmation

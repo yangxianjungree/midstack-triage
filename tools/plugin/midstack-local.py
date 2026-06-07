@@ -13,6 +13,11 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
+LIB_DIR = ROOT / "tools" / "lib"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
+
+from patch_merge import apply_script_output  # noqa: E402
 
 
 def now_iso() -> str:
@@ -110,29 +115,6 @@ def resolve_path(value: str) -> Path:
     return path if path.is_absolute() else ROOT / path
 
 
-def merge_dict(target: Dict[str, Any], patch: Dict[str, Any]) -> Dict[str, Any]:
-    for key, value in patch.items():
-        if isinstance(value, dict) and isinstance(target.get(key), dict):
-            merge_dict(target[key], value)
-        else:
-            target[key] = value
-    return target
-
-
-def append_report_patch(report: Dict[str, Any], patch: Dict[str, Any]) -> None:
-    for key, value in patch.items():
-        if key in ("collection_actions", "successful_items", "failed_items", "blank_items", "evidence_gaps"):
-            existing = report.setdefault(key, [])
-            if isinstance(existing, list) and isinstance(value, list):
-                existing.extend(value)
-            else:
-                report[key] = value
-        elif isinstance(value, dict) and isinstance(report.get(key), dict):
-            merge_dict(report[key], value)
-        else:
-            report[key] = value
-
-
 def first_context(remote_run_dir: Path) -> Dict[str, Any]:
     for path in sorted(remote_run_dir.glob("*/context.yaml")):
         return load_yaml(path)
@@ -204,12 +186,7 @@ def build_incident_from_remote_run(remote_run_dir: Path, output_dir: Path, args:
     for item_dir in script_output_dirs(remote_run_dir):
         output = load_yaml(item_dir / "output.yaml")
         script_id = str(output.get("script_id") or item_dir.name)
-        if isinstance(output.get("structured_record_patch"), dict):
-            merge_dict(structured_record, output["structured_record_patch"])
-        if isinstance(output.get("signal_bundle_patch"), dict):
-            merge_dict(signal_bundle, output["signal_bundle_patch"])
-        if isinstance(output.get("collection_report_patch"), dict):
-            append_report_patch(collection_report, output["collection_report_patch"])
+        apply_script_output(structured_record, signal_bundle, collection_report, output)
 
         target_dir = script_outputs_dir / script_id
         target_dir.mkdir(parents=True, exist_ok=True)

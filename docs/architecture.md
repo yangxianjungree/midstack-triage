@@ -101,7 +101,9 @@ runbook 只在这里存一份，通过 metadata 关联到 `scenario`。
 
 ### `interfaces/`
 
-`interfaces/` 只放给外部适配器消费的接口定义，不放 Claude Code、Codex、Cursor 等厂商插件的具体实现。
+`interfaces/` 只放给外部适配器消费的接口定义；Claude Code、Codex、Cursor 等厂商适配器的源实现放在 `plugins/<agent>/`。
+
+`.cursor/`、`.claude/` 等目录只代表某个目标项目的安装投影，不作为本仓库插件源目录。当前 Cursor 源实现放在 `plugins/cursor/`，测试时安装到 `/home/stephen/AI/` 下的临时项目或固定 sandbox 项目的 `.cursor/`。
 
 这样可以保持：
 

@@ -13,8 +13,16 @@ outputs:
   - evidence and evidence gaps
   - next recommended runbook step
 required_assets:
-  - domains/mongodb/commands/kubernetes-runtime/check-pod-resource-pressure
-  - domains/mongodb/runbooks/storage/resource-exhaustion
+  - type: scenario
+    id: resource-exhaustion
+  - type: runbook
+    id: mongodb-resource-exhaustion
+  - type: command
+    id: mongodb-check-pod-resource-pressure
+  - type: script
+    id: mongodb.collect.pods.state
+  - type: script
+    id: mongodb.collect.nodes.state
 safety_constraints:
   - default to read-only commands
   - do not delete data, restart Pods, resize volumes, or change resource limits without explicit confirmation

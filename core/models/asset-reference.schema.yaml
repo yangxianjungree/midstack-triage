@@ -1,0 +1,35 @@
+schema_id: midstack.asset_reference.v1
+kind: asset_reference
+description: Structured cross-asset reference used by skills, runbooks and golden paths.
+
+one_of:
+  - legacy_path_reference
+  - structured_reference
+
+legacy_path_reference:
+  type: string
+  pattern: ^domains/[^/]+/.+$
+  description: Transitional directory-path reference.
+
+structured_reference:
+  type: object
+  required:
+    - type
+    - id
+  fields:
+    type:
+      type: string
+      enum:
+        - scenario
+        - runbook
+        - command
+        - skill
+        - script
+    id:
+      type: string
+      description: Stable asset identifier for the referenced type.
+
+principles:
+  - Prefer structured references for new assets.
+  - Script references must use manifest script_id values.
+  - Path references are compatibility-only and must not be the only link.

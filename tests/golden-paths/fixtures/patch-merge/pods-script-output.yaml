@@ -1,0 +1,18 @@
+script_id: mongodb.collect.pods.state
+status: success
+structured_record_patch:
+  summary:
+    namespace: mongo
+  details:
+    pods:
+      - name: mongo-shard0-0
+        phase: Running
+        ready: true
+        status_hint: healthy
+signal_bundle_patch: {}
+collection_report_patch:
+  collection_actions:
+    - action_id: mongodb-collect-pods-state
+      name: collect pods state
+      target: pods
+      status: success

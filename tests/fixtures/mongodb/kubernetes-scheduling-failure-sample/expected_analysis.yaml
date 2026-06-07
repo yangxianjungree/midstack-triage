@@ -1,0 +1,5 @@
+conclusion_summary:
+  statement: MongoDB shard member Pod is Pending because node selector or affinity does not match available nodes.
+  confidence: high
+  impact_scope: MongoDB shard replica availability
+  primary_cause_category: kubernetes-scheduling

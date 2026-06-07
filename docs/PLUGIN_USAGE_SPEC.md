@@ -8,14 +8,15 @@
 
 说明：
 
-- `/xx` 仅表示插件名称前缀占位，不是最终固定命令名
+- `/<plugin_name>` 表示插件名称前缀占位
 - 实际命令形态应为 `/<plugin_name>:start`、`/<plugin_name>:analyse`、`/<plugin_name>:review`
+- 当前 Cursor 集成使用的插件名前缀为 `/midstack`
 
 当前建议只保留 3 个主命令：
 
-- `/xx:start`
-- `/xx:analyse`
-- `/xx:review`
+- `/midstack:start`
+- `/midstack:analyse`
+- `/midstack:review`
 
 内部仍然映射到项目的 5 段排障主流程，但对用户不暴露过多内部细节。
 
@@ -42,7 +43,7 @@
 - `start` 负责把排障启动起来，并完成前两段基础工作
 - `analyse` 负责跑完正式分析主路径，并直接产出结论
 - `review` 不面向最终用户结果输出，而面向插件优化反馈闭环
-## 3. `/xx:start`
+## 3. `/midstack:start`
 
 ### 目标
 
@@ -85,9 +86,9 @@
 
 ### `ready` 时的行为
 
-- 提示用户可执行 `/xx:analyse`
+- 提示用户可执行 `/midstack:analyse`
 
-## 4. `/xx:analyse`
+## 4. `/midstack:analyse`
 
 ### 目标
 
@@ -104,7 +105,7 @@
 
 - 基于前面阶段已确认的信息继续分析
 - 没有显式 `incident_id` 时，默认分析当前会话记忆里最近一次使用的目标记录
-- 对于刚通过 `/xx:start` 创建的记录，默认将其视为当前目标记录
+- 对于刚通过 `/midstack:start` 创建的记录，默认将其视为当前目标记录
 - 前面阶段的基础输入和基础确认内容默认冻结，不再随意修改
 - 由脚本负责采集、整理、标准化、结构化输出
 - 由 Agent 负责假设生成、验证动作生成和阶段性判断
@@ -122,10 +123,10 @@
 
 ### 额外约定
 
-- `/xx:analyse` 执行完成后，应直接完成第 3、4、5 段
-- 用户不需要再执行 `/xx:review` 才能看到结论和报告
+- `/midstack:analyse` 执行完成后，应直接完成第 3、4、5 段
+- 用户不需要再执行 `/midstack:review` 才能看到结论和报告
 
-## 5. `/xx:review`
+## 5. `/midstack:review`
 
 ### 目标
 
@@ -176,9 +177,9 @@
 
 当前建议的标准使用路径为：
 
-1. 执行 `/xx:start`
-2. 在 `ready` 后执行 `/xx:analyse`
-3. 在需要对插件效果做反馈和评分时执行 `/xx:review`
+1. 执行 `/midstack:start`
+2. 在 `ready` 后执行 `/midstack:analyse`
+3. 在需要对插件效果做反馈和评分时执行 `/midstack:review`
 
 ## 7. 命令输出合同
 
@@ -188,9 +189,9 @@
 
 - 详细证据、信号、采集报告和分析结果写入 incident 目录
 - 命令输出只包含状态、摘要、用户提示、记录引用、下一步动作、阻塞项和告警
-- `/xx:start` 的输出状态主要是 `ready` 或 `blocked`
-- `/xx:analyse` 的输出状态主要是 `completed`、`blocked` 或 `failed`
-- `/xx:review` 的输出状态主要是 `completed` 或 `failed`
+- `/midstack:start` 的输出状态主要是 `ready` 或 `blocked`
+- `/midstack:analyse` 的输出状态主要是 `completed`、`blocked` 或 `failed`
+- `/midstack:review` 的输出状态主要是 `completed` 或 `failed`
 
 轻量合同模型：
 
@@ -202,18 +203,18 @@
 
 ## 8. 设计结论
 
-### 为什么不合并 `/xx:start` 和 `/xx:analyse`
+### 为什么不合并 `/midstack:start` 和 `/midstack:analyse`
 
 因为两者职责不同：
 
-- `/xx:start` 负责启动、建档、判定 `ready / blocked`
-- `/xx:analyse` 负责正式进入分析和验证
+- `/midstack:start` 负责启动、建档、判定 `ready / blocked`
+- `/midstack:analyse` 负责正式进入分析和验证
 
 强行合并会模糊状态边界，不利于用户理解，也不利于插件内部控制流程。
 
-### 为什么保留 `/xx:review`
+### 为什么保留 `/midstack:review`
 
-虽然 `/xx:analyse` 已直接产出结论和报告，但仍建议保留 `/xx:review`，因为它适合：
+虽然 `/midstack:analyse` 已直接产出结论和报告，但仍建议保留 `/midstack:review`，因为它适合：
 
 - 对插件排障效果做反馈
 - 对分析质量做评分

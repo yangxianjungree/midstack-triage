@@ -23,3 +23,11 @@ verification_steps:
   - classify the issue into topology, network, resource, or replication backlog
 rollback_or_safety_notes:
   - do not run stepdown, reconfig, resync, or restart during the diagnosis phase without explicit approval
+workflow_phases:
+  - 3
+  - 4
+related_scripts:
+  - mongodb.collect.pods.state
+  - mongodb.collect.replicaset.rs_status
+related_skills:
+  - mongodb-triage-replica-member-not-healthy

@@ -1,7 +1,7 @@
 collection_actions:
   - action_id: mongodb-mvp-collection
     status: success
-    note: 10 MongoDB MVP scripts completed in remote smoke baseline.
+    note: 11 MongoDB MVP scripts completed in remote smoke baseline.
 successful_items:
   - pods
   - statefulsets

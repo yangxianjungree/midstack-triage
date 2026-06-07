@@ -1,0 +1,8 @@
+incident_id: mongodb-kubernetes-image-pull-failure-sample
+middleware: mongodb
+scenario: unknown
+namespace: mongo
+cluster_id: fixture
+customer_clue: MongoDB member Pod cannot start.
+input_source: fixture
+received_at: "2026-06-07T00:00:00+08:00"

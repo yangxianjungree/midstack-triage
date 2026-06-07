@@ -25,8 +25,8 @@
 
 ### 4. 适配器策略
 
-- 主仓库仅保留接口定义是否最终确认
-- Claude Code、Codex、Cursor 的适配器是否拆为独立仓库
+- 主仓库保留 `interfaces/` 接口定义，同时在 `plugins/<agent>/` 保留适配器源实现是否继续稳定
+- Claude Code、Codex、Cursor 的适配器后续是否拆为独立仓库
 - 各适配器与本仓库之间采用何种版本兼容策略
 
 ### 5. 运行与安全边界
@@ -93,7 +93,8 @@
 - 已明确 `scenarios/` 只定义场景，不存产品专属 runbook
 - 已明确 `domains/<product>/` 只存具体中间件资产
 - 已明确 runbook 只存一份，物理上按组件组织，逻辑上按场景检索
-- 已明确主仓库不放厂商插件实现，只放接口定义
+- 已明确 `interfaces/` 放跨适配器接口定义，`plugins/<agent>/` 放适配器源实现
+- 已明确源码仓库自己的 `.cursor/` 不作为 Midstack 插件安装投影
 - 已明确 `core/shared/` 四类目录的职责边界
 - 已明确 MongoDB 第一版脚本目录与命名规范
 - 已明确主仓库脚本资产与插件运行时脚本分离
@@ -125,14 +126,14 @@
 - 已通过真实 K8s 环境验证 `mongodb.collect.logs.previous`
 - 已通过真实 K8s 环境验证 `mongodb.normalize.logs.highlights`
 - 已通过真实 K8s 环境验证 `mongodb.normalize.signals.bundle`
-- 已补齐 MongoDB MVP 第一批 10 个脚本的合同级实现
-- 已通过真实 K8s 环境跑通 MongoDB MVP 第一批 10 个脚本
+- 已补齐 MongoDB MVP 第一批 11 个脚本的合同级实现
+- 已通过真实 K8s 环境跑通 MongoDB MVP 第一批 11 个脚本
 - 已补充 `tools/remote-smoke/mongodb-smoke.py` 远程脚本测试执行器
-- 已使用正式远程 smoke 工具跑通 MongoDB MVP 第一批 10 个脚本
+- 已使用正式远程 smoke 工具跑通 MongoDB MVP 第一批 11 个脚本
 - 已明确第 3 段脚本需兼容 Python 3.6 且不默认依赖 `PyYAML`
 - 已补充 `tools/validators/validate-mongodb-scripts.py`，用于校验 MongoDB 脚本 manifest 与插件运行时映射
 - 已补充 `tools/validators/validate-repo.py`，用于串联资产合同校验、fixture replay 和 score gate
-- 已通过 `validate-mongodb-scripts.py` 校验 MongoDB MVP 第一批 10 个脚本
+- 已通过 `validate-mongodb-scripts.py` 校验 MongoDB MVP 第一批 11 个脚本
 - 已补充 `core/models/script-context.schema.yaml` 和 `core/models/script-output.schema.yaml` 的轻量合同模型
 - 已补充 MongoDB 基础采集脚本 `context-file` 和 `output-file` 示例文件
 - 已补充 MongoDB `context.example.yaml` / `output.example.yaml` 的最小合同校验
@@ -164,10 +165,11 @@
 - 已补充 MongoDB scripts helpers 边界说明
 - validator 已支持 MongoDB 领域资产 component 引用校验
 - MongoDB `mongos getShardMap` 和 `replicaset rs.status` 脚本已支持从 Kubernetes Secret 读取认证信息
-- Secret 认证支持改动后已通过真实 MongoDB remote smoke，10 个 MVP 脚本全部 `success`
+- Secret 认证支持改动后已通过真实 MongoDB remote smoke，10 个原有 MVP 脚本全部 `success`
 - 已补充 MongoDB `resource-exhaustion`、`latency-spike`、`data-hotspot` 场景资产
 - 已补充 P3 测试闭环基础目录：fixtures、replay、scores
 - 已补充 MongoDB 第一批 replay fixture：baseline、replica-inconsistency、connection-failure
+- 已补充 MongoDB remote run / incident 到 fixture 的冻结工具
 - validator 已支持 MongoDB fixture 最小文件集校验
 - 已补充 MongoDB fixture replay 摘要工具
 - 已补充 MongoDB score summary 工具
@@ -180,6 +182,10 @@
 - 本地插件 `analyse` 已支持消费已完成的 remote smoke 结果目录，归并脚本输出并生成 incident 分析结果
 - 本地插件 `analyse` 已支持通过 `.local` remote config 调用 remote smoke 工具执行真实只读采集后继续分析
 - 本地插件 `review` 已能基于 `analysis.yaml` 生成五维评分和改进建议
+- 已补充 `plugins/cursor/` Cursor 集成源实现、`/midstack:*` 命令和自动化 smoke test
+- 已补充 Cursor 固定 sandbox 测试入口 `/home/stephen/AI/midstack-cursor-sandbox`
+- 已补充 Kubernetes runtime 通用信号 taxonomy 和 `runtime-classification` validator，防止故障分类点对点实现
+- 已补充 MongoDB Kubernetes scheduling 故障 fixture，并验证未知场景下可归因为 `kubernetes-scheduling`
 
 ### 2. 首个领域样例
 

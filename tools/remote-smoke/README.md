@@ -19,4 +19,4 @@ python3 tools/remote-smoke/mongodb-smoke.py --config .local/test-envs/mongodb-k8
 - 本地结果回收到 `.local/remote-runs/<incident_id>/`
 - 只执行只读采集和 normalize 脚本
 
-当前 MongoDB smoke 工具会按 manifest MVP 顺序执行 10 个脚本。
+当前 MongoDB smoke 工具会按 manifest MVP 顺序执行 11 个脚本。

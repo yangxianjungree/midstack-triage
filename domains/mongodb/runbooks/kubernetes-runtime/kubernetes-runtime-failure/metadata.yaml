@@ -1,0 +1,36 @@
+id: mongodb-kubernetes-runtime-failure
+title: MongoDB Kubernetes Runtime Failure
+middleware: mongodb
+component: kubernetes-runtime
+scenario: resource-exhaustion
+summary: Diagnose MongoDB availability issues caused by Kubernetes scheduling, PVC binding, image pull, CrashLoop, readiness, or StatefulSet replica availability failures.
+risk_level: read-only
+tags:
+  - kubernetes
+  - scheduling
+  - pod-not-ready
+  - statefulset
+  - events
+required_tools:
+  - kubectl
+  - bash
+applicable_env:
+  - kubernetes
+verification_steps:
+  - identify affected MongoDB Pod and owning controller
+  - inspect Pod phase, readiness, nodeSelector, affinity, tolerations, and conditions
+  - inspect Kubernetes events for scheduling, PVC, image pull, probe, or restart reasons
+  - compare StatefulSet ready replicas with desired replicas
+  - map the Kubernetes runtime failure to MongoDB component impact
+rollback_or_safety_notes:
+  - keep diagnosis read-only; do not patch node labels, delete Pods, change PVCs, or modify StatefulSets without explicit approval
+workflow_phases:
+  - 3
+  - 4
+related_scripts:
+  - mongodb.collect.pods.state
+  - mongodb.collect.events.yaml
+  - mongodb.collect.statefulsets.yaml
+  - mongodb.collect.nodes.state
+related_skills:
+  - mongodb-triage-kubernetes-runtime-failure

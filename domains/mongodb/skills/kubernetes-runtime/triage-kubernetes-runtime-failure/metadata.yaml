@@ -1,0 +1,30 @@
+id: mongodb-triage-kubernetes-runtime-failure
+title: Triage MongoDB Kubernetes Runtime Failure
+middleware: mongodb
+component: kubernetes-runtime
+primary_scenario: resource-exhaustion
+inputs:
+  - customer clue or business symptom
+  - namespace or cluster identifier
+  - affected Pod, StatefulSet, or component if known
+outputs:
+  - Kubernetes runtime signal category
+  - affected MongoDB component and blast radius
+  - supported and refuted hypotheses
+  - read-only verification actions
+required_assets:
+  - type: scenario
+    id: resource-exhaustion
+  - type: runbook
+    id: mongodb-kubernetes-runtime-failure
+  - type: command
+    id: mongodb-check-pod-resource-pressure
+  - type: script
+    id: mongodb.collect.pods.state
+  - type: script
+    id: mongodb.collect.events.yaml
+  - type: script
+    id: mongodb.collect.statefulsets.yaml
+safety_constraints:
+  - default to read-only commands
+  - do not patch Kubernetes objects, delete Pods, or change scheduling/resource configuration without explicit confirmation

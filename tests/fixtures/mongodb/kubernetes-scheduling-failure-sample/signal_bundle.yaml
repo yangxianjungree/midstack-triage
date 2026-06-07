@@ -1,0 +1,26 @@
+incident_id: mongodb-kubernetes-scheduling-failure-sample
+middleware: mongodb
+signal_overview:
+  status: abnormal
+  abnormal_signal_count: 2
+abnormal_signals:
+  - signal_id: pod-node-selector-mismatch
+    severity: high
+    object_ref: pod/bnmongo-shard1-data-2
+    detail: "Pod is Pending/Unschedulable because node selector or affinity does not match available nodes; node_selector={'abcd': 'xxxx'}; scheduler_message=0/3 nodes are available: 1 node(s) didn't match Pod's node affinity/selector."
+  - signal_id: statefulset-replicas-not-ready
+    severity: high
+    object_ref: statefulset/bnmongo-shard1-data
+    detail: StatefulSet ready_replicas=2 desired_replicas=3 current_replicas=2 updated_replicas=1
+object_signal_links:
+  - object_ref: pod/bnmongo-shard1-data-2
+    signal_refs:
+      - pod-node-selector-mismatch
+  - object_ref: statefulset/bnmongo-shard1-data
+    signal_refs:
+      - statefulset-replicas-not-ready
+timeline_summary:
+  - pod-node-selector-mismatch observed on pod/bnmongo-shard1-data-2
+processed_log_highlights: []
+generated_at: "2026-06-07T00:00:00+08:00"
+updated_at: "2026-06-07T00:00:00+08:00"

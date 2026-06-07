@@ -1,0 +1,8 @@
+incident_id: mongodb-kubernetes-resource-insufficient-sample
+middleware: mongodb
+scenario: unknown
+namespace: mongo
+cluster_id: fixture
+customer_clue: MongoDB member Pod is pending.
+input_source: fixture
+received_at: "2026-06-07T00:00:00+08:00"

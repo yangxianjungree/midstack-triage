@@ -1,0 +1,5 @@
+conclusion_summary:
+  statement: MongoDB member Pod is Pending because PVC or volume binding failed.
+  confidence: high
+  impact_scope: MongoDB member availability
+  primary_cause_category: kubernetes-storage-binding

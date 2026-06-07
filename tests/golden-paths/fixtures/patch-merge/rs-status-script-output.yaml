@@ -1,0 +1,17 @@
+script_id: mongodb.collect.replicaset.rs_status
+status: success
+structured_record_patch:
+  details:
+    replica_members:
+      - source_pod_ref: mongo-shard0-0
+        replica_set_id: shard0
+        self_member:
+          state_str: SECONDARY
+          health: 1
+signal_bundle_patch: {}
+collection_report_patch:
+  collection_actions:
+    - action_id: mongodb-collect-replicaset-rs-status
+      name: collect rs status
+      target: replicaset
+      status: success

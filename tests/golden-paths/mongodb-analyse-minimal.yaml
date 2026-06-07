@@ -1,0 +1,81 @@
+id: mongodb-analyse-minimal
+title: MongoDB minimal analyse golden path
+description: >
+  Validates replica-inconsistency routing, cross-asset references, and the
+  first collect script contract for the analyse MVP.
+middleware: mongodb
+scenario: replica-inconsistency
+
+routing:
+  symptoms:
+    - member state is not PRIMARY or SECONDARY as expected
+    - replication lag keeps increasing
+  expected:
+    scenario_id: replica-inconsistency
+    applicable_middleware:
+      - mongodb
+    skill_id: mongodb-triage-replica-member-not-healthy
+    runbook_id: mongodb-replica-member-not-healthy
+    command_id: mongodb-check-rs-status
+
+asset_refs:
+  scenario:
+    type: scenario
+    id: replica-inconsistency
+    path: scenarios/replica-inconsistency/scenario.yaml
+  skill:
+    type: skill
+    id: mongodb-triage-replica-member-not-healthy
+    path: domains/mongodb/skills/replica-set/triage-replica-member-not-healthy/metadata.yaml
+  runbook:
+    type: runbook
+    id: mongodb-replica-member-not-healthy
+    path: domains/mongodb/runbooks/replica-set/replica-member-not-healthy/metadata.yaml
+  command:
+    type: command
+    id: mongodb-check-rs-status
+    path: domains/mongodb/commands/replica-set/check-rs-status/metadata.yaml
+
+analyse_mvp_scripts:
+  - mongodb.collect.pods.state
+  - mongodb.collect.replicaset.rs_status
+
+contract_steps:
+  - step_id: collect-pods-state-blocked
+    script_id: mongodb.collect.pods.state
+    script_source: domains/mongodb/scripts/collect/collect-pods-state.sh
+    context_fixture: tests/golden-paths/fixtures/mongodb-collect-pods-blocked-context.yaml
+    expect:
+      exit_code: 0
+      output:
+        script_id: mongodb.collect.pods.state
+        status: blocked
+        required_fields:
+          - summary
+          - started_at
+          - finished_at
+          - collection_report_patch
+          - evidence_gaps
+  - step_id: collect-replicaset-rs-status-blocked
+    script_id: mongodb.collect.replicaset.rs_status
+    script_source: domains/mongodb/scripts/collect/collect-replicaset-rs-status.sh
+    context_fixture: tests/golden-paths/fixtures/mongodb-collect-replicaset-blocked-context.yaml
+    expect:
+      exit_code: 0
+      output:
+        script_id: mongodb.collect.replicaset.rs_status
+        status: blocked
+        required_fields:
+          - summary
+          - started_at
+          - finished_at
+          - collection_report_patch
+          - evidence_gaps
+
+patch_merge_fixture: tests/golden-paths/fixtures/patch-merge
+
+success_criteria:
+  - scenario routes to MongoDB replica-inconsistency assets
+  - skill required_assets resolve by structured id
+  - collect scripts honor context/output contract when kubectl is unavailable
+  - pods.state and replicaset.rs_status patches merge without overwriting each other

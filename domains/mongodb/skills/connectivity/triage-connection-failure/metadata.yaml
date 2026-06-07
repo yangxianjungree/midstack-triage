@@ -13,8 +13,18 @@ outputs:
   - evidence and evidence gaps
   - next recommended runbook step
 required_assets:
-  - domains/mongodb/commands/connectivity/check-mongos-connectivity
-  - domains/mongodb/runbooks/connectivity/connection-failure
+  - type: scenario
+    id: connection-failure
+  - type: runbook
+    id: mongodb-connection-failure
+  - type: command
+    id: mongodb-check-mongos-connectivity
+  - type: script
+    id: mongodb.collect.pods.state
+  - type: script
+    id: mongodb.collect.services.yaml
+  - type: script
+    id: mongodb.collect.logs.current
 safety_constraints:
   - default to read-only commands
   - do not restart Pods, change Services, edit Secrets, or modify network policy without explicit confirmation

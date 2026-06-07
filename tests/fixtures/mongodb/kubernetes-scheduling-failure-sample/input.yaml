@@ -1,0 +1,8 @@
+incident_id: mongodb-kubernetes-scheduling-failure-sample
+middleware: mongodb
+scenario: unknown
+namespace: psmdb-test
+cluster_id: remote-smoke
+customer_clue: MongoDB test fault, no scenario supplied.
+input_source: fixture
+received_at: "2026-06-07T00:00:00+08:00"

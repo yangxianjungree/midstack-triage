@@ -8,4 +8,5 @@
 - `status-types.yaml`：脚本输出、远程执行器、插件输出和 review 评分状态
 - `scenario-types.yaml`：跨中间件故障场景类型
 - `capability-types.yaml`：远程执行与观测能力类型
+- `kubernetes-runtime-signal-types.yaml`：跨中间件复用的 Kubernetes runtime 异常信号类型
 - `tag-guidelines.yaml`：标签使用原则和示例

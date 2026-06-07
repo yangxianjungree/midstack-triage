@@ -1,0 +1,30 @@
+incident_id: mongodb-golden-20260607-120000-test
+middleware: mongodb
+script_id: mongodb.collect.pods.state
+namespace: mongo
+cluster_id: mongo-golden-test
+artifact_root: /tmp/midstack-golden-artifacts
+
+deployment_architecture: bitnami
+topology_type: sharded_cluster
+
+access:
+  primary_ip: 10.0.0.1
+  candidate_ips:
+    - 10.0.0.1
+  username: test-user
+  password: example-password
+  port: 22
+
+targets:
+  namespace: mongo
+  pod_refs:
+    - mongo-mongos-0
+
+capabilities:
+  kubectl_available: false
+  kubectl_exec_available: false
+  mongosh_in_pod_available: false
+
+pod_query:
+  mode: by_pod_refs

@@ -1,0 +1,17 @@
+id: mongodb-check-latency-signals
+title: Check MongoDB Latency Signals
+middleware: mongodb
+component: mongos
+scenario: latency-spike
+risk_level: read-only
+tags:
+  - latency
+  - mongos
+  - log-analysis
+required_tools:
+  - kubectl
+  - mongosh
+expected_signal:
+  - mongos logs show whether slow, timeout, connection, or routing errors increased
+  - shard map and replica status can identify affected shard or member
+  - Pod and Node state can confirm resource correlation

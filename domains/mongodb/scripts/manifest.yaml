@@ -1,0 +1,101 @@
+middleware: mongodb
+scripts:
+  - script_id: mongodb.collect.pods.state
+    source: collect/collect-pods-state.sh
+    phase: collect
+    target: pods
+    action: state
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: true
+
+  - script_id: mongodb.collect.statefulsets.yaml
+    source: collect/collect-statefulsets-yaml.sh
+    phase: collect
+    target: statefulsets
+    action: yaml
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: true
+
+  - script_id: mongodb.collect.services.yaml
+    source: collect/collect-services-yaml.sh
+    phase: collect
+    target: services
+    action: yaml
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: true
+
+  - script_id: mongodb.collect.nodes.state
+    source: collect/collect-nodes-state.sh
+    phase: collect
+    target: nodes
+    action: state
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: true
+
+  - script_id: mongodb.collect.mongos.get_shard_map
+    source: collect/collect-mongos-get-shard-map.sh
+    phase: collect
+    target: mongos
+    action: get_shard_map
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: true
+
+  - script_id: mongodb.collect.replicaset.rs_status
+    source: collect/collect-replicaset-rs-status.sh
+    phase: collect
+    target: replicaset
+    action: rs_status
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: true
+
+  - script_id: mongodb.collect.logs.current
+    source: collect/collect-logs-current.sh
+    phase: collect
+    target: logs
+    action: current
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: true
+
+  - script_id: mongodb.collect.logs.previous
+    source: collect/collect-logs-previous.sh
+    phase: collect
+    target: logs
+    action: previous
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: true
+
+  - script_id: mongodb.normalize.logs.highlights
+    source: normalize/normalize-logs-highlights.py
+    phase: normalize
+    target: logs
+    action: highlights
+    runtime: python
+    readonly: true
+    default_packaged: true
+    mvp: true
+
+  - script_id: mongodb.normalize.signals.bundle
+    source: normalize/normalize-signals-bundle.py
+    phase: normalize
+    target: signals
+    action: bundle
+    runtime: python
+    readonly: true
+    default_packaged: true
+    mvp: true

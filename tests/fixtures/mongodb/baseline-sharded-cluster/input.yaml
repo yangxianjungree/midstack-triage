@@ -1,0 +1,6 @@
+incident_id: fixture-mongodb-baseline-sharded-cluster
+middleware: mongodb
+scenario: baseline
+customer_clue: MongoDB cluster is healthy; this fixture represents normal baseline collection.
+input_source: fixture
+received_at: "2026-06-07T00:00:00+08:00"

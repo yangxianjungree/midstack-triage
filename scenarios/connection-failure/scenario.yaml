@@ -1,0 +1,22 @@
+id: connection-failure
+title: Connection Failure
+summary: Client, service, network, authentication, or routing failure prevents access to middleware service.
+tags:
+  - connectivity
+  - network
+  - authentication
+  - routing
+symptoms:
+  - client reports connection refused, timeout, reset, or authentication failure
+  - middleware Service or NodePort cannot be reached
+  - target Pod is running but service command cannot connect
+  - only part of the middleware topology is reachable
+applicable_middleware:
+  - mongodb
+diagnostic_goals:
+  - determine whether the failure is caused by Kubernetes service routing, Pod readiness, network path, authentication, or middleware process state
+  - identify the failed connection path and the first broken hop
+  - separate client-side clues from environment-side evidence
+route_hints:
+  - middleware=mongodb component=connectivity
+  - check service endpoints, mongos Pods, Pod readiness, and in-Pod mongosh connectivity

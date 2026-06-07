@@ -1,0 +1,20 @@
+taxonomy_id: midstack.scenario_types.v1
+values:
+  - id: connection-failure
+    label: Connection Failure
+    description: Client, service, network, authentication, or routing failure.
+  - id: latency-spike
+    label: Latency Spike
+    description: Sudden or sustained latency increase.
+  - id: resource-exhaustion
+    label: Resource Exhaustion
+    description: CPU, memory, disk, IO, file descriptor, or scheduling pressure.
+  - id: replica-inconsistency
+    label: Replica Inconsistency
+    description: Replica member health, election, replication lag, or topology inconsistency.
+  - id: queue-backlog
+    label: Queue Backlog
+    description: Consumer lag, unconsumed messages, delayed processing, or pending queue growth.
+  - id: data-hotspot
+    label: Data Hotspot
+    description: Uneven shard, partition, key, topic, tenant, or node load distribution.

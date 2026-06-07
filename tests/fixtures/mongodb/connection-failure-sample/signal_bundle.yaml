@@ -1,0 +1,24 @@
+signal_overview:
+  status: abnormal
+  abnormal_signal_count: 2
+abnormal_signals:
+  - signal_id: service-endpoints-not-ready
+    severity: high
+    object_ref: service/mongo-mongos
+    detail: Service has no ready endpoint for mongos.
+  - signal_id: mongos-pod-not-ready
+    severity: high
+    object_ref: pod/mongo-mongos-0
+    detail: mongos Pod is Running but not Ready.
+object_signal_links:
+  - object_ref: service/mongo-mongos
+    signal_refs:
+      - service-endpoints-not-ready
+  - object_ref: pod/mongo-mongos-0
+    signal_refs:
+      - mongos-pod-not-ready
+timeline_summary:
+  - connection timeout overlaps with mongos endpoint readiness failure
+processed_log_highlights: []
+generated_at: "2026-06-07T00:00:00+08:00"
+updated_at: "2026-06-07T00:00:00+08:00"

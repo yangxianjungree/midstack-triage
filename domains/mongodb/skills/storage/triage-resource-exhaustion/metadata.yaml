@@ -1,0 +1,20 @@
+id: mongodb-triage-resource-exhaustion
+title: Triage MongoDB Resource Exhaustion
+middleware: mongodb
+component: storage
+primary_scenario: resource-exhaustion
+inputs:
+  - customer clue or business symptom
+  - namespace or cluster identifier
+  - suspected Pod, Node, or component if available
+outputs:
+  - affected resource layer
+  - likely resource pressure category
+  - evidence and evidence gaps
+  - next recommended runbook step
+required_assets:
+  - domains/mongodb/commands/kubernetes-runtime/check-pod-resource-pressure
+  - domains/mongodb/runbooks/storage/resource-exhaustion
+safety_constraints:
+  - default to read-only commands
+  - do not delete data, restart Pods, resize volumes, or change resource limits without explicit confirmation

@@ -1,0 +1,25 @@
+review:
+  score:
+    evidence_completeness:
+      level: <high|medium|low>
+      reason: <reason>
+    hypothesis_coverage:
+      level: <high|medium|low>
+      reason: <reason>
+    validation_depth:
+      level: <high|medium|low>
+      reason: <reason>
+    conclusion_confidence:
+      level: <high|medium|low>
+      reason: <reason>
+    knowledge_reusability:
+      level: <high|medium|low>
+      reason: <reason>
+  overall:
+    level: <high|medium|low>
+    reason: <overall reason>
+  improvement_suggestions:
+    - <suggestion>
+  regression_risks:
+    - <risk>
+  generated_at: <timestamp>

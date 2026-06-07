@@ -1,0 +1,75 @@
+script_id: mongodb.collect.mongos.get_shard_map
+status: success
+summary: collected shard map from mongo-mongos-0 and mapped 3 shards to replica sets
+started_at: "2026-06-07T22:45:10+08:00"
+finished_at: "2026-06-07T22:45:18+08:00"
+
+artifacts:
+  - path: raw/mongos-get-shard-map.json
+    kind: raw_command_output
+    description: raw getShardMap output captured from mongos
+
+structured_record_patch:
+  details:
+    shard_map:
+      source_component_ref: mongos-router
+      source_pod_ref: mongo-mongos-0
+      source_method: "mongos getShardMap"
+      config_server_ref: configsvr-rs
+      shards:
+        - shard_id: shard-01
+          replica_set_id: shard-01-rs
+          component_ref: shard-01
+          statefulset_refs:
+            - mongo-shard1-data
+          service_refs:
+            - mongo-shared-svc
+          host_summary:
+            - mongo-shard1-data-0.mongo-shared-svc.mongo.svc.cluster.local:27017
+            - mongo-shard1-data-1.mongo-shared-svc.mongo.svc.cluster.local:27017
+            - mongo-shard1-data-2.mongo-shared-svc.mongo.svc.cluster.local:27017
+        - shard_id: shard-02
+          replica_set_id: shard-02-rs
+          component_ref: shard-02
+          statefulset_refs:
+            - mongo-shard2-data
+          service_refs:
+            - mongo-shared-svc
+          host_summary:
+            - mongo-shard2-data-0.mongo-shared-svc.mongo.svc.cluster.local:27017
+            - mongo-shard2-data-1.mongo-shared-svc.mongo.svc.cluster.local:27017
+            - mongo-shard2-data-2.mongo-shared-svc.mongo.svc.cluster.local:27017
+        - shard_id: shard-03
+          replica_set_id: shard-03-rs
+          component_ref: shard-03
+          statefulset_refs:
+            - mongo-shard3-data
+          service_refs:
+            - mongo-shared-svc
+          host_summary:
+            - mongo-shard3-data-0.mongo-shared-svc.mongo.svc.cluster.local:27017
+            - mongo-shard3-data-1.mongo-shared-svc.mongo.svc.cluster.local:27017
+            - mongo-shard3-data-2.mongo-shared-svc.mongo.svc.cluster.local:27017
+      collection_status: success
+      collected_at: "2026-06-07T22:45:18+08:00"
+
+signal_bundle_patch: {}
+
+collection_report_patch:
+  collection_actions:
+    - action_id: collect-mongos-get-shard-map
+      name: collect mongos shard map
+      target: mongo-mongos-0
+      method: kubectl exec + mongosh
+      status: success
+      performed_at: "2026-06-07T22:45:18+08:00"
+  successful_items:
+    - item: shard_map
+      source: mongo-mongos-0
+      note: 3 shards mapped successfully
+  failed_items: []
+  blank_items: []
+  evidence_gaps: []
+
+warnings: []
+evidence_gaps: []

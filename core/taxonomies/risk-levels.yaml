@@ -1,0 +1,14 @@
+taxonomy_id: midstack.risk_levels.v1
+values:
+  - id: read-only
+    label: Read Only
+    description: Diagnostic action that should not change workload, middleware state, or Kubernetes resources.
+    requires_confirmation: false
+  - id: low-risk
+    label: Low Risk
+    description: Operational action with limited blast radius or reversible impact.
+    requires_confirmation: true
+  - id: high-risk
+    label: High Risk
+    description: Action that may affect availability, data safety, topology, routing, or workload scheduling.
+    requires_confirmation: true

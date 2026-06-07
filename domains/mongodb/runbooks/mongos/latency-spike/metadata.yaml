@@ -1,0 +1,25 @@
+id: mongodb-latency-spike
+title: MongoDB Latency Spike
+middleware: mongodb
+component: mongos
+scenario: latency-spike
+summary: Diagnose MongoDB latency spikes by correlating slow logs, mongos routing, replica state, shard distribution, and Kubernetes resource signals.
+risk_level: read-only
+tags:
+  - latency
+  - mongos
+  - slow-query
+  - performance
+required_tools:
+  - kubectl
+  - mongosh
+  - bash
+applicable_env:
+  - kubernetes
+verification_steps:
+  - identify the latency time window and affected entrypoint
+  - confirm whether slow logs or timeout errors increased around the same time
+  - correlate affected components with shard map, replica status, and resource signals
+  - classify latency into query workload, routing, replication, resource, storage, or hotspot direction
+rollback_or_safety_notes:
+  - do not kill queries, restart Pods, change indexes, or modify balancer settings during diagnosis without explicit approval

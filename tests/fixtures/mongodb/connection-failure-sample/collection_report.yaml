@@ -1,0 +1,14 @@
+collection_actions:
+  - action_id: mongodb-collect-services-yaml
+    status: success
+  - action_id: mongodb-collect-pods-state
+    status: success
+successful_items:
+  - services
+  - pods
+failed_items: []
+blank_items: []
+evidence_gaps:
+  - in-Pod mongosh ping result is missing in this fixture
+generated_at: "2026-06-07T00:00:00+08:00"
+updated_at: "2026-06-07T00:00:00+08:00"

@@ -1,0 +1,74 @@
+schema_id: midstack.remote_executor_result.v1
+kind: remote_executor_result
+description: Result contract for one remote script execution task.
+
+required:
+  - executor_id
+  - incident_id
+  - script_id
+  - plugin_name
+  - status
+  - selected_ip
+  - started_at
+  - finished_at
+  - capability_checks
+  - remote_paths
+  - retrieved_files
+  - process
+  - error
+  - warnings
+
+fields:
+  executor_id:
+    type: string
+  incident_id:
+    type: string
+  script_id:
+    type: string
+  plugin_name:
+    type: string
+  status:
+    type: string
+    enum:
+      - success
+      - partial
+      - blocked
+      - failed
+  selected_ip:
+    type: string
+  started_at:
+    type: string
+    format: datetime
+  finished_at:
+    type: string
+    format: datetime
+  capability_checks:
+    type: list[object]
+  remote_paths:
+    type: object
+  retrieved_files:
+    type: object
+  process:
+    type: object
+    fields:
+      exit_code:
+        type: integer
+      stdout_tail:
+        type: string
+      stderr_tail:
+        type: string
+  error:
+    type: object
+    fields:
+      code:
+        type: string
+      message:
+        type: string
+  warnings:
+    type: list[string]
+
+principles:
+  - remote executor status is separate from script output-file status.
+  - A valid script output-file with status blocked can still produce remote executor status success.
+  - Non-zero process exit without a valid output-file should be treated as failed.
+  - Result must record capability checks and selected_ip for auditability.

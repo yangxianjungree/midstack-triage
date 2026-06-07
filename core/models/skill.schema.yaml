@@ -1,0 +1,39 @@
+schema_id: midstack.skill_metadata.v1
+kind: skill_metadata
+description: Metadata contract for an Agent-facing workflow skill.
+
+required:
+  - id
+  - title
+  - middleware
+  - component
+  - primary_scenario
+  - inputs
+  - outputs
+  - required_assets
+  - safety_constraints
+
+fields:
+  id:
+    type: string
+  title:
+    type: string
+  middleware:
+    type: string
+  component:
+    type: string
+  primary_scenario:
+    type: string
+  inputs:
+    type: list[string]
+  outputs:
+    type: list[string]
+  required_assets:
+    type: list[string]
+  safety_constraints:
+    type: list[string]
+
+principles:
+  - Skills wrap Agent workflow, not full runbook content.
+  - Skills may reference runbooks and commands but should not duplicate them.
+  - Skills must define expected inputs, outputs and safety constraints.

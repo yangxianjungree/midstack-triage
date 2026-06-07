@@ -1,0 +1,25 @@
+id: mongodb-data-hotspot
+title: MongoDB Data Hotspot
+middleware: mongodb
+component: shard
+scenario: data-hotspot
+summary: Diagnose MongoDB data or request hotspots by correlating shard map, affected collections, shard member state, and resource signals.
+risk_level: read-only
+tags:
+  - hotspot
+  - shard
+  - distribution
+  - routing
+required_tools:
+  - kubectl
+  - mongosh
+  - bash
+applicable_env:
+  - kubernetes
+verification_steps:
+  - identify whether symptoms concentrate on one shard or member
+  - collect shard map and affected namespace clues
+  - correlate shard-level symptoms with resource and replica member state
+  - classify the issue into data distribution, request routing, resource, or topology direction
+rollback_or_safety_notes:
+  - do not move chunks, enable or disable balancer, reshard, or change shard keys during diagnosis without explicit approval

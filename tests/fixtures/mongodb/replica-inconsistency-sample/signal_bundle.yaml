@@ -1,0 +1,21 @@
+signal_overview:
+  status: abnormal
+  abnormal_signal_count: 2
+abnormal_signals:
+  - signal_id: replica-member-recovering
+    severity: medium
+    object_ref: shard-01-2
+    detail: Replica member is RECOVERING instead of SECONDARY.
+  - signal_id: stale-read-risk
+    severity: medium
+    object_ref: shard-01-rs
+    detail: Customer reports stale reads while one member is unhealthy.
+object_signal_links:
+  - object_ref: shard-01-2
+    signal_refs:
+      - replica-member-recovering
+timeline_summary:
+  - replica member abnormal state overlaps with customer stale read clue
+processed_log_highlights: []
+generated_at: "2026-06-07T00:00:00+08:00"
+updated_at: "2026-06-07T00:00:00+08:00"

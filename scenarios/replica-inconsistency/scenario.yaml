@@ -1,0 +1,18 @@
+id: replica-inconsistency
+title: Replica Inconsistency
+summary: Cluster members do not agree on role, sync state, or replication progress.
+tags:
+  - replication
+  - topology
+  - availability
+symptoms:
+  - member state is not PRIMARY or SECONDARY as expected
+  - replication lag keeps increasing
+  - clients report stale or failed reads from replica members
+applicable_middleware:
+  - mongodb
+diagnostic_goals:
+  - confirm whether the issue is topology, network, resource, or replication backlog related
+  - identify the unhealthy member and its impact scope
+route_hints:
+  - middleware=mongodb component=replica-set

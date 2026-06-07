@@ -1,0 +1,11 @@
+# Taxonomies
+
+本目录用于存放通用分类和枚举。
+
+当前已定义：
+
+- `risk-levels.yaml`：只读、低风险、高风险动作分级
+- `status-types.yaml`：脚本输出、远程执行器、插件输出和 review 评分状态
+- `scenario-types.yaml`：跨中间件故障场景类型
+- `capability-types.yaml`：远程执行与观测能力类型
+- `tag-guidelines.yaml`：标签使用原则和示例

@@ -1,0 +1,47 @@
+hypotheses:
+  - hypothesis_id: H1
+    statement: <what may be causing the incident>
+    causal_path:
+      - <cause>
+      - <mechanism>
+      - <observed symptom>
+    supporting_evidence:
+      - source: <structured_record|signal_bundle|collection_report|log>
+        detail: <evidence>
+    counter_evidence:
+      - source: <source>
+        detail: <counter evidence>
+    disconfirming_conditions:
+      - <condition that would refute this hypothesis>
+    evidence_gaps:
+      - <missing evidence>
+    validation_actions:
+      - action: <validation action>
+        status: <planned|executed|blocked>
+        result: <result>
+    validation_result: <supported|refuted|insufficient>
+    status: <supported|refuted|insufficient>
+
+conclusion_summary:
+  statement: <initial conclusion>
+  confidence: <high|medium|low>
+  impact_scope: <impact scope>
+  primary_cause_category: <category>
+  evidence:
+    - <key evidence>
+  limitations:
+    - <limitation or missing evidence>
+
+next_actions:
+  - action: <next action>
+    risk_level: <read-only|low-risk|high-risk>
+    requires_confirmation: true
+
+knowledge_candidates:
+  - candidate_type: <runbook|command|script|skill|asset_update>
+    title: <candidate title>
+    reason: <why this should be captured>
+    suggested_path: <path>
+
+generated_at: <timestamp>
+updated_at: <timestamp>

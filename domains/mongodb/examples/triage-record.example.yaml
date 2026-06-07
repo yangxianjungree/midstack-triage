@@ -1,0 +1,317 @@
+summary:
+  cluster_id: "mongo-prod-sharded-01"
+  namespace: "mongo"
+  deployment_architecture: "bitnami"
+  topology_summary: "2 mongos + 1 configsvr rs + 3 shard replica sets"
+  key_object_status: "all statefulsets present; 1 pod restarting; no abnormal pvc; node worker-03 not ready"
+  key_replica_status: "configsvr healthy; shard-02 primary election observed; shard-02-1 replication lag detected"
+  key_findings:
+    - "pod mongo-shard2-data-1 restarted 4 times in the last 30 minutes"
+    - "node worker-03 reported NotReady around the same period"
+    - "shard-02 replica set showed recent election and replication lag"
+  current_scope: "single shard replica set with possible node impact"
+  collected_at: "2026-06-07T15:42:00+08:00"
+
+details:
+  cluster_info:
+    cluster_id: "mongo-prod-sharded-01"
+    namespace: "mongo"
+    middleware: "mongodb"
+    deployment_architecture: "bitnami"
+    architecture_evidence:
+      - "bitnami labels found on statefulsets"
+      - "mongos/configsvr/shards mapped as shared services with grouped statefulsets"
+    topology_type: "sharded_cluster"
+    entry_ips:
+      - "10.20.30.40"
+      - "10.20.30.41"
+    entry_port: 22
+    entry_role: "jumpserver"
+    identification_source: "customer provided namespace and environment scan confirmed single target cluster"
+    collected_at: "2026-06-07T15:05:00+08:00"
+
+  components:
+    - component_type: "mongos"
+      component_id: "mongos-router"
+      parent_component: null
+      topology_role: "router"
+      statefulset_refs:
+        - "mongo-mongos"
+      service_refs:
+        - "mongo-shared-svc"
+      member_count: 2
+      status_hint: "healthy"
+      collected_at: "2026-06-07T15:10:00+08:00"
+    - component_type: "configsvr"
+      component_id: "configsvr-rs"
+      parent_component: null
+      topology_role: "config"
+      statefulset_refs:
+        - "mongo-configsvr"
+      service_refs:
+        - "mongo-shared-svc"
+      member_count: 3
+      status_hint: "healthy"
+      collected_at: "2026-06-07T15:11:00+08:00"
+    - component_type: "shard"
+      component_id: "shard-02"
+      parent_component: null
+      topology_role: "data_shard"
+      statefulset_refs:
+        - "mongo-shard2-data"
+      service_refs:
+        - "mongo-shared-svc"
+      member_count: 3
+      status_hint: "partial"
+      collected_at: "2026-06-07T15:12:00+08:00"
+    - component_type: "replica_set"
+      component_id: "shard-02-rs"
+      parent_component: "shard-02"
+      topology_role: "replica_group"
+      statefulset_refs:
+        - "mongo-shard2-data"
+      service_refs:
+        - "mongo-shared-svc"
+      member_count: 3
+      status_hint: "partial"
+      collected_at: "2026-06-07T15:12:00+08:00"
+
+  statefulsets:
+    - name: "mongo-mongos"
+      namespace: "mongo"
+      component_ref: "mongos-router"
+      replicas_desired: 2
+      replicas_ready: 2
+      selector:
+        app.kubernetes.io/component: "mongos"
+      service_name: "mongo-shared-svc"
+      pod_refs:
+        - "mongo-mongos-0"
+        - "mongo-mongos-1"
+      yaml:
+        kind: "StatefulSet"
+        metadata:
+          labels:
+            app.kubernetes.io/name: "mongodb"
+            app.kubernetes.io/managed-by: "Helm"
+            app.kubernetes.io/instance: "mongo"
+      status_hint: "healthy"
+      collected_at: "2026-06-07T15:13:00+08:00"
+    - name: "mongo-shard2-data"
+      namespace: "mongo"
+      component_ref: "shard-02-rs"
+      replicas_desired: 3
+      replicas_ready: 2
+      selector:
+        app.kubernetes.io/component: "data"
+        mongodb.shard: "shard-02"
+      service_name: "mongo-shared-svc"
+      pod_refs:
+        - "mongo-shard2-data-0"
+        - "mongo-shard2-data-1"
+        - "mongo-shard2-data-2"
+      yaml:
+        kind: "StatefulSet"
+        spec:
+          updateStrategy:
+            type: "RollingUpdate"
+          volumeClaimTemplates:
+            - metadata:
+                name: "datadir"
+      status_hint: "partial"
+      collected_at: "2026-06-07T15:14:00+08:00"
+
+  pods:
+    - name: "mongo-shard2-data-0"
+      namespace: "mongo"
+      component_ref: "shard-02-rs"
+      statefulset_ref: "mongo-shard2-data"
+      node_ref: "worker-01"
+      pod_ip: "172.16.10.20"
+      phase: "Running"
+      ready: true
+      created_at: "2026-06-06T10:00:00+08:00"
+      restart_count: 0
+      last_restart_at: null
+      container_status: "running"
+      yaml:
+        metadata:
+          labels:
+            statefulset.kubernetes.io/pod-name: "mongo-shard2-data-0"
+      log_refs:
+        - "log-mongo-shard2-data-0-recent"
+      status_hint: "healthy"
+      collected_at: "2026-06-07T15:18:00+08:00"
+    - name: "mongo-shard2-data-1"
+      namespace: "mongo"
+      component_ref: "shard-02-rs"
+      statefulset_ref: "mongo-shard2-data"
+      node_ref: "worker-03"
+      pod_ip: "172.16.10.21"
+      phase: "Running"
+      ready: false
+      created_at: "2026-06-06T10:00:00+08:00"
+      restart_count: 4
+      last_restart_at: "2026-06-07T15:21:00+08:00"
+      container_status: "restarting"
+      yaml:
+        metadata:
+          labels:
+            statefulset.kubernetes.io/pod-name: "mongo-shard2-data-1"
+      log_refs:
+        - "log-mongo-shard2-data-1-before-restart"
+        - "log-mongo-shard2-data-1-after-restart"
+      status_hint: "unhealthy"
+      collected_at: "2026-06-07T15:19:00+08:00"
+
+  services:
+    - name: "mongo-shared-svc"
+      namespace: "mongo"
+      component_ref: "cluster-shared-entry"
+      service_type: "ClusterIP"
+      cluster_ip: "10.96.12.55"
+      ports:
+        - name: "mongodb"
+          port: 27017
+      node_ports: []
+      selector:
+        app.kubernetes.io/name: "mongodb"
+      endpoint_refs:
+        - "mongo-mongos-0"
+        - "mongo-mongos-1"
+      status_hint: "healthy"
+      collected_at: "2026-06-07T15:20:00+08:00"
+
+  nodes:
+    - name: "worker-03"
+      status: "NotReady"
+      internal_ip: "192.168.10.13"
+      external_ip: null
+      labels:
+        kubernetes.io/hostname: "worker-03"
+        node-role.kubernetes.io/worker: ""
+        topology.kubernetes.io/zone: "zone-a"
+      taints: []
+      pod_refs:
+        - "mongo-shard2-data-1"
+      condition_summary:
+        - "Ready=False"
+        - "MemoryPressure=False"
+      status_hint: "unhealthy"
+      collected_at: "2026-06-07T15:22:00+08:00"
+
+  shard_map:
+    source_component_ref: "mongos-router"
+    source_pod_ref: "mongo-mongos-0"
+    source_method: "mongos getShardMap"
+    config_server_ref: "configsvr-rs"
+    shards:
+      - shard_id: "shard-01"
+        replica_set_id: "shard-01-rs"
+        component_ref: "shard-01"
+        statefulset_refs:
+          - "mongo-shard1-data"
+        service_refs:
+          - "mongo-shared-svc"
+        host_summary:
+          - "mongo-shard1-data-0.mongo-shared-svc.mongo.svc.cluster.local:27017"
+          - "mongo-shard1-data-1.mongo-shared-svc.mongo.svc.cluster.local:27017"
+          - "mongo-shard1-data-2.mongo-shared-svc.mongo.svc.cluster.local:27017"
+      - shard_id: "shard-02"
+        replica_set_id: "shard-02-rs"
+        component_ref: "shard-02"
+        statefulset_refs:
+          - "mongo-shard2-data"
+        service_refs:
+          - "mongo-shared-svc"
+        host_summary:
+          - "mongo-shard2-data-0.mongo-shared-svc.mongo.svc.cluster.local:27017"
+          - "mongo-shard2-data-1.mongo-shared-svc.mongo.svc.cluster.local:27017"
+          - "mongo-shard2-data-2.mongo-shared-svc.mongo.svc.cluster.local:27017"
+      - shard_id: "shard-03"
+        replica_set_id: "shard-03-rs"
+        component_ref: "shard-03"
+        statefulset_refs:
+          - "mongo-shard3-data"
+        service_refs:
+          - "mongo-shared-svc"
+        host_summary:
+          - "mongo-shard3-data-0.mongo-shared-svc.mongo.svc.cluster.local:27017"
+          - "mongo-shard3-data-1.mongo-shared-svc.mongo.svc.cluster.local:27017"
+          - "mongo-shard3-data-2.mongo-shared-svc.mongo.svc.cluster.local:27017"
+    collection_status: "success"
+    collected_at: "2026-06-07T15:22:30+08:00"
+
+  replica_members:
+    - replica_set_id: "shard-02-rs"
+      member_name: "mongo-shard2-data-0.mongo-shared-svc.mongo.svc.cluster.local:27017"
+      pod_ref: "mongo-shard2-data-0"
+      self_view: true
+      role: "PRIMARY"
+      health: 1
+      state_str: "PRIMARY"
+      term: 42
+      election_time: "2026-06-07T15:16:30+08:00"
+      sync_lag: 0
+      optime_date: "2026-06-07T15:21:58+08:00"
+      source_pod: "mongo-shard2-data-0"
+      collection_status: "success"
+      collected_at: "2026-06-07T15:23:00+08:00"
+    - replica_set_id: "shard-02-rs"
+      member_name: "mongo-shard2-data-1.mongo-shared-svc.mongo.svc.cluster.local:27017"
+      pod_ref: "mongo-shard2-data-1"
+      self_view: false
+      role: "SECONDARY"
+      health: 1
+      state_str: "RECOVERING"
+      term: 42
+      election_time: "2026-06-07T15:16:30+08:00"
+      sync_lag: 184
+      optime_date: "2026-06-07T15:18:54+08:00"
+      source_pod: "mongo-shard2-data-0"
+      collection_status: "partial"
+      collected_at: "2026-06-07T15:23:00+08:00"
+
+  raw_logs:
+    - log_id: "log-mongo-shard2-data-1-before-restart"
+      pod_ref: "mongo-shard2-data-1"
+      component_ref: "shard-02-rs"
+      log_type: "before_restart"
+      time_range:
+        from: "2026-06-07T15:18:00+08:00"
+        to: "2026-06-07T15:20:59+08:00"
+      source: "kubectl logs --previous"
+      content: |
+        {"t":{"$date":"2026-06-07T07:20:41.214Z"},"s":"E","c":"STORAGE","msg":"WiredTiger error: No space left on device"}
+        {"t":{"$date":"2026-06-07T07:20:42.112Z"},"s":"F","c":"CONTROL","msg":"Fatal assertion due to storage initialization failure"}
+      collection_status: "success"
+      collected_at: "2026-06-07T15:24:00+08:00"
+    - log_id: "log-mongo-shard2-data-1-after-restart"
+      pod_ref: "mongo-shard2-data-1"
+      component_ref: "shard-02-rs"
+      log_type: "after_restart"
+      time_range:
+        from: "2026-06-07T15:21:00+08:00"
+        to: "2026-06-07T15:24:00+08:00"
+      source: "kubectl logs"
+      content: |
+        {"t":{"$date":"2026-06-07T07:21:16.004Z"},"s":"I","c":"CONTROL","msg":"Restarting mongod"}
+        {"t":{"$date":"2026-06-07T07:21:24.817Z"},"s":"W","c":"REPL","msg":"Initial sync source unavailable"}
+      collection_status: "success"
+      collected_at: "2026-06-07T15:24:00+08:00"
+
+  processed_logs:
+    - processed_log_id: "plog-shard2-data-1-restart"
+      raw_log_ref: "log-mongo-shard2-data-1-before-restart"
+      pod_ref: "mongo-shard2-data-1"
+      keywords:
+        - "wiredtiger"
+        - "no space left on device"
+        - "storage initialization failure"
+      normalized_summary: "mongo shard2 member failed before restart due to storage space error"
+      log_snippets:
+        - "WiredTiger error: No space left on device"
+        - "Fatal assertion due to storage initialization failure"
+      severity_hint: "high"
+      noise_reduction_method: "error-level lines only; duplicate lines removed"
+      processed_at: "2026-06-07T15:26:00+08:00"

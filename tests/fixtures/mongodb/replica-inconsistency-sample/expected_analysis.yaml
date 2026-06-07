@@ -1,0 +1,19 @@
+hypotheses:
+  - hypothesis_id: H1
+    statement: A shard replica member state transition caused replica inconsistency symptoms.
+    status: supported
+    validation_result: supported
+  - hypothesis_id: H2
+    statement: Resource pressure caused the member to enter RECOVERING.
+    status: insufficient
+    validation_result: insufficient
+conclusion_summary:
+  statement: Initial evidence supports a replica member health issue in shard-01-rs.
+  confidence: medium
+  impact_scope: shard-01 read path
+  primary_cause_category: replication
+next_actions:
+  - inspect previous logs and resource signals for shard-01-2
+knowledge_candidates:
+  - candidate_type: runbook
+    title: MongoDB Replica Set Member Not Healthy

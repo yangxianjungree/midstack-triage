@@ -1,0 +1,13 @@
+hypotheses:
+  - hypothesis_id: H1
+    statement: MongoDB baseline fixture does not show incident-specific abnormal signals.
+    status: supported
+    validation_result: supported
+conclusion_summary:
+  statement: Baseline collection is healthy enough for regression comparison.
+  confidence: high
+  impact_scope: none
+  primary_cause_category: baseline
+next_actions:
+  - use this fixture to detect analyse regressions
+knowledge_candidates: []

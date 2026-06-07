@@ -1,0 +1,6 @@
+incident_id: fixture-mongodb-connection-failure
+middleware: mongodb
+scenario: connection-failure
+customer_clue: Application reports MongoDB connection timeout when using the mongos Service.
+input_source: fixture
+received_at: "2026-06-07T00:00:00+08:00"

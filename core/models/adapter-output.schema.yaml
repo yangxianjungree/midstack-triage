@@ -1,0 +1,82 @@
+schema_id: midstack.adapter_output.v1
+kind: adapter_output
+description: User-facing output contract returned by plugin commands.
+
+required:
+  - plugin_name
+  - command
+  - incident_id
+  - middleware
+  - status
+  - summary
+  - user_message
+  - record_refs
+  - next_actions
+  - blocking_items
+  - warnings
+  - generated_at
+
+fields:
+  plugin_name:
+    type: string
+  command:
+    type: string
+    enum:
+      - start
+      - analyse
+      - review
+  incident_id:
+    type: string
+  middleware:
+    type: string
+  status:
+    type: string
+    enum:
+      - ready
+      - blocked
+      - completed
+      - failed
+  summary:
+    type: string
+    description: Short machine-readable summary of command outcome.
+  user_message:
+    type: string
+    description: Human-facing concise message.
+  record_refs:
+    type: list[object]
+    description: References to generated incident files or sections.
+    item_fields:
+      name:
+        type: string
+      path:
+        type: string
+      description:
+        type: string
+  next_actions:
+    type: list[string]
+  blocking_items:
+    type: list[object]
+    item_fields:
+      code:
+        type: string
+      message:
+        type: string
+      required_user_action:
+        type: string
+  warnings:
+    type: list[string]
+  generated_at:
+    type: string
+    format: datetime
+
+optional:
+  - quality_review
+  - conclusion
+  - knowledge_candidates
+
+principles:
+  - Adapter output is a summary envelope, not the full incident record.
+  - Detailed evidence must be referenced through record_refs.
+  - start returns ready or blocked.
+  - analyse returns completed, blocked or failed.
+  - review returns completed or failed.

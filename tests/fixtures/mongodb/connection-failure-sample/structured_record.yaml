@@ -1,0 +1,15 @@
+summary:
+  middleware: mongodb
+  topology_type: sharded_cluster
+  affected_component: connectivity
+details:
+  services:
+    - name: mongo-mongos
+      type: NodePort
+      endpoints_ready: false
+  pods:
+    - name: mongo-mongos-0
+      phase: Running
+      ready: false
+      restart_count: 3
+generated_at: "2026-06-07T00:00:00+08:00"

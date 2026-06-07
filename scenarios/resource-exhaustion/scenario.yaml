@@ -1,0 +1,24 @@
+id: resource-exhaustion
+title: Resource Exhaustion
+summary: CPU, memory, disk, IO, file descriptor, or scheduling pressure affects middleware availability or performance.
+tags:
+  - resource
+  - cpu
+  - memory
+  - disk
+  - node-pressure
+symptoms:
+  - Pod restarts repeatedly or is killed by OOM
+  - middleware process is slow, unavailable, or cannot start
+  - logs contain no space left, OOM, too many open files, or storage errors
+  - Kubernetes reports node pressure or failed scheduling
+  - replication, routing, or query latency degrades under resource pressure
+applicable_middleware:
+  - mongodb
+diagnostic_goals:
+  - identify whether the pressure is at Pod, container, PVC, Node, or middleware process level
+  - correlate resource symptoms with middleware topology and affected members
+  - separate resource exhaustion from network, authentication, or topology issues
+route_hints:
+  - middleware=mongodb component=storage
+  - check Pod restarts, container last state, Node pressure, PVC usage, and MongoDB logs

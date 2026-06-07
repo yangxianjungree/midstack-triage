@@ -1,0 +1,84 @@
+schema_id: midstack.remote_executor_request.v1
+kind: remote_executor_request
+description: Request contract for one remote script execution task.
+
+required:
+  - executor_id
+  - incident_id
+  - script_id
+  - middleware
+  - plugin_name
+  - access
+  - script
+  - remote_workspace
+  - required_capabilities
+  - execution
+
+fields:
+  executor_id:
+    type: string
+  incident_id:
+    type: string
+  script_id:
+    type: string
+  middleware:
+    type: string
+  plugin_name:
+    type: string
+  access:
+    type: object
+    sensitive: true
+    fields:
+      candidate_ips:
+        type: list[string]
+      primary_ip:
+        type: string
+      username:
+        type: string
+      password:
+        type: string
+        sensitive: true
+      port:
+        type: integer
+  script:
+    type: object
+    fields:
+      runtime_path:
+        type: string
+      runtime:
+        type: string
+        enum:
+          - shell
+          - python
+      readonly:
+        type: boolean
+      arguments:
+        type: object
+  remote_workspace:
+    type: object
+    fields:
+      plugin_root:
+        type: string
+      script_root:
+        type: string
+      run_root:
+        type: string
+      script_path:
+        type: string
+      context_file:
+        type: string
+      output_file:
+        type: string
+      artifact_dir:
+        type: string
+  required_capabilities:
+    type: object
+  execution:
+    type: object
+
+principles:
+  - Remote executor owns SSH, staging, execution and result retrieval.
+  - Domain scripts must not implement SSH logic.
+  - Remote workspace should live under /tmp/<plugin_name>/.
+  - script.runtime_path must come from script-runtime-map.
+  - Sensitive access fields must not be copied into script outputs or public artifacts.

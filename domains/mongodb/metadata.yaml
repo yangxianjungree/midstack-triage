@@ -1,0 +1,14 @@
+id: mongodb
+title: MongoDB
+summary: MongoDB production triage assets focused on replica set, connectivity, and resource diagnosis.
+components:
+  - mongod
+  - mongos
+  - replica-set
+preferred_tools:
+  - mongosh
+  - kubectl
+  - bash
+default_tags:
+  - document-db
+  - replication

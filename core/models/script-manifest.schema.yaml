@@ -1,0 +1,63 @@
+schema_id: midstack.script_manifest.v1
+kind: script_manifest
+description: Source asset manifest for domain-owned executable scripts.
+
+required:
+  - middleware
+  - scripts
+
+script_required:
+  - script_id
+  - source
+  - phase
+  - target
+  - action
+  - runtime
+  - readonly
+  - default_packaged
+  - mvp
+
+fields:
+  middleware:
+    type: string
+    description: Middleware product name, for example mongodb.
+  scripts:
+    type: list[object]
+    description: Domain script entry list.
+    item_fields:
+      script_id:
+        type: string
+        description: Stable script identifier in the form <middleware>.<phase>.<target>.<action>.
+      source:
+        type: string
+        description: Repository-relative source asset path under domains/<product>/scripts/.
+      phase:
+        type: string
+        enum:
+          - collect
+          - normalize
+      target:
+        type: string
+        description: Target object or signal group handled by the script.
+      action:
+        type: string
+        description: Concrete action performed by the script.
+      runtime:
+        type: string
+        enum:
+          - shell
+          - python
+      readonly:
+        type: boolean
+      default_packaged:
+        type: boolean
+        description: Whether plugin packages should include this script by default.
+      mvp:
+        type: boolean
+        description: Whether this script belongs to the current MVP support set.
+
+principles:
+  - source is a repository asset path, not the plugin runtime execution path.
+  - script_id must stay stable even if file names or packaged paths change.
+  - Helpers are not listed unless they are direct executable entries.
+  - default_packaged entries must be represented in script-runtime-map.

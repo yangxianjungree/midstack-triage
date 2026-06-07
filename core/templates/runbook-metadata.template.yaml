@@ -1,0 +1,17 @@
+id: <middleware>-<component>-<scenario>
+title: <Runbook Title>
+middleware: <middleware>
+component: <component>
+scenario: <scenario>
+summary: <one sentence summary>
+risk_level: read-only
+tags:
+  - <tag>
+required_tools:
+  - <tool>
+applicable_env:
+  - kubernetes
+verification_steps:
+  - <how to verify the diagnosis result>
+rollback_or_safety_notes:
+  - <safety note or rollback boundary>

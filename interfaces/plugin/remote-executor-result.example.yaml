@@ -1,0 +1,46 @@
+executor_id: remote-executor-20260607-224500-a1b2
+incident_id: mongodb-20260607-224500-a1b2
+script_id: mongodb.collect.pods.state
+plugin_name: midstack-triage
+status: success
+selected_ip: "192.0.2.10"
+started_at: "2026-06-07T22:45:00+08:00"
+finished_at: "2026-06-07T22:45:08+08:00"
+
+capability_checks:
+  - name: ssh
+    status: success
+    detail: ssh echo ok succeeded
+  - name: kubectl
+    status: success
+    detail: kubectl version --client succeeded
+  - name: kubectl_exec
+    status: success
+    detail: kubectl exec smoke test succeeded
+  - name: pod_tool.mongosh
+    status: partial
+    detail: not required by this script
+
+remote_paths:
+  plugin_root: /tmp/midstack-triage
+  script_root: /tmp/midstack-triage/assets/scripts
+  run_root: /tmp/midstack-triage/runs/mongodb-20260607-224500-a1b2/mongodb.collect.pods.state
+  script_path: /tmp/midstack-triage/assets/scripts/mongodb/collect-pods-state.sh
+  context_file: /tmp/midstack-triage/runs/mongodb-20260607-224500-a1b2/mongodb.collect.pods.state/context.yaml
+  output_file: /tmp/midstack-triage/runs/mongodb-20260607-224500-a1b2/mongodb.collect.pods.state/output.yaml
+  artifact_dir: /tmp/midstack-triage/runs/mongodb-20260607-224500-a1b2/mongodb.collect.pods.state/artifacts
+
+retrieved_files:
+  output_file: collection/mongodb.collect.pods.state/output.yaml
+  artifact_dir: collection/mongodb.collect.pods.state/artifacts
+
+process:
+  exit_code: 0
+  stdout_tail: ""
+  stderr_tail: ""
+
+error:
+  code: ""
+  message: ""
+
+warnings: []

@@ -1,0 +1,29 @@
+plugin_name: midstack-triage
+command: analyse
+incident_id: mongodb-20260607-224500-a1b2
+middleware: mongodb
+status: completed
+summary: MongoDB analysis completed with enough evidence for an initial conclusion.
+user_message: Analysis completed. See the generated incident record for evidence, signals and conclusion.
+
+record_refs:
+  - name: structured_record
+    path: incidents/mongodb-20260607-224500-a1b2/structured_record.yaml
+    description: Structured MongoDB topology, Kubernetes objects and collected details.
+  - name: signal_bundle
+    path: incidents/mongodb-20260607-224500-a1b2/signal_bundle.yaml
+    description: Governed abnormal signals and object-signal links.
+  - name: collection_report
+    path: incidents/mongodb-20260607-224500-a1b2/collection_report.yaml
+    description: Collection actions, successful items, failed items and evidence gaps.
+  - name: analysis
+    path: incidents/mongodb-20260607-224500-a1b2/analysis.yaml
+    description: Hypotheses, validation results, conclusion and knowledge candidates.
+
+next_actions:
+  - Review conclusion_summary in analysis.yaml.
+  - Confirm any high-risk remediation step before execution.
+
+blocking_items: []
+warnings: []
+generated_at: "2026-06-07T22:55:00+08:00"

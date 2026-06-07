@@ -1,0 +1,22 @@
+summary:
+  middleware: mongodb
+  topology_type: sharded_cluster
+  affected_component: replica-set
+details:
+  replica_members:
+    - replica_set_id: shard-01-rs
+      source_pod_ref: shard-01-2
+      self_member:
+        state_str: RECOVERING
+        health: 1
+      members:
+        - name: shard-01-0
+          state_str: PRIMARY
+          health: 1
+        - name: shard-01-1
+          state_str: SECONDARY
+          health: 1
+        - name: shard-01-2
+          state_str: RECOVERING
+          health: 1
+generated_at: "2026-06-07T00:00:00+08:00"

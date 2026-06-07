@@ -1,0 +1,127 @@
+schema_id: midstack.script_context.v1
+kind: script_context
+description: Minimum context-file contract for phase-3 collection and normalization scripts.
+
+required:
+  - incident_id
+  - middleware
+  - script_id
+  - namespace
+  - cluster_id
+  - artifact_root
+
+fields:
+  incident_id:
+    type: string
+    description: Stable incident identifier for one triage session.
+  middleware:
+    type: string
+    description: Middleware product name, for example mongodb.
+  script_id:
+    type: string
+    description: Stable script identifier in the form <middleware>.<phase>.<target>.<action>.
+  namespace:
+    type: string
+    description: Kubernetes namespace used by the current script.
+  cluster_id:
+    type: string
+    description: Human or runtime assigned middleware cluster identifier.
+  artifact_root:
+    type: string
+    description: Logical root path for collected artifacts.
+
+mongodb_shared_fields:
+  deployment_architecture:
+    type: string
+    examples:
+      - bitnami
+      - operator_crd
+  topology_type:
+    type: string
+    examples:
+      - sharded_cluster
+      - replica_set
+  access:
+    type: object
+    description: Remote entry information supplied by plugin runtime. Sensitive values must not be written to outputs.
+    fields:
+      primary_ip:
+        type: string
+      candidate_ips:
+        type: list[string]
+      username:
+        type: string
+      password:
+        type: string
+      port:
+        type: integer
+  targets:
+    type: object
+    fields:
+      namespace:
+        type: string
+      statefulset_refs:
+        type: list[string]
+      service_refs:
+        type: list[string]
+      pod_refs:
+        type: list[string]
+      node_refs:
+        type: list[string]
+      mongos_pod_ref:
+        type: string
+  capabilities:
+    type: object
+    fields:
+      kubectl_available:
+        type: boolean
+      kubectl_exec_available:
+        type: boolean
+      mongosh_in_pod_available:
+        type: boolean
+
+script_specific_fields:
+  mongodb.collect.pods.state:
+    pod_query.mode:
+      type: string
+      enum:
+        - by_statefulset
+        - by_pod_refs
+        - by_namespace_scan
+  mongodb.collect.statefulsets.yaml:
+    statefulset_query.include_yaml:
+      type: boolean
+  mongodb.collect.services.yaml:
+    service_query.include_nodeport:
+      type: boolean
+  mongodb.collect.nodes.state:
+    node_query.resolve_from_pods:
+      type: boolean
+  mongodb.collect.mongos.get_shard_map:
+    mongos_query.shell:
+      type: string
+    mongos_query.database:
+      type: string
+    mongos_query.command:
+      type: string
+    mongos_query.username:
+      type: string
+    mongos_query.password:
+      type: string
+      sensitive: true
+    mongos_query.password_env:
+      type: string
+    mongos_query.password_file_env:
+      type: string
+    mongos_query.auth_database:
+      type: string
+    mongos_query.secret_ref:
+      type: object
+      fields:
+        namespace:
+          type: string
+        name:
+          type: string
+        key:
+          type: string
+      sensitive: true

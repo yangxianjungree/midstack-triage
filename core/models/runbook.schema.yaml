@@ -1,0 +1,52 @@
+schema_id: midstack.runbook_metadata.v1
+kind: runbook_metadata
+description: Metadata contract for a human-facing troubleshooting runbook.
+
+required:
+  - id
+  - title
+  - middleware
+  - component
+  - scenario
+  - summary
+  - risk_level
+  - tags
+  - required_tools
+  - applicable_env
+  - verification_steps
+  - rollback_or_safety_notes
+
+fields:
+  id:
+    type: string
+  title:
+    type: string
+  middleware:
+    type: string
+  component:
+    type: string
+  scenario:
+    type: string
+  summary:
+    type: string
+  risk_level:
+    type: string
+    enum:
+      - read-only
+      - low-risk
+      - high-risk
+  tags:
+    type: list[string]
+  required_tools:
+    type: list[string]
+  applicable_env:
+    type: list[string]
+  verification_steps:
+    type: list[string]
+  rollback_or_safety_notes:
+    type: list[string]
+
+principles:
+  - Runbooks are stored physically by component and retrieved logically by scenario.
+  - One runbook has one primary scenario.
+  - Related symptoms should be expressed as tags rather than duplicated runbooks.

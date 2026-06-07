@@ -1,0 +1,17 @@
+id: mongodb-check-shard-distribution
+title: Check MongoDB Shard Distribution
+middleware: mongodb
+component: shard
+scenario: data-hotspot
+risk_level: read-only
+tags:
+  - shard
+  - hotspot
+  - distribution
+required_tools:
+  - mongosh
+  - kubectl
+expected_signal:
+  - shard map identifies shard to replica set mapping
+  - rs.status and Pod state identify whether one shard or member is abnormal
+  - resource signals can distinguish hotspot from cluster-wide pressure

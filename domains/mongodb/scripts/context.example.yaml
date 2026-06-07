@@ -1,0 +1,51 @@
+incident_id: mongodb-20260607-223500-a1b2
+middleware: mongodb
+script_id: mongodb.collect.mongos.get_shard_map
+namespace: mongo
+cluster_id: mongo-prod-sharded-01
+artifact_root: incidents/mongodb-20260607-223500-a1b2/artifacts
+
+deployment_architecture: bitnami
+topology_type: sharded_cluster
+
+access:
+  primary_ip: 10.20.30.40
+  candidate_ips:
+    - 10.20.30.40
+    - 10.20.30.41
+  username: root
+  password: example-password
+  port: 22
+
+targets:
+  namespace: mongo
+  statefulset_refs:
+    - mongo-mongos
+    - mongo-configsvr
+    - mongo-shard1-data
+    - mongo-shard2-data
+    - mongo-shard3-data
+  service_refs:
+    - mongo-shared-svc
+  pod_refs:
+    - mongo-mongos-0
+    - mongo-mongos-1
+  node_refs:
+    - worker-01
+    - worker-02
+    - worker-03
+  mongos_pod_ref: mongo-mongos-0
+
+capabilities:
+  kubectl_available: true
+  kubectl_exec_available: true
+  mongosh_in_pod_available: true
+
+mongos_query:
+  shell: mongosh
+  database: admin
+  command: getShardMap
+  secret_ref:
+    namespace: mongo
+    name: mongodb-credentials
+    key: mongodb-root-password

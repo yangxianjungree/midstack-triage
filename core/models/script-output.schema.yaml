@@ -1,0 +1,65 @@
+schema_id: midstack.script_output.v1
+kind: script_output
+description: Minimum output-file contract for phase-3 collection and normalization scripts.
+
+required:
+  - script_id
+  - status
+  - summary
+  - started_at
+  - finished_at
+  - artifacts
+  - structured_record_patch
+  - signal_bundle_patch
+  - collection_report_patch
+  - warnings
+  - evidence_gaps
+
+fields:
+  script_id:
+    type: string
+    description: Stable script identifier in the form <middleware>.<phase>.<target>.<action>.
+  status:
+    type: string
+    enum:
+      - success
+      - partial
+      - blocked
+  summary:
+    type: string
+    description: One sentence summary of what was collected and what is missing.
+  started_at:
+    type: string
+    format: datetime
+  finished_at:
+    type: string
+    format: datetime
+  artifacts:
+    type: list[object]
+    description: Relative references to files under artifact-dir.
+    item_fields:
+      path:
+        type: string
+      kind:
+        type: string
+      description:
+        type: string
+  structured_record_patch:
+    type: object
+    description: Incremental patch for structured incident details.
+  signal_bundle_patch:
+    type: object
+    description: Incremental patch for governed signals.
+  collection_report_patch:
+    type: object
+    description: Incremental patch for collection actions, successes, failures and evidence gaps.
+  warnings:
+    type: list[string]
+  evidence_gaps:
+    type: list[object]
+
+principles:
+  - Machine-readable output must be written to output-file, not stdout.
+  - Artifact paths must be relative to artifact-dir.
+  - Passwords, tokens and remote credentials must not be written to output or artifacts.
+  - A script that writes a valid output-file exits 0 even when status is partial or blocked.

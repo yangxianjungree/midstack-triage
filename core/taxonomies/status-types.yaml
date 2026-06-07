@@ -1,0 +1,19 @@
+taxonomy_id: midstack.status_types.v1
+script_output_status:
+  - success
+  - partial
+  - blocked
+remote_executor_status:
+  - success
+  - partial
+  - blocked
+  - failed
+adapter_output_status:
+  - ready
+  - blocked
+  - completed
+  - failed
+review_score:
+  - high
+  - medium
+  - low

@@ -1,0 +1,22 @@
+id: data-hotspot
+title: Data Hotspot
+summary: Uneven data, request, shard, partition, or key distribution overloads part of the middleware topology.
+tags:
+  - hotspot
+  - distribution
+  - shard
+  - imbalance
+symptoms:
+  - only one shard, partition, node, or key range shows abnormal load
+  - latency or backlog is concentrated on a subset of topology
+  - data or request distribution is visibly uneven
+  - balancing or routing does not match expected distribution
+applicable_middleware:
+  - mongodb
+diagnostic_goals:
+  - identify whether load, data, or request distribution is uneven
+  - locate the affected shard, member, key range, namespace, or collection
+  - separate hotspot from general resource exhaustion or cluster-wide latency
+route_hints:
+  - middleware=mongodb component=shard
+  - check shard map, collection distribution, per-shard symptoms, and resource correlation

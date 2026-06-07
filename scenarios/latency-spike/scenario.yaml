@@ -1,0 +1,22 @@
+id: latency-spike
+title: Latency Spike
+summary: Sudden or sustained latency increase affects middleware requests, queries, routing, or replication.
+tags:
+  - latency
+  - performance
+  - slow-query
+  - resource
+symptoms:
+  - business reports slow requests or timeout after latency increase
+  - middleware slow logs increase
+  - routing, query, or replication latency becomes abnormal
+  - latency correlates with resource pressure or topology changes
+applicable_middleware:
+  - mongodb
+diagnostic_goals:
+  - identify whether latency comes from query workload, routing, resource pressure, replication, or storage
+  - correlate latency spike with timeline, topology, logs, and affected components
+  - separate latency symptom from connection failure or full outage
+route_hints:
+  - middleware=mongodb component=mongos
+  - check slow logs, Pod restarts, resource pressure, shard distribution, and replica member state

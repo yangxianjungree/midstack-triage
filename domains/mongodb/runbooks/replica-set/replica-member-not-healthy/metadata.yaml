@@ -1,0 +1,25 @@
+id: mongodb-replica-member-not-healthy
+title: MongoDB Replica Set Member Not Healthy
+middleware: mongodb
+component: replica-set
+scenario: replica-inconsistency
+summary: Diagnose a replica set member that is unhealthy, lagging, or in an unexpected state.
+risk_level: read-only
+tags:
+  - replication
+  - topology
+  - lag
+  - member-health
+required_tools:
+  - mongosh
+  - kubectl
+  - bash
+applicable_env:
+  - kubernetes
+  - virtual-machine
+verification_steps:
+  - identify the unhealthy member and current role distribution
+  - confirm whether replication lag exists and whether it is increasing
+  - classify the issue into topology, network, resource, or replication backlog
+rollback_or_safety_notes:
+  - do not run stepdown, reconfig, resync, or restart during the diagnosis phase without explicit approval

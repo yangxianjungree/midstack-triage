@@ -1,0 +1,24 @@
+id: mongodb-resource-exhaustion
+title: MongoDB Resource Exhaustion
+middleware: mongodb
+component: storage
+scenario: resource-exhaustion
+summary: Diagnose MongoDB failures caused by Pod, container, PVC, Node, or storage resource pressure.
+risk_level: read-only
+tags:
+  - resource
+  - storage
+  - pod-restart
+  - node-pressure
+required_tools:
+  - kubectl
+  - bash
+applicable_env:
+  - kubernetes
+verification_steps:
+  - identify affected MongoDB component and Pod
+  - confirm whether Pod restart, OOM, disk pressure, or Node pressure exists
+  - correlate resource pressure with MongoDB logs and replica member state
+  - classify the issue into memory, disk, IO, file descriptor, Node, or scheduling pressure
+rollback_or_safety_notes:
+  - do not delete data, restart Pods, resize volumes, or change resource limits during diagnosis without explicit approval

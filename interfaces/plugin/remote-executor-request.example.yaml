@@ -1,0 +1,46 @@
+executor_id: remote-executor-20260607-224500-a1b2
+incident_id: mongodb-20260607-224500-a1b2
+script_id: mongodb.collect.pods.state
+middleware: mongodb
+plugin_name: midstack-triage
+
+access:
+  candidate_ips:
+    - "192.0.2.10"
+    - "192.0.2.11"
+  primary_ip: "192.0.2.10"
+  username: root
+  password: "<password>"
+  port: 22
+
+script:
+  runtime_path: assets/scripts/mongodb/collect-pods-state.sh
+  runtime: shell
+  readonly: true
+  arguments:
+    context_file: context.yaml
+    output_file: output.yaml
+    artifact_dir: artifacts
+
+remote_workspace:
+  plugin_root: /tmp/midstack-triage
+  script_root: /tmp/midstack-triage/assets/scripts
+  run_root: /tmp/midstack-triage/runs/mongodb-20260607-224500-a1b2/mongodb.collect.pods.state
+  script_path: /tmp/midstack-triage/assets/scripts/mongodb/collect-pods-state.sh
+  context_file: /tmp/midstack-triage/runs/mongodb-20260607-224500-a1b2/mongodb.collect.pods.state/context.yaml
+  output_file: /tmp/midstack-triage/runs/mongodb-20260607-224500-a1b2/mongodb.collect.pods.state/output.yaml
+  artifact_dir: /tmp/midstack-triage/runs/mongodb-20260607-224500-a1b2/mongodb.collect.pods.state/artifacts
+
+required_capabilities:
+  ssh: true
+  kubectl: true
+  kubectl_exec: true
+  pod_tools:
+    - name: mongosh
+      required: false
+      execution: pod_internal
+
+execution:
+  timeout_seconds: 120
+  retrieve_output_file: true
+  retrieve_artifact_dir: true

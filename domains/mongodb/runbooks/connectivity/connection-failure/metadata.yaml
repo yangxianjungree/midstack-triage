@@ -1,0 +1,25 @@
+id: mongodb-connection-failure
+title: MongoDB Connection Failure
+middleware: mongodb
+component: connectivity
+scenario: connection-failure
+summary: Diagnose MongoDB connection failures across Kubernetes Service, Pod readiness, mongos reachability, authentication, and in-Pod service checks.
+risk_level: read-only
+tags:
+  - connectivity
+  - mongos
+  - service
+  - authentication
+required_tools:
+  - kubectl
+  - mongosh
+  - bash
+applicable_env:
+  - kubernetes
+verification_steps:
+  - identify the failing connection path and target component
+  - confirm whether Kubernetes Service and endpoints point to ready Pods
+  - confirm whether mongos or mongod is reachable from inside the target Pod
+  - classify the issue into service routing, Pod readiness, network, authentication, or middleware process state
+rollback_or_safety_notes:
+  - do not restart Pods, change Services, rotate credentials, or modify network policy during diagnosis without explicit approval

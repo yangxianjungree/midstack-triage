@@ -1,0 +1,43 @@
+schema_id: midstack.command_metadata.v1
+kind: command_metadata
+description: Metadata contract for a reusable diagnostic command asset.
+
+required:
+  - id
+  - title
+  - middleware
+  - component
+  - scenario
+  - risk_level
+  - tags
+  - required_tools
+  - expected_signal
+
+fields:
+  id:
+    type: string
+  title:
+    type: string
+  middleware:
+    type: string
+  component:
+    type: string
+  scenario:
+    type: string
+  risk_level:
+    type: string
+    enum:
+      - read-only
+      - low-risk
+      - high-risk
+  tags:
+    type: list[string]
+  required_tools:
+    type: list[string]
+  expected_signal:
+    type: list[string]
+
+principles:
+  - A command asset describes one clear diagnostic purpose.
+  - Read-only and high-risk commands must not be mixed in one asset.
+  - Commands are optimized for quick reuse by humans and scripts.

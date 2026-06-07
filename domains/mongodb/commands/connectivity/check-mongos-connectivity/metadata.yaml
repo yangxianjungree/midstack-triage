@@ -1,0 +1,18 @@
+id: mongodb-check-mongos-connectivity
+title: Check MongoDB mongos Connectivity
+middleware: mongodb
+component: connectivity
+scenario: connection-failure
+risk_level: read-only
+tags:
+  - connectivity
+  - mongos
+  - service
+  - health-check
+required_tools:
+  - kubectl
+  - mongosh
+expected_signal:
+  - Kubernetes Service and endpoints can be compared with target Pods
+  - mongos Pod readiness and restart status can be confirmed
+  - in-Pod mongosh ping can separate service routing issues from MongoDB process or authentication issues

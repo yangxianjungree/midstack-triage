@@ -1,0 +1,6 @@
+incident_id: fixture-mongodb-replica-inconsistency
+middleware: mongodb
+scenario: replica-inconsistency
+customer_clue: Business reports stale reads and one MongoDB replica member appears unhealthy.
+input_source: fixture
+received_at: "2026-06-07T00:00:00+08:00"

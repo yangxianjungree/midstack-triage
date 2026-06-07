@@ -1,0 +1,19 @@
+case_id: baseline-sharded-cluster
+middleware: mongodb
+score:
+  evidence_completeness:
+    level: high
+    reason: Baseline fixture has complete MVP collection summary.
+  hypothesis_coverage:
+    level: medium
+    reason: Baseline case only requires no-incident hypothesis.
+  validation_depth:
+    level: medium
+    reason: Remote smoke validates collection, but analyse replay runner is not implemented yet.
+  conclusion_confidence:
+    level: high
+    reason: Baseline conclusion is intentionally simple.
+  knowledge_reusability:
+    level: medium
+    reason: Useful as regression baseline, not as a production runbook source.
+generated_at: "2026-06-07T00:00:00+08:00"

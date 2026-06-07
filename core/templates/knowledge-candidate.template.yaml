@@ -1,0 +1,19 @@
+candidate_id: <candidate_id>
+candidate_type: <runbook|command|script|skill|taxonomy|template>
+title: <candidate title>
+middleware: <middleware>
+component: <component>
+scenario: <scenario>
+source_incident_id: <incident_id>
+reason: <why this candidate should be created or updated>
+evidence_refs:
+  - <path or evidence id>
+suggested_path: <path>
+draft:
+  summary: <draft summary>
+  key_steps:
+    - <step>
+safety_notes:
+  - <safety note>
+status: proposed
+generated_at: <timestamp>

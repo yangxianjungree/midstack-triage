@@ -1,0 +1,22 @@
+taxonomy_id: midstack.tag_guidelines.v1
+principles:
+  - Tags should describe symptoms, components, signals, or diagnostic technique.
+  - Tags should not duplicate middleware, component, scenario, or risk_level fields.
+  - Prefer lowercase kebab-case tags.
+examples:
+  symptom:
+    - lag
+    - connection-refused
+    - pod-restart
+  component:
+    - replication
+    - topology
+    - storage
+  signal:
+    - member-health
+    - election
+    - node-pressure
+  technique:
+    - log-analysis
+    - metrics-check
+    - yaml-inspection

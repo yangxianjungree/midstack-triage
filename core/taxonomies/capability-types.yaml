@@ -1,0 +1,23 @@
+taxonomy_id: midstack.capability_types.v1
+values:
+  - id: ssh
+    layer: remote-access
+    description: SSH connection to the selected remote entry host.
+  - id: kubectl
+    layer: kubernetes-control
+    description: kubectl command is available in the remote execution environment.
+  - id: kubectl_exec
+    layer: kubernetes-control
+    description: kubectl exec can run a basic command inside target Pods.
+  - id: pod_tool
+    layer: pod-internal
+    description: Middleware client tool is available inside target Pods.
+  - id: log_system
+    layer: observability
+    description: External log system such as Loki or Elasticsearch is available.
+  - id: metrics_system
+    layer: observability
+    description: Metrics system such as Prometheus is available.
+  - id: node_system_logs
+    layer: node
+    description: Node-level system logs can be collected when node-level issues are suspected.

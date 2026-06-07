@@ -1,0 +1,16 @@
+id: mongodb-check-rs-status
+title: Check MongoDB Replica Set Status
+middleware: mongodb
+component: replica-set
+scenario: replica-inconsistency
+risk_level: read-only
+tags:
+  - replication
+  - topology
+  - health-check
+required_tools:
+  - mongosh
+expected_signal:
+  - current PRIMARY and SECONDARY members are visible
+  - member stateStr and optimeDate can be compared
+  - unhealthy members can be identified quickly

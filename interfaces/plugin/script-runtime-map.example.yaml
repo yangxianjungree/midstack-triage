@@ -1,0 +1,53 @@
+plugin: claude-code
+version: 0.1.0
+generated_at: "2026-06-07T22:40:00+08:00"
+scripts:
+  - script_id: mongodb.collect.pods.state
+    runtime_path: assets/scripts/mongodb/collect-pods-state.sh
+    runtime: shell
+    readonly: true
+
+  - script_id: mongodb.collect.statefulsets.yaml
+    runtime_path: assets/scripts/mongodb/collect-statefulsets-yaml.sh
+    runtime: shell
+    readonly: true
+
+  - script_id: mongodb.collect.services.yaml
+    runtime_path: assets/scripts/mongodb/collect-services-yaml.sh
+    runtime: shell
+    readonly: true
+
+  - script_id: mongodb.collect.nodes.state
+    runtime_path: assets/scripts/mongodb/collect-nodes-state.sh
+    runtime: shell
+    readonly: true
+
+  - script_id: mongodb.collect.mongos.get_shard_map
+    runtime_path: assets/scripts/mongodb/collect-mongos-get-shard-map.sh
+    runtime: shell
+    readonly: true
+
+  - script_id: mongodb.collect.replicaset.rs_status
+    runtime_path: assets/scripts/mongodb/collect-replicaset-rs-status.sh
+    runtime: shell
+    readonly: true
+
+  - script_id: mongodb.collect.logs.current
+    runtime_path: assets/scripts/mongodb/collect-logs-current.sh
+    runtime: shell
+    readonly: true
+
+  - script_id: mongodb.collect.logs.previous
+    runtime_path: assets/scripts/mongodb/collect-logs-previous.sh
+    runtime: shell
+    readonly: true
+
+  - script_id: mongodb.normalize.logs.highlights
+    runtime_path: assets/scripts/mongodb/normalize-logs-highlights.py
+    runtime: python
+    readonly: true
+
+  - script_id: mongodb.normalize.signals.bundle
+    runtime_path: assets/scripts/mongodb/normalize-signals-bundle.py
+    runtime: python
+    readonly: true

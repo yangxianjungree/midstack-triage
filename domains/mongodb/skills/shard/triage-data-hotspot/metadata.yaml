@@ -1,0 +1,20 @@
+id: mongodb-triage-data-hotspot
+title: Triage MongoDB Data Hotspot
+middleware: mongodb
+component: shard
+primary_scenario: data-hotspot
+inputs:
+  - customer clue or affected business scope
+  - namespace or cluster identifier
+  - affected collection, shard, tenant, or key range if available
+outputs:
+  - suspected hotspot object
+  - likely hotspot category
+  - evidence and evidence gaps
+  - next recommended runbook step
+required_assets:
+  - domains/mongodb/commands/shard/check-shard-distribution
+  - domains/mongodb/runbooks/shard/data-hotspot
+safety_constraints:
+  - default to read-only commands
+  - do not move chunks, reshard, change shard keys, modify balancer settings, or restart shard members without explicit confirmation

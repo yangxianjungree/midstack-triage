@@ -1,0 +1,47 @@
+schema_id: midstack.script_runtime_map.v1
+kind: script_runtime_map
+description: Plugin runtime mapping from stable script_id to packaged script path.
+
+required:
+  - plugin
+  - version
+  - generated_at
+  - scripts
+
+script_required:
+  - script_id
+  - runtime_path
+  - runtime
+  - readonly
+
+fields:
+  plugin:
+    type: string
+    description: Adapter or plugin package name.
+  version:
+    type: string
+    description: Runtime map version.
+  generated_at:
+    type: string
+    format: datetime
+  scripts:
+    type: list[object]
+    description: Packaged executable script entries.
+    item_fields:
+      script_id:
+        type: string
+      runtime_path:
+        type: string
+        description: Plugin-package relative path, for example assets/scripts/mongodb/collect-pods-state.sh.
+      runtime:
+        type: string
+        enum:
+          - shell
+          - python
+      readonly:
+        type: boolean
+
+principles:
+  - runtime_path must be plugin-package relative, not an absolute path.
+  - Runtime map entries must align with default_packaged scripts in the domain manifest.
+  - Runtime map must not point at the source repository path.

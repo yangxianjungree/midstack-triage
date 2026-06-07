@@ -1,0 +1,14 @@
+id: <middleware>-<skill-purpose>
+title: <Skill Title>
+middleware: <middleware>
+component: <component>
+primary_scenario: <scenario>
+inputs:
+  - <required input>
+outputs:
+  - <expected output>
+required_assets:
+  - domains/<middleware>/commands/<component>/<command-id>
+  - domains/<middleware>/runbooks/<component>/<runbook-id>
+safety_constraints:
+  - <safety boundary>

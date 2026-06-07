@@ -1,0 +1,20 @@
+id: mongodb-triage-latency-spike
+title: Triage MongoDB Latency Spike
+middleware: mongodb
+component: mongos
+primary_scenario: latency-spike
+inputs:
+  - customer clue with latency time window
+  - namespace or cluster identifier
+  - affected entrypoint, query, collection, or shard if available
+outputs:
+  - latency time window
+  - affected component or shard
+  - likely latency category
+  - evidence and evidence gaps
+required_assets:
+  - domains/mongodb/commands/mongos/check-latency-signals
+  - domains/mongodb/runbooks/mongos/latency-spike
+safety_constraints:
+  - default to read-only commands
+  - do not kill operations, restart Pods, change indexes, or modify balancer settings without explicit confirmation

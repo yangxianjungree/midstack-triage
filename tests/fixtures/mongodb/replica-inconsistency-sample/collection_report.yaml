@@ -1,0 +1,11 @@
+collection_actions:
+  - action_id: mongodb-collect-replicaset-rs-status
+    status: success
+successful_items:
+  - replica_members
+failed_items: []
+blank_items: []
+evidence_gaps:
+  - log evidence around the exact state transition is not available in this fixture
+generated_at: "2026-06-07T00:00:00+08:00"
+updated_at: "2026-06-07T00:00:00+08:00"

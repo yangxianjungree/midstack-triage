@@ -1,0 +1,17 @@
+id: mongodb-check-pod-resource-pressure
+title: Check MongoDB Pod Resource Pressure
+middleware: mongodb
+component: kubernetes-runtime
+scenario: resource-exhaustion
+risk_level: read-only
+tags:
+  - resource
+  - pod-restart
+  - node-pressure
+  - yaml-inspection
+required_tools:
+  - kubectl
+expected_signal:
+  - Pod restart count, lastState, OOMKilled, and probe failures can be identified
+  - Node pressure and scheduling events can be correlated with affected MongoDB Pods
+  - resource requests and limits can be compared with symptoms

@@ -1,0 +1,236 @@
+summary:
+  cluster_id: "pulsar-prod-01"
+  namespace: "pulsar"
+  deployment_architecture: "operator + crd"
+  topology_summary: "3 brokers + 3 bookies + 3 zookeeper nodes"
+  key_object_status: "all brokers running; 1 bookie pod restarting; pvc pressure suspected on bookie-1; node worker-07 under disk pressure"
+  key_component_status: "brokers healthy; bookie-1 unhealthy; zookeeper healthy; topic backlog increased on affected tenants"
+  key_findings:
+    - "bookie-1 restarted 3 times in the last 20 minutes"
+    - "worker-07 reported DiskPressure during the same window"
+    - "broker logs showed ledger write timeout and topic backlog increased"
+  current_scope: "single bookie with cluster-wide write and backlog side effects"
+  collected_at: "2026-06-07T18:05:00+08:00"
+
+details:
+  cluster_info:
+    cluster_id: "pulsar-prod-01"
+    namespace: "pulsar"
+    middleware: "pulsar"
+    deployment_architecture: "operator + crd"
+    architecture_evidence:
+      - "pulsar operator crds detected in cluster"
+      - "broker, bookie, zookeeper mapped as dedicated statefulsets"
+    topology_type: "pulsar_cluster"
+    entry_ips:
+      - "10.30.40.50"
+    entry_port: 22
+    entry_role: "jumpserver"
+    identification_source: "customer provided namespace and environment scan confirmed single target cluster"
+    collected_at: "2026-06-07T17:32:00+08:00"
+
+  components:
+    - component_type: "broker"
+      component_id: "broker-group"
+      parent_component: null
+      topology_role: "request-routing"
+      statefulset_refs:
+        - "pulsar-broker"
+      service_refs:
+        - "pulsar-broker"
+      member_count: 3
+      status_hint: "healthy"
+      collected_at: "2026-06-07T17:36:00+08:00"
+    - component_type: "bookie"
+      component_id: "bookie-group"
+      parent_component: null
+      topology_role: "ledger-storage"
+      statefulset_refs:
+        - "pulsar-bookie"
+      service_refs:
+        - "pulsar-bookie"
+      member_count: 3
+      status_hint: "partial"
+      collected_at: "2026-06-07T17:37:00+08:00"
+    - component_type: "zookeeper"
+      component_id: "zookeeper-group"
+      parent_component: null
+      topology_role: "metadata"
+      statefulset_refs:
+        - "pulsar-zookeeper"
+      service_refs:
+        - "pulsar-zookeeper"
+      member_count: 3
+      status_hint: "healthy"
+      collected_at: "2026-06-07T17:38:00+08:00"
+
+  statefulsets:
+    - name: "pulsar-bookie"
+      namespace: "pulsar"
+      component_ref: "bookie-group"
+      replicas_desired: 3
+      replicas_ready: 2
+      selector:
+        app: "bookie"
+      service_name: "pulsar-bookie"
+      pod_refs:
+        - "pulsar-bookie-0"
+        - "pulsar-bookie-1"
+        - "pulsar-bookie-2"
+      yaml:
+        kind: "StatefulSet"
+        spec:
+          volumeClaimTemplates:
+            - metadata:
+                name: "journal"
+            - metadata:
+                name: "ledgers"
+      status_hint: "partial"
+      collected_at: "2026-06-07T17:40:00+08:00"
+
+  pods:
+    - name: "pulsar-bookie-1"
+      namespace: "pulsar"
+      component_ref: "bookie-group"
+      statefulset_ref: "pulsar-bookie"
+      node_ref: "worker-07"
+      pod_ip: "172.17.22.41"
+      phase: "Running"
+      ready: false
+      created_at: "2026-06-06T09:30:00+08:00"
+      restart_count: 3
+      last_restart_at: "2026-06-07T17:48:00+08:00"
+      container_status: "restarting"
+      yaml:
+        metadata:
+          labels:
+            component: "bookie"
+      log_refs:
+        - "log-pulsar-bookie-1-before-restart"
+        - "log-pulsar-bookie-1-after-restart"
+      status_hint: "unhealthy"
+      collected_at: "2026-06-07T17:49:00+08:00"
+    - name: "pulsar-broker-0"
+      namespace: "pulsar"
+      component_ref: "broker-group"
+      statefulset_ref: "pulsar-broker"
+      node_ref: "worker-03"
+      pod_ip: "172.17.22.15"
+      phase: "Running"
+      ready: true
+      created_at: "2026-06-06T09:30:00+08:00"
+      restart_count: 0
+      last_restart_at: null
+      container_status: "running"
+      yaml:
+        metadata:
+          labels:
+            component: "broker"
+      log_refs:
+        - "log-pulsar-broker-0-recent"
+      status_hint: "healthy"
+      collected_at: "2026-06-07T17:50:00+08:00"
+
+  services:
+    - name: "pulsar-bookie"
+      namespace: "pulsar"
+      component_ref: "bookie-group"
+      service_type: "ClusterIP"
+      cluster_ip: "10.96.44.21"
+      ports:
+        - name: "bookie"
+          port: 3181
+      node_ports: []
+      selector:
+        component: "bookie"
+      endpoint_refs:
+        - "pulsar-bookie-0"
+        - "pulsar-bookie-1"
+        - "pulsar-bookie-2"
+      status_hint: "partial"
+      collected_at: "2026-06-07T17:51:00+08:00"
+
+  nodes:
+    - name: "worker-07"
+      status: "Ready"
+      internal_ip: "192.168.20.17"
+      external_ip: null
+      labels:
+        kubernetes.io/hostname: "worker-07"
+        node-role.kubernetes.io/worker: ""
+      taints: []
+      pod_refs:
+        - "pulsar-bookie-1"
+      condition_summary:
+        - "Ready=True"
+        - "DiskPressure=True"
+      status_hint: "partial"
+      collected_at: "2026-06-07T17:52:00+08:00"
+
+  bookie_members:
+    - component_id: "bookie-group"
+      member_name: "pulsar-bookie-0"
+      pod_ref: "pulsar-bookie-0"
+      writable: true
+      health: "healthy"
+      disk_usage_percent: 68
+      journal_status: "ok"
+      ledger_status: "ok"
+      source_pod: "pulsar-bookie-0"
+      collection_status: "success"
+      collected_at: "2026-06-07T17:54:00+08:00"
+    - component_id: "bookie-group"
+      member_name: "pulsar-bookie-1"
+      pod_ref: "pulsar-bookie-1"
+      writable: false
+      health: "degraded"
+      disk_usage_percent: 96
+      journal_status: "slow"
+      ledger_status: "error"
+      source_pod: "pulsar-bookie-0"
+      collection_status: "partial"
+      collected_at: "2026-06-07T17:54:00+08:00"
+
+  raw_logs:
+    - log_id: "log-pulsar-bookie-1-before-restart"
+      pod_ref: "pulsar-bookie-1"
+      component_ref: "bookie-group"
+      log_type: "before_restart"
+      time_range:
+        from: "2026-06-07T17:42:00+08:00"
+        to: "2026-06-07T17:47:59+08:00"
+      source: "kubectl logs --previous"
+      content: |
+        ERROR org.apache.bookkeeper.bookie.BookieException: No space left on device
+        ERROR org.apache.bookkeeper.bookie.Journal: Failed to write entry to journal
+      collection_status: "success"
+      collected_at: "2026-06-07T17:55:00+08:00"
+    - log_id: "log-pulsar-broker-0-recent"
+      pod_ref: "pulsar-broker-0"
+      component_ref: "broker-group"
+      log_type: "recent"
+      time_range:
+        from: "2026-06-07T17:45:00+08:00"
+        to: "2026-06-07T17:55:00+08:00"
+      source: "kubectl logs"
+      content: |
+        WARN ManagedLedgerImpl - Write to bookie timed out
+        WARN PersistentTopic - Backlog growing for tenant-a/ns1/topic-orders
+      collection_status: "success"
+      collected_at: "2026-06-07T17:55:00+08:00"
+
+  processed_logs:
+    - processed_log_id: "plog-pulsar-bookie-1-disk"
+      raw_log_ref: "log-pulsar-bookie-1-before-restart"
+      pod_ref: "pulsar-bookie-1"
+      keywords:
+        - "no space left on device"
+        - "journal write failure"
+        - "bookie restart"
+      normalized_summary: "pulsar bookie-1 failed before restart due to disk space and journal write errors"
+      log_snippets:
+        - "No space left on device"
+        - "Failed to write entry to journal"
+      severity_hint: "high"
+      noise_reduction_method: "error-level lines only; duplicate lines removed"
+      processed_at: "2026-06-07T17:57:00+08:00"

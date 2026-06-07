@@ -1,0 +1,12 @@
+id: <middleware>-<command-purpose>
+title: <Command Title>
+middleware: <middleware>
+component: <component>
+scenario: <scenario>
+risk_level: read-only
+tags:
+  - <tag>
+required_tools:
+  - <tool>
+expected_signal:
+  - <signal this command can reveal>

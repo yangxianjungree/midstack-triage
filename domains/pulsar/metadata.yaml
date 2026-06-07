@@ -1,0 +1,18 @@
+id: pulsar
+title: Apache Pulsar
+summary: Pulsar production triage assets focused on broker, bookie, zookeeper, storage, and backlog diagnosis.
+components:
+  - broker
+  - bookie
+  - zookeeper
+  - proxy
+preferred_tools:
+  - kubectl
+  - bash
+  - pulsar-admin
+  - bookkeeper shell
+default_tags:
+  - message-queue
+  - pubsub
+  - backlog
+  - storage

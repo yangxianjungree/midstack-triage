@@ -15,9 +15,38 @@
 ```bash
 python3 tools/plugin/midstack-local.py start \
   --middleware mongodb \
-  --customer-clue "MongoDB connection timeout" \
+  --customer-clue "运维巡检发现一个 MongoDB 节点异常。" \
+  --environment-ip 192.168.154.251 \
+  --username root \
+  --password '<password>' \
+  --port 22 \
   --namespace psmdb-test
 ```
+
+`start` 会执行最小环境校验：
+
+- SSH `echo ok`
+- `kubectl version --client=true`
+- `kubectl get nodes`
+
+基于 `start` 生成的 incident 执行 analyse：
+
+```bash
+python3 tools/plugin/midstack-local.py analyse \
+  --incident-dir .local/incidents/<incident_id>
+```
+
+如果刚执行过 ready 的 `start`，也可以直接分析最近 incident：
+
+```bash
+python3 tools/plugin/midstack-local.py analyse
+```
+
+`analyse` 完成后会生成：
+
+- `analysis.yaml`：结构化分析结果
+- `report.md`：面向用户的 Markdown 排障报告
+- `adapter-output.yaml`：插件命令摘要输出
 
 基于 fixture 或 incident 执行 analyse：
 
@@ -57,6 +86,7 @@ python3 tools/plugin/midstack-local.py review \
 - 不实现正式 remote executor，只在本地原型中复用 remote smoke 工具
 - 可消费已完成的 remote smoke 结果目录
 - 可通过本地 remote smoke 工具调度真实只读采集
+- 可从 `/start` 生成的 incident 目录继续执行 `/analyse`
 - 不实现 vendor 插件协议
 - analyse 当前调用本地 MongoDB analyse runner
 - review 当前基于 `analysis.yaml` 做本地五维评分，不等同于正式人工反馈系统

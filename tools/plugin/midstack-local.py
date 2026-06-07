@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import json
 import shutil
 import subprocess
@@ -61,11 +62,124 @@ def adapter_output(command: str, incident_id: str, middleware: str, status: str,
     }
 
 
+def path_from_arg(value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else ROOT / path
+
+
+def current_incident_marker(output_root: Path) -> Path:
+    return output_root / ".current-incident"
+
+
+def write_current_incident(output_root: Path, incident_dir: Path) -> None:
+    marker = current_incident_marker(output_root)
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text(str(incident_dir) + "\n", encoding="utf-8")
+
+
+def read_current_incident(output_root: Path) -> Path:
+    marker = current_incident_marker(output_root)
+    if not marker.exists():
+        raise FileNotFoundError("current incident marker does not exist: %s" % marker)
+    value = marker.read_text(encoding="utf-8").strip()
+    if not value:
+        raise ValueError("current incident marker is empty: %s" % marker)
+    return resolve_path(value)
+
+
+def ssh_command(access: Dict[str, Any], remote_command: str) -> List[str]:
+    return [
+        "sshpass",
+        "-e",
+        "ssh",
+        "-o",
+        "StrictHostKeyChecking=no",
+        "-o",
+        "UserKnownHostsFile=/dev/null",
+        "-o",
+        "ConnectTimeout=8",
+        "-p",
+        str(access.get("port", 22)),
+        "%s@%s" % (access["username"], access["primary_ip"]),
+        "bash -lc %s" % json.dumps(remote_command),
+    ]
+
+
+def run_env_check(access: Dict[str, Any], remote_command: str) -> Dict[str, Any]:
+    if not shutil.which("sshpass"):
+        return {"status": "failed", "stdout": "", "stderr": "sshpass is not installed"}
+    env = os.environ.copy()
+    env["SSHPASS"] = str(access["password"])
+    proc = subprocess.run(
+        ssh_command(access, remote_command),
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        timeout=30,
+    )
+    return {
+        "status": "passed" if proc.returncode == 0 else "failed",
+        "stdout": proc.stdout.strip(),
+        "stderr": proc.stderr.strip(),
+        "exit_code": proc.returncode,
+    }
+
+
+def validate_remote_environment(access: Dict[str, Any]) -> Dict[str, Any]:
+    checks = [
+        {"check_id": "ssh", "command": "echo ok"},
+        {"check_id": "kubectl-client", "command": "kubectl version --client=true >/dev/null"},
+        {"check_id": "kubectl-nodes", "command": "kubectl get nodes -o name >/dev/null"},
+    ]
+    results = []
+    for item in checks:
+        result = run_env_check(access, item["command"])
+        result["check_id"] = item["check_id"]
+        results.append(result)
+        if result["status"] != "passed":
+            break
+    return {"status": "passed" if all(item["status"] == "passed" for item in results) else "failed", "checks": results}
+
+
 def command_start(args: argparse.Namespace) -> int:
     incident_id = args.incident_id or "%s-%s" % (args.middleware, datetime.now().strftime("%Y%m%d-%H%M%S"))
-    output_dir = ROOT / args.output_root / incident_id
-    status = "ready" if args.middleware and args.customer_clue else "blocked"
+    output_dir = path_from_arg(args.output_root) / incident_id
     created_at = now_iso()
+    env_ips = [item for item in (args.environment_ip or []) if item]
+    primary_ip = env_ips[0] if env_ips else ""
+    blocking_items = []
+    if not args.middleware:
+        blocking_items.append({"code": "missing_middleware", "message": "middleware is required", "required_user_action": "provide middleware, for example mongodb"})
+    if not args.customer_clue:
+        blocking_items.append({"code": "missing_customer_clue", "message": "customer clue is required", "required_user_action": "provide the incident clue or symptom"})
+    if not primary_ip:
+        blocking_items.append({"code": "missing_environment_ip", "message": "environment IP is required", "required_user_action": "provide at least one remote environment IP"})
+    if not args.username:
+        blocking_items.append({"code": "missing_username", "message": "remote username is required", "required_user_action": "provide remote username"})
+    if not args.password:
+        blocking_items.append({"code": "missing_password", "message": "remote password is required", "required_user_action": "provide remote password"})
+
+    remote_validation: Dict[str, Any] = {"status": "skipped", "checks": []}
+    access = {
+        "candidate_ips": env_ips,
+        "primary_ip": primary_ip,
+        "username": args.username,
+        "password": args.password,
+        "port": args.port,
+    }
+    if not blocking_items:
+        remote_validation = validate_remote_environment(access)
+        if remote_validation["status"] != "passed":
+            blocking_items.append(
+                {
+                    "code": "remote_environment_validation_failed",
+                    "message": "remote SSH or kubectl validation failed",
+                    "required_user_action": "fix remote access, install sshpass locally, or ensure kubectl can access the cluster on the jump host",
+                }
+            )
+
+    status = "ready" if not blocking_items else "blocked"
     write_yaml(
         output_dir / "meta.yaml",
         {
@@ -79,24 +193,49 @@ def command_start(args: argparse.Namespace) -> int:
             "namespace": args.namespace,
             "cluster_id": args.cluster_id,
             "owner": "local",
+            "remote_validation": remote_validation,
         },
     )
     write_yaml(
         output_dir / "input.yaml",
         {
             "middleware": args.middleware,
+            "incident_id": incident_id,
             "namespace": args.namespace,
             "cluster_id": args.cluster_id,
             "customer_clue": args.customer_clue,
             "input_source": "local-cli",
+            "environment_ips": env_ips,
+            "remote_port": args.port,
             "received_at": created_at,
         },
     )
+    if primary_ip:
+        write_yaml(
+            output_dir / "remote-config.yaml",
+            {
+                "name": "%s-remote" % incident_id,
+                "purpose": "incident remote Kubernetes environment",
+                "created_at": created_at,
+                "access": access,
+                "defaults": {
+                    "jump_host_strategy": "first_ip",
+                    "remote_workspace_root": "/tmp/midstack-triage",
+                    "remote_script_root": "/tmp/midstack-triage/assets/scripts",
+                    "remote_run_root": "/tmp/midstack-triage/runs",
+                    "kubectl_required": True,
+                    "kubectl_exec_required": True,
+                    "middleware_tools_location": "pod_internal",
+                },
+            },
+        )
     output = adapter_output("start", incident_id, args.middleware, status, "local incident %s is %s" % (incident_id, status), output_dir)
     if status == "ready":
         output["next_actions"] = ["run analyse with --incident-dir %s" % output_dir]
+        write_current_incident(path_from_arg(args.output_root), output_dir)
     else:
-        output["blocking_items"] = [{"code": "missing_input", "message": "middleware and customer_clue are required", "required_user_action": "rerun start with required fields"}]
+        output["blocking_items"] = blocking_items
+        output["warnings"].append("incident is blocked until required input and remote validation pass")
     write_yaml(output_dir / "adapter-output.yaml", output)
     print(str(output_dir))
     return 0 if status == "ready" else 1
@@ -127,15 +266,16 @@ def script_output_dirs(remote_run_dir: Path) -> List[Path]:
 
 def build_input_from_remote_run(remote_run_dir: Path, args: argparse.Namespace) -> Dict[str, Any]:
     context = first_context(remote_run_dir)
-    incident_id = str(context.get("incident_id") or remote_run_dir.name)
+    incident_input = getattr(args, "incident_input", {}) or {}
+    incident_id = str(incident_input.get("incident_id") or getattr(args, "incident_id_override", "") or context.get("incident_id") or remote_run_dir.name)
     return {
         "incident_id": incident_id,
-        "middleware": str(context.get("middleware") or "mongodb"),
+        "middleware": str(incident_input.get("middleware") or context.get("middleware") or "mongodb"),
         "scenario": args.scenario or str(context.get("scenario") or "unknown"),
         "namespace": str(context.get("namespace") or ""),
-        "cluster_id": str(context.get("cluster_id") or ""),
-        "customer_clue": args.customer_clue or str(context.get("customer_clue") or "remote run script outputs"),
-        "input_source": "remote-run-dir",
+        "cluster_id": str(incident_input.get("cluster_id") or context.get("cluster_id") or ""),
+        "customer_clue": args.customer_clue or str(incident_input.get("customer_clue") or context.get("customer_clue") or "remote run script outputs"),
+        "input_source": "incident-dir" if incident_input else "remote-run-dir",
         "remote_run_dir": str(remote_run_dir),
         "received_at": now_iso(),
     }
@@ -228,8 +368,84 @@ def run_remote_smoke(args: argparse.Namespace, output_dir: Path) -> Path:
     raise RuntimeError("remote smoke output did not include local_dir")
 
 
+def as_list(value: Any) -> List[Any]:
+    return value if isinstance(value, list) else []
+
+
+def write_report(output_dir: Path, input_data: Dict[str, Any], analysis: Dict[str, Any]) -> Path:
+    conclusion = analysis.get("conclusion_summary") or {}
+    report_file = output_dir / "report.md"
+    lines = [
+        "# Midstack Triage Report",
+        "",
+        "## Incident",
+        "",
+        "- Incident ID: `%s`" % input_data.get("incident_id", output_dir.name),
+        "- Middleware: `%s`" % input_data.get("middleware", "mongodb"),
+        "- Namespace: `%s`" % input_data.get("namespace", ""),
+        "- Cluster: `%s`" % input_data.get("cluster_id", ""),
+        "- Customer clue: %s" % input_data.get("customer_clue", ""),
+        "",
+        "## Conclusion",
+        "",
+        "- Statement: %s" % conclusion.get("statement", ""),
+        "- Confidence: `%s`" % conclusion.get("confidence", ""),
+        "- Primary cause category: `%s`" % conclusion.get("primary_cause_category", ""),
+        "- Impact scope: %s" % conclusion.get("impact_scope", ""),
+        "",
+        "## Evidence",
+        "",
+    ]
+    evidence = as_list(conclusion.get("evidence"))
+    lines.extend(["- %s" % item for item in evidence] if evidence else ["- No explicit evidence recorded."])
+    lines.extend(["", "## Hypotheses", ""])
+    for item in as_list(analysis.get("hypotheses")):
+        if not isinstance(item, dict):
+            continue
+        lines.append("- `%s` %s: %s" % (item.get("status", ""), item.get("hypothesis_id", ""), item.get("statement", "")))
+    lines.extend(["", "## Evidence Gaps", ""])
+    gaps = as_list(conclusion.get("limitations"))
+    lines.extend(["- %s" % item for item in gaps] if gaps else ["- No explicit evidence gaps recorded."])
+    lines.extend(["", "## Next Read-Only Actions", ""])
+    actions = as_list(analysis.get("next_actions"))
+    lines.extend(["- %s" % ((item or {}).get("action") if isinstance(item, dict) else item) for item in actions] if actions else ["- No next actions recorded."])
+    lines.extend(["", "## Knowledge Candidates", ""])
+    candidates = as_list(analysis.get("knowledge_candidates"))
+    if candidates:
+        for item in candidates:
+            if isinstance(item, dict):
+                lines.append("- `%s` %s: `%s`" % (item.get("candidate_type", ""), item.get("title", ""), item.get("asset_path", "")))
+    else:
+        lines.append("- No knowledge candidates recorded.")
+    lines.append("")
+    report_file.write_text("\n".join(lines), encoding="utf-8")
+    return report_file
+
+
 def command_analyse(args: argparse.Namespace) -> int:
-    output_dir = ROOT / args.output_dir
+    if not (args.incident_dir or args.remote_config or args.remote_run_dir or args.input_dir):
+        args.incident_dir = str(read_current_incident(path_from_arg(args.output_root)))
+    if args.incident_dir:
+        incident_dir = resolve_path(args.incident_dir)
+        if not incident_dir.exists():
+            print("ERROR: incident dir does not exist: %s" % incident_dir, file=sys.stderr)
+            return 1
+        output_dir = resolve_path(args.output_dir) if args.output_dir else incident_dir
+        input_data = load_yaml(incident_dir / "input.yaml")
+        args.incident_input = input_data
+        args.incident_id_override = str(input_data.get("incident_id") or incident_dir.name)
+        args.remote_config = str(incident_dir / "remote-config.yaml")
+        args.remote_namespace = args.remote_namespace or str(input_data.get("namespace") or "")
+        args.customer_clue = args.customer_clue or str(input_data.get("customer_clue") or "")
+        args.scenario = args.scenario or str(input_data.get("scenario") or "unknown")
+        if not Path(args.remote_config).exists():
+            print("ERROR: missing incident remote-config.yaml: %s" % args.remote_config, file=sys.stderr)
+            return 1
+    else:
+        if not args.output_dir:
+            print("ERROR: --output-dir is required unless --incident-dir is used", file=sys.stderr)
+            return 1
+        output_dir = resolve_path(args.output_dir)
     try:
         if args.remote_config:
             remote_run_dir = run_remote_smoke(args, output_dir)
@@ -271,6 +487,10 @@ def command_analyse(args: argparse.Namespace) -> int:
     output["record_refs"].append({"name": "analysis", "path": str(analysis_file), "description": "generated analysis result"})
     if proc.returncode != 0:
         output["warnings"].append(proc.stderr.strip())
+    else:
+        analysis = load_yaml(analysis_file)
+        report_file = write_report(output_dir, input_data, analysis)
+        output["record_refs"].append({"name": "report", "path": str(report_file), "description": "generated human-readable report"})
     write_yaml(output_dir / "adapter-output.yaml", output)
     print(str(analysis_file))
     return proc.returncode
@@ -406,14 +626,20 @@ def parse_args() -> argparse.Namespace:
     start.add_argument("--cluster-id", default="")
     start.add_argument("--incident-id")
     start.add_argument("--output-root", default=".local/incidents")
+    start.add_argument("--environment-ip", action="append", default=[], help="Remote environment IP. May be repeated; the first IP is used as jump host.")
+    start.add_argument("--username", default="")
+    start.add_argument("--password", default="")
+    start.add_argument("--port", type=int, default=22)
     start.set_defaults(func=command_start)
 
     analyse = subparsers.add_parser("analyse")
-    input_source = analyse.add_mutually_exclusive_group(required=True)
+    input_source = analyse.add_mutually_exclusive_group(required=False)
     input_source.add_argument("--input-dir")
     input_source.add_argument("--remote-run-dir")
     input_source.add_argument("--remote-config", help="Run MongoDB remote smoke first, then analyse the generated remote run directory.")
-    analyse.add_argument("--output-dir", required=True)
+    input_source.add_argument("--incident-dir", help="Run analyse from a started incident directory containing remote-config.yaml.")
+    analyse.add_argument("--output-dir")
+    analyse.add_argument("--output-root", default=".local/incidents")
     analyse.add_argument("--scenario", help="Override or supply scenario when analysing a remote run.")
     analyse.add_argument("--customer-clue", help="Override or supply customer clue when analysing a remote run.")
     analyse.add_argument("--remote-output-dir", default=".local/remote-runs")

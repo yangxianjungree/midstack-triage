@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict
@@ -26,7 +27,7 @@ REMOVED_COMMANDS = [
 
 def config_payload(target_root: Path) -> Dict[str, Any]:
     return {
-        "command": "python3",
+        "command": sys.executable,
         "args": [str(PLUGIN_DIR / "mcp-server.py")],
         "env": {"MIDSTACK_TRIAGE_WORKSPACE": str(target_root)},
     }
@@ -53,6 +54,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Install or verify the Midstack Triage Cursor MCP configuration.")
     parser.add_argument("--target-dir", required=True, help="Cursor workspace/project directory to install into.")
     parser.add_argument("--check", action="store_true", help="Only verify .cursor/mcp.json, do not modify files.")
+    parser.add_argument("--approve", action="store_true", help="Run `agent mcp enable midstack-triage` in the target workspace after install.")
     return parser.parse_args()
 
 
@@ -74,6 +76,17 @@ def sync_cursor_files(target_root: Path) -> None:
         stale = command_dir / name
         if stale.exists():
             stale.unlink()
+
+    gitignore = target_root / ".gitignore"
+    marker = "# Midstack Triage local runtime outputs"
+    entry = "%s\n.local/\n" % marker
+    if gitignore.exists():
+        content = gitignore.read_text(encoding="utf-8")
+        if marker not in content and "\n.local/\n" not in ("\n" + content):
+            suffix = "" if content.endswith("\n") else "\n"
+            gitignore.write_text(content + suffix + "\n" + entry, encoding="utf-8")
+    else:
+        gitignore.write_text(entry, encoding="utf-8")
 
 
 def main() -> int:
@@ -103,9 +116,11 @@ def main() -> int:
         rule_target = target_root / ".cursor" / "rules" / "midstack-triage.mdc"
         if rule_target.exists() and rule_source.exists() and rule_target.read_text(encoding="utf-8") != rule_source.read_text(encoding="utf-8"):
             drift.append("rules/midstack-triage.mdc")
-        if missing or stale or drift:
+        gitignore = target_root / ".gitignore"
+        gitignore_missing = not gitignore.exists() or ".local/" not in gitignore.read_text(encoding="utf-8")
+        if missing or stale or drift or gitignore_missing:
             print("ERROR: Cursor command files are not in expected /midstack:* form", file=sys.stderr)
-            print(json.dumps({"missing": missing, "stale": stale, "drift": drift}, indent=2, sort_keys=False), file=sys.stderr)
+            print(json.dumps({"missing": missing, "stale": stale, "drift": drift, "gitignore_missing": gitignore_missing}, indent=2, sort_keys=False), file=sys.stderr)
             return 1
         print("ok: Cursor MCP config installed")
         return 0
@@ -113,6 +128,17 @@ def main() -> int:
     sync_cursor_files(target_root)
     servers[SERVER_NAME] = expected
     write_json(config_path, config)
+    if args.approve:
+        approve = subprocess.run(
+            ["agent", "mcp", "enable", SERVER_NAME],
+            cwd=str(target_root),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+        if approve.returncode != 0:
+            print(approve.stderr or approve.stdout, file=sys.stderr)
+            return approve.returncode
     print(str(config_path))
     return 0
 

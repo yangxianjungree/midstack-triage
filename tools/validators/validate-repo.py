@@ -57,6 +57,10 @@ def checks(args: argparse.Namespace) -> List[Dict[str, Any]]:
             "check_id": "runtime-classification",
             "command": [sys.executable, "tools/validators/validate-runtime-classification.py"],
         },
+        {
+            "check_id": "remote-smoke",
+            "command": [sys.executable, "tools/validators/validate-remote-smoke.py"],
+        },
     ]
     if not args.skip_replay:
         plan.append(

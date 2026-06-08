@@ -47,7 +47,7 @@ def main() -> int:
         readme.write_text("# Midstack Cursor Sandbox\n\nTemporary project for Cursor plugin testing.\n", encoding="utf-8")
 
     install = subprocess.run(
-        [sys.executable, str(ROOT / "plugins" / "cursor" / "install.py"), "--target-dir", str(sandbox)],
+        [sys.executable, str(ROOT / "plugins" / "cursor" / "install.py"), "--target-dir", str(sandbox), "--approve"],
         cwd=str(ROOT),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -66,6 +66,20 @@ def main() -> int:
     if check.returncode != 0:
         print(check.stderr, file=sys.stderr)
         return check.returncode
+    list_tools = subprocess.run(
+        ["agent", "mcp", "list-tools", "midstack-triage"],
+        cwd=str(sandbox),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        timeout=30,
+    )
+    if list_tools.returncode != 0:
+        print(list_tools.stderr or list_tools.stdout, file=sys.stderr)
+        return list_tools.returncode
+    if "midstack_start" not in list_tools.stdout:
+        print("ERROR: Cursor CLI did not list midstack_start", file=sys.stderr)
+        return 1
 
     env = os.environ.copy()
     env["MIDSTACK_TRIAGE_WORKSPACE"] = str(sandbox)
@@ -81,11 +95,17 @@ def main() -> int:
         request(proc, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
         proc.stdin.write(encode({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}))
         proc.stdin.flush()
+        resources = request(proc, {"jsonrpc": "2.0", "id": 2, "method": "resources/list", "params": {}})
+        if "error" in resources:
+            raise RuntimeError(resources["error"])
+        resource_uris = {item["uri"] for item in resources["result"]["resources"]}
+        if "midstack://commands/start" not in resource_uris:
+            raise RuntimeError("missing start resource: %s" % sorted(resource_uris))
         analyse = request(
             proc,
             {
                 "jsonrpc": "2.0",
-                "id": 2,
+                "id": 3,
                 "method": "tools/call",
                 "params": {
                     "name": "midstack_analyse_fixture",
@@ -102,7 +122,7 @@ def main() -> int:
             proc,
             {
                 "jsonrpc": "2.0",
-                "id": 3,
+                "id": 4,
                 "method": "tools/call",
                 "params": {
                     "name": "midstack_review",

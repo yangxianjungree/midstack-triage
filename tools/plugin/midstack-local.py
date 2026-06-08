@@ -21,6 +21,9 @@ if str(LIB_DIR) not in sys.path:
 from patch_merge import apply_script_output  # noqa: E402
 
 
+MONGODB_DISCOVERY_HINTS = ("mongo", "mongodb", "mongos", "mongod", "configsvr", "shard", "psmdb", "percona")
+
+
 def now_iso() -> str:
     return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
 
@@ -98,6 +101,16 @@ def ssh_command(access: Dict[str, Any], remote_command: str) -> List[str]:
         "UserKnownHostsFile=/dev/null",
         "-o",
         "ConnectTimeout=8",
+        "-o",
+        "ServerAliveInterval=5",
+        "-o",
+        "ServerAliveCountMax=2",
+        "-o",
+        "PreferredAuthentications=password,keyboard-interactive",
+        "-o",
+        "PubkeyAuthentication=no",
+        "-o",
+        "NumberOfPasswordPrompts=1",
         "-p",
         str(access.get("port", 22)),
         "%s@%s" % (access["username"], access["primary_ip"]),
@@ -110,14 +123,22 @@ def run_env_check(access: Dict[str, Any], remote_command: str) -> Dict[str, Any]
         return {"status": "failed", "stdout": "", "stderr": "sshpass is not installed"}
     env = os.environ.copy()
     env["SSHPASS"] = str(access["password"])
-    proc = subprocess.run(
-        ssh_command(access, remote_command),
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-        timeout=30,
-    )
+    try:
+        proc = subprocess.run(
+            ssh_command(access, remote_command),
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "status": "failed",
+            "stdout": exc.stdout or "",
+            "stderr": "remote command timed out after 30s: %s" % remote_command,
+            "exit_code": 124,
+        }
     return {
         "status": "passed" if proc.returncode == 0 else "failed",
         "stdout": proc.stdout.strip(),
@@ -142,6 +163,128 @@ def validate_remote_environment(access: Dict[str, Any]) -> Dict[str, Any]:
     return {"status": "passed" if all(item["status"] == "passed" for item in results) else "failed", "checks": results}
 
 
+def object_matches_mongodb(obj: Dict[str, Any]) -> bool:
+    text = json.dumps(obj, ensure_ascii=False).lower()
+    name = object_name(obj).lower()
+    data_plane_hints = ("mongos", "mongod", "configsvr", "shard", "replica", "rs", "data")
+    if "operator" in name and not any(hint in text for hint in data_plane_hints):
+        return False
+    return any(hint in text for hint in MONGODB_DISCOVERY_HINTS)
+
+
+def object_namespace(obj: Dict[str, Any]) -> str:
+    metadata = obj.get("metadata") or {}
+    return str(metadata.get("namespace") or "")
+
+
+def object_name(obj: Dict[str, Any]) -> str:
+    metadata = obj.get("metadata") or {}
+    return str(metadata.get("name") or "")
+
+
+def compact_k8s_object(kind: str, obj: Dict[str, Any]) -> Dict[str, Any]:
+    metadata = obj.get("metadata") or {}
+    spec = obj.get("spec") or {}
+    status = obj.get("status") or {}
+    record: Dict[str, Any] = {
+        "kind": kind,
+        "namespace": object_namespace(obj),
+        "name": object_name(obj),
+        "labels": metadata.get("labels") or {},
+    }
+    if kind == "Pod":
+        record.update(
+            {
+                "phase": status.get("phase"),
+                "node_name": spec.get("nodeName"),
+                "restart_policy": spec.get("restartPolicy"),
+            }
+        )
+    elif kind == "StatefulSet":
+        record.update(
+            {
+                "replicas": spec.get("replicas"),
+                "ready_replicas": status.get("readyReplicas"),
+                "current_replicas": status.get("currentReplicas"),
+                "updated_replicas": status.get("updatedReplicas"),
+            }
+        )
+    elif kind == "Service":
+        ports = []
+        for port in spec.get("ports") or []:
+            ports.append(
+                {
+                    "name": port.get("name"),
+                    "port": port.get("port"),
+                    "target_port": port.get("targetPort"),
+                    "node_port": port.get("nodePort"),
+                    "protocol": port.get("protocol"),
+                }
+            )
+        record.update({"type": spec.get("type"), "ports": ports})
+    return record
+
+
+def run_remote_kubectl_json(access: Dict[str, Any], resource: str, namespace: str) -> Dict[str, Any]:
+    scope = "-n %s" % namespace if namespace else "-A"
+    result = run_env_check(access, "kubectl get %s %s -o json" % (resource, scope))
+    if result["status"] != "passed":
+        return {"status": "failed", "resource": resource, "error": result}
+    try:
+        payload = json.loads(result.get("stdout") or "{}")
+    except json.JSONDecodeError as exc:
+        return {"status": "failed", "resource": resource, "error": {"message": str(exc), "stdout": result.get("stdout", "")[:1000]}}
+    return {"status": "passed", "resource": resource, "payload": payload}
+
+
+def discover_mongodb_inventory(access: Dict[str, Any], namespace: str) -> Dict[str, Any]:
+    inventory: Dict[str, Any] = {
+        "status": "running",
+        "middleware": "mongodb",
+        "requested_namespace": namespace,
+        "selected_namespace": namespace,
+        "namespace_source": "user" if namespace else "",
+        "candidate_namespaces": [],
+        "objects": [],
+        "errors": [],
+    }
+    resources = [
+        ("Pod", "pods"),
+        ("StatefulSet", "statefulsets"),
+        ("Service", "services"),
+    ]
+    candidates = set()
+    for kind, resource in resources:
+        result = run_remote_kubectl_json(access, resource, namespace)
+        if result["status"] != "passed":
+            inventory["errors"].append({"resource": resource, "error": result.get("error")})
+            continue
+        for obj in (result.get("payload") or {}).get("items") or []:
+            if not object_matches_mongodb(obj):
+                continue
+            record = compact_k8s_object(kind, obj)
+            inventory["objects"].append(record)
+            if record.get("namespace"):
+                candidates.add(str(record["namespace"]))
+
+    inventory["candidate_namespaces"] = sorted(candidates)
+    if namespace:
+        inventory["status"] = "passed"
+        inventory["selected_namespace"] = namespace
+        inventory["namespace_source"] = "user"
+    elif len(candidates) == 1:
+        inventory["status"] = "passed"
+        inventory["selected_namespace"] = next(iter(candidates))
+        inventory["namespace_source"] = "auto_discovered"
+    elif len(candidates) > 1:
+        inventory["status"] = "ambiguous"
+        inventory["namespace_source"] = "ambiguous"
+    else:
+        inventory["status"] = "not_found"
+        inventory["namespace_source"] = "not_found"
+    return inventory
+
+
 def command_start(args: argparse.Namespace) -> int:
     incident_id = args.incident_id or "%s-%s" % (args.middleware, datetime.now().strftime("%Y%m%d-%H%M%S"))
     output_dir = path_from_arg(args.output_root) / incident_id
@@ -161,6 +304,7 @@ def command_start(args: argparse.Namespace) -> int:
         blocking_items.append({"code": "missing_password", "message": "remote password is required", "required_user_action": "provide remote password"})
 
     remote_validation: Dict[str, Any] = {"status": "skipped", "checks": []}
+    object_inventory: Dict[str, Any] = {"status": "skipped", "middleware": args.middleware}
     access = {
         "candidate_ips": env_ips,
         "primary_ip": primary_ip,
@@ -178,8 +322,31 @@ def command_start(args: argparse.Namespace) -> int:
                     "required_user_action": "fix remote access, install sshpass locally, or ensure kubectl can access the cluster on the jump host",
                 }
             )
+        elif args.middleware == "mongodb":
+            object_inventory = discover_mongodb_inventory(access, args.namespace)
+            if not args.namespace and object_inventory["status"] == "passed":
+                args.namespace = str(object_inventory.get("selected_namespace") or "")
+            elif not args.namespace and object_inventory["status"] == "ambiguous":
+                blocking_items.append(
+                    {
+                        "code": "multiple_mongodb_namespaces_detected",
+                        "message": "multiple MongoDB candidate namespaces were detected",
+                        "required_user_action": "provide namespace explicitly",
+                        "candidate_namespaces": object_inventory.get("candidate_namespaces") or [],
+                    }
+                )
+            elif not args.namespace and object_inventory["status"] == "not_found":
+                blocking_items.append(
+                    {
+                        "code": "mongodb_namespace_not_detected",
+                        "message": "MongoDB namespace could not be auto-detected from pods, statefulsets, or services",
+                        "required_user_action": "provide namespace explicitly",
+                    }
+                )
 
     status = "ready" if not blocking_items else "blocked"
+    write_yaml(output_dir / "environment-check.yaml", {"remote_validation": remote_validation})
+    write_yaml(output_dir / "object-inventory.yaml", object_inventory)
     write_yaml(
         output_dir / "meta.yaml",
         {
@@ -232,6 +399,9 @@ def command_start(args: argparse.Namespace) -> int:
     output = adapter_output("start", incident_id, args.middleware, status, "local incident %s is %s" % (incident_id, status), output_dir)
     if status == "ready":
         output["next_actions"] = ["run analyse with --incident-dir %s" % output_dir]
+        if object_inventory.get("namespace_source") == "auto_discovered":
+            output["summary"] = "%s; namespace auto-discovered as %s" % (output["summary"], object_inventory.get("selected_namespace"))
+            output["user_message"] = output["summary"]
         write_current_incident(path_from_arg(args.output_root), output_dir)
     else:
         output["blocking_items"] = blocking_items
@@ -352,17 +522,26 @@ def run_remote_smoke(args: argparse.Namespace, output_dir: Path) -> Path:
     ]
     if args.remote_namespace:
         command.extend(["--namespace", args.remote_namespace])
-    proc = subprocess.run(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    (output_dir / "remote-smoke.stdout.txt").write_text(proc.stdout, encoding="utf-8")
-    (output_dir / "remote-smoke.stderr.txt").write_text(proc.stderr, encoding="utf-8")
-    if proc.returncode != 0:
-        raise RuntimeError("remote smoke failed: %s" % proc.stderr.strip())
-    for line in proc.stdout.splitlines():
+    try:
+        proc = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=900,
+        )
+        stdout = proc.stdout
+        stderr = proc.stderr
+        returncode = proc.returncode
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout or ""
+        stderr = ((exc.stderr or "") + "\nremote smoke timed out after 900s").strip()
+        returncode = 124
+    (output_dir / "remote-smoke.stdout.txt").write_text(stdout, encoding="utf-8")
+    (output_dir / "remote-smoke.stderr.txt").write_text(stderr, encoding="utf-8")
+    if returncode != 0:
+        raise RuntimeError("remote smoke failed: %s" % stderr.strip())
+    for line in stdout.splitlines():
         if line.startswith("local_dir="):
             return resolve_path(line.split("=", 1)[1].strip())
     raise RuntimeError("remote smoke output did not include local_dir")

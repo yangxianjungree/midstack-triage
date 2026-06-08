@@ -4,12 +4,15 @@ import json
 import os
 import subprocess
 import sys
+import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKSPACE_ROOT = Path(os.environ.get("MIDSTACK_TRIAGE_WORKSPACE", str(ROOT))).resolve()
+DEBUG_LOG = os.environ.get("MIDSTACK_TRIAGE_MCP_DEBUG_LOG", "")
+IO_MODE = "content-length"
 
 
 TOOLS = [
@@ -127,13 +130,81 @@ TOOLS = [
     },
 ]
 
+START_USAGE = """# Midstack Start Usage
+
+When the user runs `/midstack:start ...`, extract fields from the user's natural language and call the `midstack_start` MCP tool directly.
+
+Do not inspect the plugin source tree before calling the tool.
+Do not manually invoke `tools/plugin/midstack-local.py` unless MCP tool calls are unavailable.
+
+Field extraction rules:
+
+- `middleware`: use `mongodb` when the user says mongo, mongodb, mongos, mongod, shard, configsvr, or MongoDB.
+- `environment_ips`: extract one or more IPv4 addresses; keep the original order and use the first IP as jump host.
+- `username` and `password`: extract from forms such as `root/123`, `账号密码是root/123`, or `username/password`.
+- `customer_clue`: keep the user's original fault description as the incident clue.
+- `port`: default to `22` unless the user provides another SSH port.
+- `namespace`: pass it through if the user provides it; otherwise leave it empty and let `midstack_start` auto-detect a single MongoDB candidate namespace.
+
+After `midstack_start` returns:
+
+- If status is `ready`, tell the user the incident directory and suggest `/midstack:analyse`.
+- If status is `blocked`, summarize the blocking items and ask only for the missing or invalid fields. If multiple MongoDB namespaces were detected, ask the user to choose one.
+"""
+
+ANALYSE_USAGE = """# Midstack Analyse Usage
+
+When the user runs `/midstack:analyse` after `/midstack:start`, call `midstack_analyse_current`.
+
+Do not manually inspect source files first. The analysis tool will collect remote Kubernetes and MongoDB signals from the current ready incident.
+"""
+
+RESOURCES = [
+    {
+        "uri": "midstack://commands/start",
+        "name": "Midstack Start Command Guide",
+        "description": "How Cursor should handle /midstack:start natural-language triage requests.",
+        "mimeType": "text/markdown",
+    },
+    {
+        "uri": "midstack://commands/analyse",
+        "name": "Midstack Analyse Command Guide",
+        "description": "How Cursor should handle /midstack:analyse requests.",
+        "mimeType": "text/markdown",
+    },
+]
+
+RESOURCE_TEXT = {
+    "midstack://commands/start": START_USAGE,
+    "midstack://commands/analyse": ANALYSE_USAGE,
+}
+
+PROMPTS = [
+    {
+        "name": "midstack_start",
+        "description": "Start a Midstack MongoDB incident from a user's natural-language report.",
+        "arguments": [
+            {
+                "name": "user_report",
+                "description": "The full user report, including middleware, IPs, credentials, and symptom clue.",
+                "required": True,
+            }
+        ],
+    }
+]
+
 
 def read_message() -> Optional[Dict[str, Any]]:
+    global IO_MODE
     headers: Dict[str, str] = {}
     while True:
         line = sys.stdin.buffer.readline()
         if line == b"":
             return None
+        stripped = line.strip()
+        if stripped.startswith(b"{"):
+            IO_MODE = "ndjson"
+            return json.loads(stripped.decode("utf-8"))
         if line in (b"\r\n", b"\n"):
             break
         text = line.decode("ascii").strip()
@@ -149,24 +220,42 @@ def read_message() -> Optional[Dict[str, Any]]:
 
 def write_message(payload: Dict[str, Any]) -> None:
     body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-    sys.stdout.buffer.write(b"Content-Length: " + str(len(body)).encode("ascii") + b"\r\n\r\n" + body)
+    if IO_MODE == "ndjson":
+        sys.stdout.buffer.write(body + b"\n")
+    else:
+        sys.stdout.buffer.write(b"Content-Length: " + str(len(body)).encode("ascii") + b"\r\n\r\n" + body)
     sys.stdout.buffer.flush()
 
 
+def debug_log(message: str) -> None:
+    if not DEBUG_LOG:
+        return
+    path = Path(DEBUG_LOG)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(message + "\n")
+
+
 def run_command(command: List[str]) -> Dict[str, Any]:
-    proc = subprocess.run(
-        command,
-        cwd=str(ROOT),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    text = proc.stdout.strip()
-    if proc.stderr.strip():
-        text = (text + "\n" if text else "") + proc.stderr.strip()
+    try:
+        proc = subprocess.run(
+            command,
+            cwd=str(ROOT),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=1200,
+        )
+        text = proc.stdout.strip()
+        if proc.stderr.strip():
+            text = (text + "\n" if text else "") + proc.stderr.strip()
+        is_error = proc.returncode != 0
+    except subprocess.TimeoutExpired as exc:
+        text = ((exc.stdout or "") + "\n" + (exc.stderr or "") + "\ncommand timed out after 1200s").strip()
+        is_error = True
     return {
         "content": [{"type": "text", "text": text or "(no output)"}],
-        "isError": proc.returncode != 0,
+        "isError": is_error,
     }
 
 
@@ -323,22 +412,79 @@ def tool_call(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
 def handle(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     method = message.get("method")
     message_id = message.get("id")
+    debug_log("method=%s id=%s" % (method, message_id))
     if method == "initialize":
         return {
             "jsonrpc": "2.0",
             "id": message_id,
             "result": {
                 "protocolVersion": "2024-11-05",
-                "capabilities": {"tools": {}},
+                "capabilities": {"tools": {}, "resources": {}, "prompts": {}},
                 "serverInfo": {"name": "midstack-triage-cursor", "version": "0.1.0"},
             },
         }
+    if method == "ping":
+        return {"jsonrpc": "2.0", "id": message_id, "result": {}}
     if method == "tools/list":
         return {"jsonrpc": "2.0", "id": message_id, "result": {"tools": TOOLS}}
     if method == "tools/call":
         params = message.get("params") or {}
         result = tool_call(str(params.get("name") or ""), params.get("arguments") or {})
         return {"jsonrpc": "2.0", "id": message_id, "result": result}
+    if method == "resources/list":
+        return {"jsonrpc": "2.0", "id": message_id, "result": {"resources": RESOURCES}}
+    if method == "resources/templates/list":
+        return {"jsonrpc": "2.0", "id": message_id, "result": {"resourceTemplates": []}}
+    if method == "resources/read":
+        params = message.get("params") or {}
+        uri = str(params.get("uri") or "")
+        text = RESOURCE_TEXT.get(uri)
+        if text is None:
+            return {
+                "jsonrpc": "2.0",
+                "id": message_id,
+                "error": {"code": -32002, "message": "resource not found: %s" % uri},
+            }
+        return {
+            "jsonrpc": "2.0",
+            "id": message_id,
+            "result": {
+                "contents": [
+                    {
+                        "uri": uri,
+                        "mimeType": "text/markdown",
+                        "text": text,
+                    }
+                ]
+            },
+        }
+    if method == "prompts/list":
+        return {"jsonrpc": "2.0", "id": message_id, "result": {"prompts": PROMPTS}}
+    if method == "prompts/get":
+        params = message.get("params") or {}
+        if str(params.get("name") or "") != "midstack_start":
+            return {
+                "jsonrpc": "2.0",
+                "id": message_id,
+                "error": {"code": -32003, "message": "prompt not found: %s" % params.get("name")},
+            }
+        user_report = str((params.get("arguments") or {}).get("user_report") or "")
+        return {
+            "jsonrpc": "2.0",
+            "id": message_id,
+            "result": {
+                "description": "Start Midstack triage from a user report.",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": {
+                            "type": "text",
+                            "text": START_USAGE + "\n\nUser report:\n" + user_report,
+                        },
+                    }
+                ],
+            },
+        }
     if method and method.startswith("notifications/"):
         return None
     return {
@@ -349,13 +495,19 @@ def handle(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 
 def main() -> int:
-    while True:
-        message = read_message()
-        if message is None:
-            return 0
-        response = handle(message)
-        if response is not None:
-            write_message(response)
+    debug_log("server_start root=%s workspace=%s" % (ROOT, WORKSPACE_ROOT))
+    try:
+        while True:
+            message = read_message()
+            if message is None:
+                debug_log("stdin_closed")
+                return 0
+            response = handle(message)
+            if response is not None:
+                write_message(response)
+    except Exception:
+        debug_log("fatal_exception\n%s" % traceback.format_exc())
+        raise
 
 
 if __name__ == "__main__":

@@ -1,9 +1,13 @@
 id: mongodb
 title: MongoDB
 summary: MongoDB production triage assets focused on replica set, connectivity, and resource diagnosis.
+# components 指 MongoDB 逻辑组件；runbook/skill 下的目录区
+# (connectivity/storage/shard/kubernetes-runtime 等) 是按排查面组织的资产分区，
+# 二者不是同一层概念。
 components:
   - mongod
   - mongos
+  - configsvr
   - replica-set
 preferred_tools:
   - mongosh

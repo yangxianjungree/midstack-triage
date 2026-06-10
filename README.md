@@ -152,7 +152,7 @@
   - `resource-exhaustion`
   - `latency-spike`
   - `data-hotspot`
-  - `kubernetes-runtime`（运行时异常，当前归类到 `resource-exhaustion` 场景）
+  - `kubernetes-runtime`（运行时异常）
 - MongoDB 第 3 段 MVP 脚本已覆盖：
   - Pod、StatefulSet、Service、Node 采集
   - Kubernetes Events 采集

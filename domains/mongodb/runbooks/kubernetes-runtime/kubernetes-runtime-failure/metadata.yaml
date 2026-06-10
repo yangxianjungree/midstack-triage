@@ -2,7 +2,7 @@ id: mongodb-kubernetes-runtime-failure
 title: MongoDB Kubernetes Runtime Failure
 middleware: mongodb
 component: kubernetes-runtime
-scenario: resource-exhaustion
+scenario: kubernetes-runtime
 summary: Diagnose MongoDB availability issues caused by Kubernetes scheduling, PVC binding, image pull, CrashLoop, readiness, or StatefulSet replica availability failures.
 risk_level: read-only
 tags:

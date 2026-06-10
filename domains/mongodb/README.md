@@ -11,6 +11,7 @@
 - `resource-exhaustion` 场景资产
 - `latency-spike` 场景资产
 - `data-hotspot` 场景资产
+- `kubernetes-runtime` 场景资产
 - MongoDB 第 3 段 MVP 脚本资产
 
 后续如果增加新的资产，仍然遵循：

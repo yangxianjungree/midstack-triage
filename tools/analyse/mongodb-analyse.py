@@ -106,7 +106,7 @@ def knowledge_candidates_for_scenario(scenario: str, primary_cause_category: str
         "kubernetes-runtime",
     }
     if scenario in ("", "unknown") and primary_cause_category in runtime_categories:
-        scenario = "resource-exhaustion"
+        scenario = "kubernetes-runtime"
     if scenario in ("", "unknown", "baseline"):
         return []
 

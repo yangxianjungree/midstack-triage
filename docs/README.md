@@ -34,6 +34,8 @@ superseded_by: none
 | **L3 项目状态** | `docs/project/` | 时效性内容，允许滞后但须标 `last_updated` |
 | **L4 历史档案** | `docs/decisions/` | 冻结，可能过时，**不作为依据** |
 
+> 例外：`docs/concepts/architecture.md` 含三条基础结构约束（单一事实来源 / 不重复存放 / 不提前抽象），其约束效力等同 L1、高于普通 spec；若某 spec 与之冲突，以 architecture 为准。
+
 ## 文档状态头
 
 每个文档顶部带 YAML front-matter，便于识别其权威性与时效：

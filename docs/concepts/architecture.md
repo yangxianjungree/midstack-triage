@@ -58,6 +58,7 @@ superseded_by: none
 - `scenarios/replica-inconsistency/`
 - `scenarios/latency-spike/`
 - `scenarios/data-hotspot/`
+- `scenarios/kubernetes-runtime/`
 
 场景层只定义场景本身，不存具体产品的 runbook、脚本或命令。
 

@@ -1,0 +1,24 @@
+id: kubernetes-runtime
+title: Kubernetes Runtime Failure
+summary: Kubernetes scheduling, PVC binding, image pull, CrashLoop, readiness, or StatefulSet replica availability failures affect middleware availability.
+tags:
+  - kubernetes
+  - scheduling
+  - pod-not-ready
+  - statefulset
+  - image-pull
+symptoms:
+  - Pod stuck in Pending, ContainerCreating, or CrashLoopBackOff
+  - StatefulSet ready replicas fewer than desired
+  - Kubernetes events report scheduling, PVC binding, or image pull failures
+  - container repeatedly restarts or fails readiness/liveness probes
+  - middleware unavailable due to node, scheduling, or volume issues rather than its own process
+applicable_middleware:
+  - mongodb
+diagnostic_goals:
+  - identify whether the failure is at scheduling, image, volume, probe, or controller level
+  - map the Kubernetes runtime failure to the affected middleware component and blast radius
+  - separate Kubernetes runtime failures from middleware-internal, network, or resource-pressure issues
+route_hints:
+  - middleware=mongodb component=kubernetes-runtime
+  - check Pod phase and conditions, StatefulSet ready replicas, and Kubernetes events for scheduling, PVC, image, or probe reasons

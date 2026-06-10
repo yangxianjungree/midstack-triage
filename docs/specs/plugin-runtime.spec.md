@@ -114,6 +114,8 @@ superseded_by: none
   - 从 `analysed` 进入 `reviewed`
   - 不改变分析结论，只补充反馈结果
 
+> 注：incident 记录状态机用 `analysed` 表示一轮分析已完成；而 adapter 输出合同（见 plugin-usage.spec.md §7）用 `completed` 表示 `analyse` 命令本次成功返回。二者是不同字段——前者是 incident 生命周期状态，后者是单次命令输出状态。
+
 ## 6. 命令输入方式
 
 ### `/plugin:start`

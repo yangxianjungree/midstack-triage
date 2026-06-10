@@ -2,7 +2,7 @@ id: mongodb-triage-kubernetes-runtime-failure
 title: Triage MongoDB Kubernetes Runtime Failure
 middleware: mongodb
 component: kubernetes-runtime
-primary_scenario: resource-exhaustion
+primary_scenario: kubernetes-runtime
 inputs:
   - customer clue or business symptom
   - namespace or cluster identifier
@@ -14,7 +14,7 @@ outputs:
   - read-only verification actions
 required_assets:
   - type: scenario
-    id: resource-exhaustion
+    id: kubernetes-runtime
   - type: runbook
     id: mongodb-kubernetes-runtime-failure
   - type: command

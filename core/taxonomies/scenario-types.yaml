@@ -18,3 +18,6 @@ values:
   - id: data-hotspot
     label: Data Hotspot
     description: Uneven shard, partition, key, topic, tenant, or node load distribution.
+  - id: kubernetes-runtime
+    label: Kubernetes Runtime Failure
+    description: Kubernetes scheduling, PVC binding, image pull, CrashLoop, readiness, or StatefulSet replica availability failure.

@@ -169,14 +169,16 @@ superseded_by: none
 
 第 5 段负责形成阶段性结论和知识沉淀候选。
 
-第一版至少输出：
+第一版至少输出（结构对齐 `core/templates/analysis.template.yaml`）：
 
 - `conclusion_summary`
-- `confidence`
-- `impact_scope`
-- `primary_cause_category`
+  - `statement`
+  - `confidence`
+  - `impact_scope`
+  - `primary_cause_category`
+  - `evidence`
+  - `limitations`
 - `next_actions`
-- `risk_notes`
 - `knowledge_candidates`
 
 建议 `confidence` 使用：

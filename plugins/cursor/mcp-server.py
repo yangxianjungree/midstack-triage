@@ -33,7 +33,7 @@ TOOLS = [
         "description": "Create a local Midstack Triage incident record.",
         "inputSchema": {
             "type": "object",
-            "required": ["middleware", "customer_clue"],
+            "required": ["middleware"],
             "properties": {
                 "middleware": {"type": "string", "default": "mongodb"},
                 "customer_clue": {"type": "string"},
@@ -122,9 +122,9 @@ TOOLS = [
         "description": "Generate local review scores from a completed Midstack Triage incident directory.",
         "inputSchema": {
             "type": "object",
-            "required": ["incident_dir"],
             "properties": {
-                "incident_dir": {"type": "string"},
+                "incident_dir": {"type": "string", "default": ""},
+                "output_root": {"type": "string", "default": ".local/incidents"},
             },
         },
     },
@@ -142,7 +142,7 @@ Field extraction rules:
 - `middleware`: use `mongodb` when the user says mongo, mongodb, mongos, mongod, shard, configsvr, or MongoDB.
 - `environment_ips`: extract one or more IPv4 addresses; keep the original order and use the first IP as jump host.
 - `username` and `password`: extract from forms such as `root/123`, `账号密码是root/123`, or `username/password`.
-- `customer_clue`: keep the user's original fault description as the incident clue.
+- `customer_clue`: keep the user's original fault description as the incident clue when present. It is useful but optional.
 - `port`: default to `22` unless the user provides another SSH port.
 - `namespace`: pass it through if the user provides it; otherwise leave it empty and let `midstack_start` auto-detect a single MongoDB candidate namespace.
 
@@ -236,6 +236,26 @@ def debug_log(message: str) -> None:
         fh.write(message + "\n")
 
 
+def adapter_output_for_stdout(stdout: str) -> str:
+    lines = [line.strip() for line in stdout.splitlines() if line.strip()]
+    if not lines:
+        return ""
+    path = Path(lines[-1])
+    if not path.is_absolute():
+        path = ROOT / path
+    candidates = []
+    if path.is_file() and path.name in ("adapter-output.yaml", "review-adapter-output.yaml"):
+        candidates.append(path)
+    elif path.is_dir():
+        candidates.extend([path / "adapter-output.yaml", path / "review-adapter-output.yaml"])
+    else:
+        candidates.extend([path.parent / "adapter-output.yaml", path.parent / "review-adapter-output.yaml"])
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate.read_text(encoding="utf-8").strip()
+    return ""
+
+
 def run_command(command: List[str]) -> Dict[str, Any]:
     try:
         proc = subprocess.run(
@@ -246,7 +266,7 @@ def run_command(command: List[str]) -> Dict[str, Any]:
             universal_newlines=True,
             timeout=1200,
         )
-        text = proc.stdout.strip()
+        text = adapter_output_for_stdout(proc.stdout) or proc.stdout.strip()
         if proc.stderr.strip():
             text = (text + "\n" if text else "") + proc.stderr.strip()
         is_error = proc.returncode != 0
@@ -393,15 +413,16 @@ def tool_call(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         return run_command(command)
 
     if name == "midstack_review":
-        return run_command(
-            [
-                sys.executable,
-                "tools/plugin/midstack-local.py",
-                "review",
-                "--incident-dir",
-                resolve_input_path(str(arguments.get("incident_dir") or "")),
-            ]
-        )
+        command = [
+            sys.executable,
+            "tools/plugin/midstack-local.py",
+            "review",
+            "--output-root",
+            resolve_output_path(str(arguments.get("output_root") or ".local/incidents")),
+        ]
+        if arguments.get("incident_dir"):
+            command.extend(["--incident-dir", resolve_input_path(str(arguments.get("incident_dir") or ""))])
+        return run_command(command)
 
     return {
         "content": [{"type": "text", "text": "unknown tool: %s" % name}],

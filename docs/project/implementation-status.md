@@ -17,6 +17,7 @@ superseded_by: none
 - 本地插件原型已能消费 fixture、incident 或已完成的 remote smoke 结果目录来验证 analyse/review 文件流转
 - 本地插件原型已能通过 `.local` remote config 调度真实 MongoDB 只读采集并继续生成分析结果
 - 本地插件 `review` 已能基于 `analysis.yaml` 生成五维评分和改进建议（原型级）
+- 本地插件命令生命周期和 Cursor 集成已完成一轮 L1 对齐，细节见过程性提案目录
 - Cursor 集成源实现已收敛到 `plugins/cursor/`，可安装到临时 Cursor 项目并自动化 smoke test
 
 ## 第一版已实现能力清单
@@ -40,7 +41,7 @@ superseded_by: none
   - `structured_record`
   - `signal_bundle`
   - `collection_report`
-- 执行第 4 段通用推理
+- 执行第 4 段原型推理
 - 生成多条假设
 - 生成验证动作
 - 输出第 5 段阶段性结论
@@ -97,6 +98,8 @@ superseded_by: none
 - `scope` 参数
 - `force_recollect` 参数
 - 复杂多记录切换命令
+- 正式 remote executor 调度层
+- 正式 Agent 主导推理编排
 - 深入层能力：
   - 基线扫描
   - 代码逻辑分析
@@ -106,7 +109,7 @@ superseded_by: none
 ### `/plugin:review`
 
 - 评分权重正式化
-- 评分结果持久化归档细则
+- 评分结果归档策略正式化
 
 ### MongoDB
 

@@ -11,19 +11,19 @@ Extract fields from the user's natural-language request:
 - `middleware`: use `mongodb` when the user says mongo, mongodb, mongos, mongod, shard, configsvr, or MongoDB.
 - `environment_ips`: extract all IPv4 addresses, keep the original order, and let the first IP be the jump host.
 - `username` and `password`: extract forms such as `root/123`, `账号密码是root/123`, or `username/password`.
-- `customer_clue`: preserve the original symptom or fault clue from the user message.
+- `customer_clue`: preserve the original symptom or fault clue from the user message when present.
 - `port`: default to `22` unless the user provides a different SSH port.
 
 Required fields:
 
 - `middleware`, default `mongodb`
-- `customer_clue`
 - `environment_ips`, one or more remote Kubernetes environment IPs; use the first as jump host
 - `username`
 - `password`
 
 Optional fields:
 
+- `customer_clue`; high-value but not required
 - `port`, default `22`
 - `namespace`; if omitted, the plugin will try to auto-detect a single MongoDB candidate namespace from Kubernetes pods, StatefulSets, and Services
 - `cluster_id`

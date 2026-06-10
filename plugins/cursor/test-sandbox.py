@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SANDBOX = Path("/home/stephen/AI/midstack-cursor-sandbox")
@@ -141,9 +143,12 @@ def main() -> int:
             proc.kill()
 
     analysis_file = sandbox / ".local" / "incidents" / "cursor-sandbox-k8s-runtime-test" / "analysis.yaml"
-    review_file = sandbox / ".local" / "incidents" / "cursor-sandbox-k8s-runtime-test" / "review.yaml"
-    if not analysis_file.exists() or not review_file.exists():
-        print("ERROR: sandbox analysis/review outputs were not created", file=sys.stderr)
+    if not analysis_file.exists():
+        print("ERROR: sandbox analysis output was not created", file=sys.stderr)
+        return 1
+    analysis = yaml.safe_load(analysis_file.read_text(encoding="utf-8")) or {}
+    if "review" not in analysis:
+        print("ERROR: sandbox analysis does not contain review block", file=sys.stderr)
         return 1
     if "kubernetes-scheduling" not in analysis_file.read_text(encoding="utf-8"):
         print("ERROR: sandbox analysis did not classify Kubernetes scheduling failure", file=sys.stderr)

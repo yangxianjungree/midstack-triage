@@ -9,6 +9,8 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -166,9 +168,11 @@ def main() -> int:
         if review["result"].get("isError"):
             raise AssertionError(review["result"])
         expected_analysis = temp_project / ".local" / "incidents" / "cursor-mcp-test" / "analysis.yaml"
-        expected_review = temp_project / ".local" / "incidents" / "cursor-mcp-test" / "review.yaml"
-        if not expected_analysis.exists() or not expected_review.exists():
+        if not expected_analysis.exists():
             raise AssertionError("expected Cursor workspace outputs were not created")
+        analysis_data = yaml.safe_load(expected_analysis.read_text(encoding="utf-8")) or {}
+        if "review" not in analysis_data:
+            raise AssertionError("expected review block in analysis.yaml")
         print("ok: cursor MCP server smoke test passed")
     finally:
         proc.stdin.close()

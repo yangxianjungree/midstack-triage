@@ -81,12 +81,19 @@ python3 tools/plugin/midstack-local.py review \
   --incident-dir .local/incidents/connection-failure-sample
 ```
 
+`review` 会把五维评分写入 `analysis.yaml` 的 `review` block，并生成 `review-adapter-output.yaml` 摘要输出。
+
 当前限制：
 
-- 不实现正式 remote executor，只在本地原型中复用 remote smoke 工具
+- 本地插件原型当前通过 `tools/remote-executor/mongodb-executor.py` 调度真实只读采集
 - 可消费已完成的 remote smoke 结果目录
-- 可通过本地 remote smoke 工具调度真实只读采集
+- 可通过兼容保留的 remote smoke 入口调度同一执行器
+- 当前 remote executor 已按 `script-runtime-map` 查找脚本，并为每个脚本执行生成 `remote-executor-request.yaml` / `remote-executor-result.yaml`
+- 当前 remote executor 也会为整批 remote run 生成 `remote-executor-run.yaml`
+- 当前 remote executor 已对 `mongos.get_shard_map` 和 `replicaset.rs_status` 增加脚本级 target / pod tool preflight
+- `/start` 当前会从 Pod / StatefulSet 的显式 `secretKeyRef` 中提取 MongoDB 认证 `secret_ref` hint，并传给 analyse context
+- 当 remote executor preflight `blocked` 或 batch `failed` 时，`analyse` 会保留 incident 侧 `collection_report.yaml` 和 run-level 证据，并返回对应 `blocked` / `failed` adapter output
 - 可从 `/start` 生成的 incident 目录继续执行 `/analyse`
 - 不实现 vendor 插件协议
 - analyse 当前调用本地 MongoDB analyse runner
-- review 当前基于 `analysis.yaml` 做本地五维评分，不等同于正式人工反馈系统
+- review 当前基于 `analysis.yaml` 做本地五维评分，不单独生成 `review.yaml`

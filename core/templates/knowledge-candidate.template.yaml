@@ -1,5 +1,6 @@
+# candidate_type enum: core/taxonomies/candidate-types.yaml
 candidate_id: <candidate_id>
-candidate_type: <runbook|command|script|skill|taxonomy|template>
+candidate_type: <runbook|command|script|skill|taxonomy|template|asset-update>
 title: <candidate title>
 middleware: <middleware>
 component: <component>

@@ -11,9 +11,9 @@ superseded_by: none
 
 相关文档：
 
-- [docs/architecture.md](../concepts/architecture.md)
-- [docs/TRIAGE_WORKFLOW_SPEC.md](triage-workflow.spec.md)
-- [docs/PLUGIN_RUNTIME_SPEC.md](plugin-runtime.spec.md)
+- [架构设计](../concepts/architecture.md)
+- [排障流程规范](triage-workflow.spec.md)
+- [插件运行时规范](plugin-runtime.spec.md)
 - [core/models/asset-reference.schema.yaml](../../core/models/asset-reference.schema.yaml)
 
 ## 1. 目标

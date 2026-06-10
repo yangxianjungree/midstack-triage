@@ -1,5 +1,5 @@
 ---
-status: authoritative
+status: stable
 last_updated: 2026-06-10
 supersedes: none
 superseded_by: none
@@ -7,9 +7,9 @@ superseded_by: none
 
 # Triage Workflow
 
-本文件用于确认项目统一采用的排障主流程。
+本文件是排障主流程的概览（L2，解释性质）；规范性定义以[排障流程规范](../specs/triage-workflow.spec.md)为准。
 
-流程细节讨论见 [docs/TRIAGE_WORKFLOW_DISCUSSION.md](../decisions/triage-workflow-discussion.md)。
+流程细节讨论见[排障流程讨论](../decisions/triage-workflow-discussion.md)。
 
 ## 结论
 

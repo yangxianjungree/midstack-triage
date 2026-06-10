@@ -11,9 +11,11 @@ superseded_by: none
 
 相关讨论见：
 
-- [docs/DISCUSSIONS.md](../decisions/discussions-archive.md)
-- [docs/PLUGIN_USAGE_SPEC.md](plugin-usage.spec.md)
-- [docs/TRIAGE_WORKFLOW_SPEC.md](triage-workflow.spec.md)
+- [讨论归档](../decisions/discussions-archive.md)
+- [插件使用规范](plugin-usage.spec.md)
+- [排障流程规范](triage-workflow.spec.md)
+
+> 本文件是 incident 目录结构与核心文件职责的唯一权威定义。已有对应模板的文件（当前为 `analysis.yaml`，见 [core/templates/analysis.template.yaml](../../core/templates/analysis.template.yaml)）字段结构以模板为准；其余文件（`meta.yaml`、`input.yaml`、`structured_record.yaml`、`signal_bundle.yaml`、`collection_report.yaml`、`report.md`）暂以本规范的骨架为事实源，模板补齐后迁移。
 
 ## 1. 目录结构
 
@@ -28,6 +30,7 @@ incidents/
     signal_bundle.yaml
     collection_report.yaml
     analysis.yaml
+    report.md
     logs/
       raw/
       processed/
@@ -43,6 +46,7 @@ incidents/
 | `signal_bundle.yaml` | 治理后的信号结果 | 第 3 段 |
 | `collection_report.yaml` | 采集过程结果、失败、留白和证据缺口 | 第 3 段 |
 | `analysis.yaml` | 假设、验证、结论、知识沉淀候选、review 结果 | 第 4、5 段 |
+| `report.md` | 面向用户的可读排障报告，由 `analyse` 基于 `analysis.yaml` 生成 | 第 5 段 |
 
 ## 3. `meta.yaml`
 
@@ -172,10 +176,12 @@ updated_at:
 
 ### 建议骨架
 
+字段结构以 [core/templates/analysis.template.yaml](../../core/templates/analysis.template.yaml) 为准：
+
 ```yaml
 hypotheses:
-validation_actions:
 conclusion_summary:
+next_actions:
 knowledge_candidates:
 review:
 generated_at:
@@ -184,7 +190,8 @@ updated_at:
 
 ### 使用原则
 
-- 假设、验证、结论、review 四类内容并存但不混写
+- 假设、结论、知识沉淀、review 四类内容并存但不混写
+- 验证动作（`validation_actions`）嵌套在各假设内，挂回对应假设，不设顶层列表
 - `review` 并入 `analysis.yaml`，不再单独使用 `review.yaml`
 
 ## 9. `logs/`
@@ -217,6 +224,8 @@ updated_at:
    - 说明采集质量和证据缺口
 6. `analysis.yaml`
    - 基于前面三类结果做推理、结论和 review
+7. `report.md`
+   - 基于 `analysis.yaml` 生成面向用户的可读报告
 
 ### 脚本与 Agent 的边界
 
@@ -226,6 +235,7 @@ updated_at:
   - `collection_report.yaml`
 - Agent 主要产出：
   - `analysis.yaml`
+  - `report.md`
 
 ## 11. 当前结论
 

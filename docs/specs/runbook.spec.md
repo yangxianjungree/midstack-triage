@@ -14,7 +14,7 @@ superseded_by: none
 - `metadata.yaml`
 - `runbook.md`
 
-`metadata.yaml` 的最小字段集：
+`metadata.yaml` 的最小字段集（字段定义以 [core/models/runbook.schema.yaml](../../core/models/runbook.schema.yaml) 为准，本清单为摘要）：
 
 ```yaml
 id: string
@@ -23,7 +23,7 @@ middleware: string
 component: string
 scenario: string
 summary: string
-risk_level: read-only | low-risk | high-risk
+risk_level: string  # 枚举见 core/taxonomies/risk-levels.yaml
 tags:
   - string
 required_tools:

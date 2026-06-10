@@ -17,3 +17,15 @@ review_score:
   - high
   - medium
   - low
+incident_status:
+  - created
+  - blocked
+  - ready
+  - analysing
+  - analysed
+  - reviewed
+  - closed
+hypothesis_validation_result:
+  - supported
+  - refuted
+  - insufficient

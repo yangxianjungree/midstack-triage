@@ -27,12 +27,12 @@ superseded_by: none
 
 产出物：
 
-- `docs/ANALYSE_MVP_SPEC.md`
+- `docs/specs/analyse-mvp.spec.md`
 
 必须明确：
 
-- 输入来源：最近一次 `/start` 生成或确认的 incident
-- 前置条件：incident 已 `ready`
+- 输入来源：会话级当前目标记录（唯一定义见 `docs/specs/plugin-runtime.spec.md` §4）
+- 前置条件：incident 为 `ready`，或为 `analysed`（继续分析）
 - 执行范围：MongoDB 第一批 11 个第 3 段脚本
 - 第 3 段输出：`structured_record`、`signal_bundle`、`collection_report`
 - 第 4 段输出：多假设、支持证据、反证条件、证据不足项、验证结果

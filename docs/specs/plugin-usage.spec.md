@@ -63,19 +63,24 @@ superseded_by: none
 
 ### 输入
 
-至少包括：
+必填：
 
 - 中间件类型
 - 环境 IP
 - 账号
 - 密码
+
+可选（高价值，建议提供）：
+
 - 客户提供的原始故障线索
 
-可选包括：
+可选：
 
 - 端口
 - namespace
 - cluster_id
+
+> 参数定义与默认值以[插件运行时规范](plugin-runtime.spec.md) §6 为准。
 
 ### 行为
 
@@ -111,15 +116,14 @@ superseded_by: none
 
 ### 前置条件
 
-- 当前排障记录状态为 `ready`
+- 当前排障记录状态为 `ready`，或为 `analysed`（基于已有记录继续分析）
+- 状态校验与提示规则以[插件运行时规范](plugin-runtime.spec.md) §7 为准
 
 ### 行为
 
 - 基于前面阶段已确认的信息继续分析
 - 如果由 `/midstack:start` 产生 incident，则优先从该 incident 的 `remote-config.yaml` 调度真实只读采集
-- 没有显式 `incident_id` 时，默认分析当前会话记忆里最近一次使用的目标记录
-- 对于刚通过 `/midstack:start` 创建的记录，默认将其视为当前目标记录
-- 用户不传 incident 时，默认分析最近一次 ready 的 incident
+- 没有显式 `incident_id` 时，默认分析会话级当前目标记录；该记录的唯一定义见[插件运行时规范](plugin-runtime.spec.md) §4
 - 前面阶段的基础输入和基础确认内容默认冻结，不再随意修改
 - 由脚本负责采集、整理、标准化、结构化输出
 - 由 Agent 负责假设生成、验证动作生成和阶段性判断
@@ -152,7 +156,7 @@ superseded_by: none
 ### 行为
 
 - 基于当前已有排障记录和分析结果做评价
-- 没有显式 `incident_id` 时，默认 review 当前会话记忆里最近一次已分析的目标记录
+- 没有显式 `incident_id` 时，默认 review 会话级当前目标记录（定义见[插件运行时规范](plugin-runtime.spec.md) §4）；可 review 的状态集合以其 §7 为准
 - 不负责重新执行完整分析流程
 - 不作为面向最终用户的结论输出入口
 

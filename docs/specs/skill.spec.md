@@ -14,7 +14,7 @@ superseded_by: none
 - `metadata.yaml`
 - `skill.md`
 
-`metadata.yaml` 的最小字段集：
+`metadata.yaml` 的最小字段集（字段定义以 [core/models/skill.schema.yaml](../../core/models/skill.schema.yaml) 为准，本清单为摘要）：
 
 ```yaml
 id: string
@@ -37,7 +37,7 @@ safety_constraints:
 `required_assets` 支持：
 
 - 路径字符串（过渡期）
-- 结构化引用：`type` + `id`，见 [docs/ASSET_REFERENCE_SPEC.md](asset-reference.spec.md)
+- 结构化引用：`type` + `id`，见[跨资产引用规范](asset-reference.spec.md)
 
 ## 组织规则
 
@@ -50,4 +50,4 @@ safety_constraints:
 
 - [core/models/skill.schema.yaml](../../core/models/skill.schema.yaml)
 - [core/models/asset-reference.schema.yaml](../../core/models/asset-reference.schema.yaml)
-- [docs/ASSET_REFERENCE_SPEC.md](asset-reference.spec.md)
+- [跨资产引用规范](asset-reference.spec.md)

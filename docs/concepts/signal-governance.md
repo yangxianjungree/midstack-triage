@@ -1,5 +1,5 @@
 ---
-status: authoritative
+status: stable
 last_updated: 2026-06-10
 supersedes: none
 superseded_by: none

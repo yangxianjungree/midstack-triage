@@ -1,0 +1,23 @@
+taxonomy_id: midstack.candidate_types.v1
+values:
+  - id: runbook
+    label: Runbook Candidate
+    description: New runbook proposal distilled from an incident.
+  - id: command
+    label: Command Candidate
+    description: New single-purpose command asset proposal.
+  - id: script
+    label: Script Candidate
+    description: New phase-3 collection or normalization script proposal.
+  - id: skill
+    label: Skill Candidate
+    description: New agent orchestration skill proposal.
+  - id: taxonomy
+    label: Taxonomy Candidate
+    description: New or extended shared taxonomy entry proposal.
+  - id: template
+    label: Template Candidate
+    description: New or revised shared template proposal.
+  - id: asset-update
+    label: Asset Update
+    description: Revision suggestion for an existing asset instead of a new one.

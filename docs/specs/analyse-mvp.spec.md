@@ -13,11 +13,11 @@ superseded_by: none
 
 相关文档：
 
-- [docs/PLUGIN_USAGE_SPEC.md](plugin-usage.spec.md)
-- [docs/TRIAGE_WORKFLOW_SPEC.md](triage-workflow.spec.md)
-- [docs/PLUGIN_RUNTIME_SPEC.md](plugin-runtime.spec.md)
-- [docs/INCIDENT_RECORD_SPEC.md](incident-record.spec.md)
-- [docs/IMPLEMENTATION_PLAN.md](../project/implementation-plan.md)
+- [插件使用规范](plugin-usage.spec.md)
+- [排障流程规范](triage-workflow.spec.md)
+- [插件运行时规范](plugin-runtime.spec.md)
+- [单次排障记录规范](incident-record.spec.md)
+- [实施计划](../project/implementation-plan.md)
 
 ## 1. 定位
 
@@ -38,12 +38,12 @@ superseded_by: none
 第一版 `analyse` 的前置条件：
 
 - 当前会话存在目标 incident
-- 若用户未指定 `incident_id`，默认使用最近一次 `/start` 创建或确认的 incident
-- incident 状态必须是 `ready`
+- 若用户未指定 `incident_id`，默认使用会话级当前目标记录（唯一定义见[插件运行时规范](plugin-runtime.spec.md) §4）
+- incident 状态为 `ready`，或为 `analysed`（基于已有记录继续分析，见[插件运行时规范](plugin-runtime.spec.md) §7）
 - 已提供中间件类型
 - 已验证远程环境信息
 - 已验证基础 Kubernetes 操作
-- 已确认客户线索可以被理解
+- 如已提供客户线索，已确认其可以被理解
 
 如果前置条件不满足，`analyse` 不应继续执行采集和推理，应返回 `adapter output`：
 
@@ -59,7 +59,7 @@ superseded_by: none
 - Topology: 优先支持 Kubernetes 中的 MongoDB 分片集群
 - Deployment architecture:
   - Bitnami 风格部署
-  - operator+CRD 作为结构预留，但认证读取和完整适配后续实现
+  - operator+CRD：认证读取通过 `secret_ref` 纳入第一版范围（见[插件运行时规范](plugin-runtime.spec.md) §10）；拓扑识别等完整适配后续实现
 - 执行方式：
   - 通过 `remote executor` 进入用户提供的远程 K8s 环境
   - 通过 `kubectl` 和 `kubectl exec` 执行采集
@@ -146,13 +146,14 @@ superseded_by: none
 - `evidence_gaps`
 - `validation_actions`
 - `validation_result`
-- `status`
 
-假设状态建议使用：
+`validation_result` 取值（枚举见 [core/taxonomies/status-types.yaml](../../core/taxonomies/status-types.yaml)）：
 
 - `supported`
 - `refuted`
 - `insufficient`
+
+> 字段结构以 [core/templates/analysis.template.yaml](../../core/templates/analysis.template.yaml) 为准，本清单为摘要。
 
 第 4 段原则：
 

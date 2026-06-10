@@ -1,5 +1,5 @@
 ---
-status: authoritative
+status: stable
 last_updated: 2026-06-10
 supersedes: none
 superseded_by: none
@@ -123,7 +123,7 @@ runbook 只在这里存一份，通过 metadata 关联到 `scenario`。
 
 ## Remote Executor
 
-当前建议把远程执行能力明确建模为 `remote executor`。
+当前建议把远程执行能力明确建模为 `remote executor`。本节只讲设计动机与职责边界；请求/结果模型、错误分类、远程目录等运行时合同以[插件运行时规范](../specs/plugin-runtime.spec.md) §11 为准。
 
 职责边界：
 
@@ -185,7 +185,7 @@ runbook 只在这里存一份，通过 metadata 关联到 `scenario`。
 
 ## 脚本资产清单组织
 
-当前建议采用“单中间件一个 manifest”的方式：
+manifest 字段与打包流程的规范定义见[插件运行时规范](../specs/plugin-runtime.spec.md) §9。当前建议采用“单中间件一个 manifest”的方式：
 
 ```text
 domains/mongodb/scripts/

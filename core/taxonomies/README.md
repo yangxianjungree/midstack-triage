@@ -5,7 +5,8 @@
 当前已定义：
 
 - `risk-levels.yaml`：只读、低风险、高风险动作分级
-- `status-types.yaml`：脚本输出、远程执行器、插件输出和 review 评分状态
+- `status-types.yaml`：脚本输出、远程执行器、插件输出、review 评分、incident 生命周期和假设验证结果状态
+- `candidate-types.yaml`：知识沉淀候选类型
 - `scenario-types.yaml`：跨中间件故障场景类型
 - `capability-types.yaml`：远程执行与观测能力类型
 - `kubernetes-runtime-signal-types.yaml`：跨中间件复用的 Kubernetes runtime 异常信号类型

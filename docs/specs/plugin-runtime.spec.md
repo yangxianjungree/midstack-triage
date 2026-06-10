@@ -11,10 +11,12 @@ superseded_by: none
 
 相关文档：
 
-- [docs/PLUGIN_USAGE_SPEC.md](plugin-usage.spec.md)
-- [docs/INCIDENT_RECORD_SPEC.md](incident-record.spec.md)
-- [docs/TRIAGE_WORKFLOW_SPEC.md](triage-workflow.spec.md)
-- [docs/DISCUSSIONS.md](../decisions/discussions-archive.md)
+- [插件使用规范](plugin-usage.spec.md)
+- [单次排障记录规范](incident-record.spec.md)
+- [排障流程规范](triage-workflow.spec.md)
+- [讨论归档](../decisions/discussions-archive.md)
+
+> 本文件是插件**命令行为**（参数、状态机、目标记录选择、运行时合同）的唯一权威定义。其他文档与本文件冲突时，以本文件为准；其他文档应引用本文件，不另行复述行为规则。
 
 ## 1. 命令模型
 
@@ -58,7 +60,7 @@ superseded_by: none
 
 ## 4. 会话级当前目标记录
 
-当前目标记录按会话级维护。
+当前目标记录按会话级维护。**本节是"无显式 `incident_id` 时命中哪条记录"的唯一定义**，`analyse`、`review` 及相关 spec 均引用本节，不另行定义。
 
 规则：
 
@@ -160,8 +162,8 @@ superseded_by: none
 
 规则：
 
-- 无显式 `incident_id` 时，默认 review 当前会话里最近一次已分析的目标记录
-- 第一版已实现基于 `analysis.yaml` 的五维评分与改进建议（原型级）
+- 无显式 `incident_id` 时，默认 review 会话级当前目标记录（定义见 §4）；状态是否允许 review 按 §7 规则校验
+- 第一版提供基于 `analysis.yaml` 的五维评分与改进建议（原型级）
 
 后续版本预留：
 
@@ -220,7 +222,7 @@ superseded_by: none
 当前 MVP 范围如下：
 
 - 第一版只正式支持 `MongoDB`
-- `/plugin:review` 第一版已实现五维评分与改进建议原型
+- `/plugin:review` 第一版提供五维评分与改进建议（原型级）
 - `/plugin:analyse` 第一版覆盖：
   - Kubernetes 对象采集
   - 日志采集
@@ -291,7 +293,7 @@ domains/mongodb/scripts/
 
 当前建议 `manifest.yaml` 使用“一个文件登记多个脚本”的方式，不为每个脚本单独建 metadata 文件。
 
-最小字段集：
+最小字段集（字段定义以 [core/models/script-manifest.schema.yaml](../../core/models/script-manifest.schema.yaml) 为准，本清单为摘要）：
 
 - `script_id`
 - `source`
@@ -347,7 +349,7 @@ domains/mongodb/scripts/
 - 将主仓库中的脚本资产标识与插件包内实际落点解耦
 - 避免插件执行逻辑直接依赖主仓库源码路径
 
-当前建议最小字段：
+当前建议最小字段（字段定义以 [core/models/script-runtime-map.schema.yaml](../../core/models/script-runtime-map.schema.yaml) 为准，本清单为摘要）：
 
 - `plugin`
 - `version`
@@ -411,7 +413,7 @@ domains/mongodb/scripts/
 
 ### `context-file` 的最小公共字段
 
-当前建议至少包括：
+字段定义以 [core/models/script-context.schema.yaml](../../core/models/script-context.schema.yaml) 为准，本清单为摘要。当前建议至少包括：
 
 - `incident_id`
 - `middleware`
@@ -543,16 +545,16 @@ MongoDB 认证来源原则：
 - MongoDB 运行命令通常需要认证信息，不应默认无认证
 - Bitnami 部署优先从 Pod 内环境变量读取，例如 `MONGODB_ROOT_PASSWORD`
 - operator+CRD 部署通常需要从 Kubernetes Secret 读取认证信息
-- 第一版脚本先支持：
+- 第一版脚本支持以下认证来源：
   - 明文 `mongos_query.password`
   - Pod 内环境变量 `mongos_query.password_env`
   - Pod 内密码文件环境变量 `mongos_query.password_file_env`
-- `mongos_query.secret_ref` 作为 operator+CRD 方式的接口预留，后续实现
+  - Kubernetes Secret 读取 `mongos_query.secret_ref`（operator+CRD 方式，字段定义见 [core/models/script-context.schema.yaml](../../core/models/script-context.schema.yaml)）
 - 脚本输出、artifact 和日志中不应写入 MongoDB 密码
 
 ### `output-file` 的最小公共字段
 
-当前建议至少包括：
+字段定义以 [core/models/script-output.schema.yaml](../../core/models/script-output.schema.yaml) 为准，本清单为摘要。当前建议至少包括：
 
 - `script_id`
 - `status`
@@ -710,7 +712,7 @@ MongoDB 认证来源原则：
 
 `remote executor` 的请求模型用于表达“一次脚本远程执行任务”。
 
-当前建议最小字段：
+当前建议最小字段（字段定义以 [core/models/remote-executor-request.schema.yaml](../../core/models/remote-executor-request.schema.yaml) 为准，本清单为摘要）：
 
 - `executor_id`
 - `incident_id`
@@ -758,7 +760,7 @@ MongoDB 认证来源原则：
 
 `remote executor` 的结果模型用于表达“远程执行层是否成功完成调度、执行和回收”。
 
-当前建议最小字段：
+当前建议最小字段（字段定义以 [core/models/remote-executor-result.schema.yaml](../../core/models/remote-executor-result.schema.yaml) 为准，本清单为摘要）：
 
 - `executor_id`
 - `incident_id`
@@ -955,96 +957,13 @@ MongoDB 认证来源原则：
 - `structured_record_patch` / `collection_report_patch` 至少有一项符合预期
 - 产物引用路径存在且可读
 
-### 第一版已实现能力清单
+### 实现进展
 
-#### `/plugin:start`
+第一版"已实现 / 未实现 / 已验证"能力清单属于项目状态（L3），统一维护在[实现进展](../project/implementation-status.md)，本规范不再承载。
 
-- 接收启动输入
-- 支持“参数可选 + 交互补全”
-- 创建 `incident_id`
-- 创建 incident 目录和基础文件
-- 验证远程环境基础可达性
-- 验证基础 Kubernetes 操作能力
-- 判断并输出 `ready / blocked`
-- 将新记录设为当前会话目标记录
+MongoDB MVP 第 3 段脚本范围（11 个）的能力边界定义见 [Analyse MVP 规范](analyse-mvp.spec.md)。
 
-#### `/plugin:analyse`
-
-- 基于当前目标记录继续执行
-- 执行第 3 段信号采集与治理
-- 输出：
-  - `structured_record`
-  - `signal_bundle`
-  - `collection_report`
-- 执行第 4 段通用推理
-- 生成多条假设
-- 生成验证动作
-- 输出第 5 段阶段性结论
-- 输出知识沉淀候选
-
-#### MongoDB
-
-- 环境与对象盘点
-- Kubernetes 对象采集
-  - `StatefulSet`
-  - Pod
-  - `Service`
-  - Node
-- 分片集群 / 副本集基础 topology 识别
-- `rs.status()` 基础成员状态采集
-- Pod 日志采集
-  - 当前日志
-  - 重启前日志（如可用）
-- 基础信号治理
-  - 时间对齐
-  - 对象关联
-  - 初步过滤降噪
-- 第 3 段脚本组织
-  - `domains/mongodb/scripts/collect/`
-  - `domains/mongodb/scripts/normalize/`
-  - `domains/mongodb/scripts/helpers/`
-- 第 3 段脚本命名规则
-  - 采用 `<phase>-<target>-<action>`
-
-#### MongoDB 第一批脚本清单
-
-当前 `/plugin:analyse` 的 MongoDB MVP 已完成以下 11 个第 3 段脚本的合同级实现：
-
-1. `mongodb.collect.pods.state`
-2. `mongodb.collect.statefulsets.yaml`
-3. `mongodb.collect.services.yaml`
-4. `mongodb.collect.nodes.state`
-5. `mongodb.collect.events.yaml`
-6. `mongodb.collect.mongos.get_shard_map`
-7. `mongodb.collect.replicaset.rs_status`
-8. `mongodb.collect.logs.current`
-9. `mongodb.collect.logs.previous`
-10. `mongodb.normalize.logs.highlights`
-11. `mongodb.normalize.signals.bundle`
-
-当前收敛原则：
-
-- 先覆盖对象盘点、Kubernetes Events、分片拓扑确认、成员状态、当前日志、重启前日志和基础信号治理
-- 先保证 `/plugin:analyse` 的主路径闭环
-- 更复杂的事件、指标、节点系统日志和高级诊断脚本放后续版本补充
-
-真实环境验证状态：
-
-- 以上 11 个脚本已通过真实 K8s 环境 smoke test
-- 测试环境为 3 节点 Kubernetes 集群
-- 目标 namespace 为 `psmdb-test`
-- 验证对象包括：
-  - 12 个 Pod
-  - 3 个 StatefulSet
-  - 2 个 Service
-  - 3 个 Node
-  - 2 个 shard
-  - 3 个副本集，9 个成员
-  - 22 个日志文件
-  - 63 条日志 highlights
-  - 1 个 signal bundle
-
-#### MongoDB 第一批脚本执行顺序
+### MongoDB MVP 脚本执行顺序
 
 当前建议执行顺序如下：
 
@@ -1071,164 +990,17 @@ MongoDB 认证来源原则：
 11. `mongodb.normalize.signals.bundle`
    - 最后做对象关联、时间线归并和信号打包
 
-#### `/plugin:review`
-
-- 保留命令入口
-- 保留运行时规则和目标记录选择规则
-
-### 第一版未实现能力清单
-
-#### `/plugin:analyse`
-
-- `scope` 参数
-- `force_recollect` 参数
-- 复杂多记录切换命令
-- 深入层能力：
-  - 基线扫描
-  - 代码逻辑分析
-  - 代码路径追踪
-  - 复现脚本生成
-
-#### `/plugin:review`
-
-- 五维评分与改进建议已有原型实现（见 plugin-usage.spec.md）
-- 仍未实现：评分权重正式化、评分结果持久化归档细则
-
-#### MongoDB
-
-- 更复杂的高级场景自动化分析
-- 节点系统日志的完整实现
-- 指标采集的完整实现
-- 日志系统接入的完整实现
-
-#### 其他中间件
-
-- Pulsar 正式支持
-- Redis 正式支持
-- Elasticsearch 正式支持
-- Kafka 正式支持
-
 ### 使用原则
 
 - 第一版输出中应显式标记未实现能力
 - 第一版文档中应明确标记支持范围
 - 第一版实现优先保证主路径可跑通，而不是追求覆盖全部已讨论能力
 
-## 13. Incident 目录结构
+## 13. Incident 记录结构
 
-当前采用“一次排障一个目录”的方式：
+incident 目录结构、核心文件职责和文件最小骨架的唯一权威定义见[单次排障记录规范](incident-record.spec.md)；已有模板的文件以 `core/templates/` 对应模板为准（如 [analysis.template.yaml](../../core/templates/analysis.template.yaml)），其余文件以该规范骨架为准。本规范不再复述。
 
-```text
-incidents/
-  <incident_id>/
-    meta.yaml
-    input.yaml
-    structured_record.yaml
-    signal_bundle.yaml
-    collection_report.yaml
-    analysis.yaml
-    logs/
-      raw/
-      processed/
-```
-
-## 14. 核心文件职责
-
-| 文件 | 职责 |
-|---|---|
-| `meta.yaml` | 记录级元信息、状态和导航入口 |
-| `input.yaml` | 启动输入和原始故障线索 |
-| `structured_record.yaml` | 对象、拓扑、状态、日志等结构化明细 |
-| `signal_bundle.yaml` | 治理后的信号结果 |
-| `collection_report.yaml` | 采集结果、失败、留白和证据缺口 |
-| `analysis.yaml` | 假设、验证、结论、知识沉淀候选、review 结果 |
-
-## 15. 关键文件最小骨架
-
-### `meta.yaml`
-
-建议字段：
-
-- `incident_id`
-- `middleware`
-- `status`
-- `created_at`
-- `updated_at`
-- `plugin_version`
-- `current_command`
-- `namespace`
-- `cluster_id`
-- `owner`
-
-原则：
-
-- 只做总入口和导航
-- 不放分析内容
-
-### `input.yaml`
-
-建议字段：
-
-- `middleware`
-- `k8s_access_ips`
-- `username`
-- `password`
-- `port`
-- `customer_clue`
-- `clue_enrichment`
-- `input_source`
-- `received_at`
-
-原则：
-
-- 保留启动时第一手输入
-- 基础输入默认冻结
-
-### `structured_record.yaml`
-
-最小骨架：
-
-- `summary`
-- `details`
-- `generated_at`
-
-### `signal_bundle.yaml`
-
-最小骨架：
-
-- `signal_overview`
-- `abnormal_signals`
-- `object_signal_links`
-- `timeline_summary`
-- `processed_log_highlights`
-- `generated_at`
-- `updated_at`
-
-### `collection_report.yaml`
-
-最小骨架：
-
-- `collection_actions`
-- `successful_items`
-- `failed_items`
-- `blank_items`
-- `evidence_gaps`
-- `generated_at`
-- `updated_at`
-
-### `analysis.yaml`
-
-最小骨架：
-
-- `hypotheses`
-- `validation_actions`
-- `conclusion_summary`
-- `knowledge_candidates`
-- `review`
-- `generated_at`
-- `updated_at`
-
-## 16. 脚本与 Agent 边界
+## 14. 脚本与 Agent 边界
 
 第 3 段当前应优先设计为脚本友好：
 
@@ -1247,7 +1019,7 @@ incidents/
 - 验证动作生成
 - 阶段性结论整理
 
-## 17. 当前结论
+## 15. 当前结论
 
 当前已经具备编码前的最小运行时基线：
 
@@ -1265,6 +1037,6 @@ incidents/
 
 后续未实现项可继续在：
 
-- [docs/TODO.md](../project/todo.md)
+- [TODO](../project/todo.md)
 
 中持续追加。

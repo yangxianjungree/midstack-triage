@@ -1,5 +1,5 @@
 ---
-status: authoritative
+status: stable
 last_updated: 2026-06-10
 supersedes: none
 superseded_by: none
@@ -144,7 +144,7 @@ superseded_by: none
 - 在结论阶段加入知识沉淀，而不是只停在一次性结论
 - 将历史案例和历史经验作为正式输入，而不是临时参考
 
-与第 3 段“信号采集与治理”实现方式相关的方案对比，见 [docs/SIGNAL_GOVERNANCE_PATTERNS.md](concepts/signal-governance.md)。
+与第 3 段“信号采集与治理”实现方式相关的方案对比，见[信号治理模式](concepts/signal-governance.md)。
 
 ## 后续可继续扩展的参考方向
 

@@ -9,7 +9,7 @@ superseded_by: none
 
 本文件用于沉淀当前已经基本稳定的排障主流程规范，作为项目后续 `runbook`、`skill`、结构化记录、脚本和知识沉淀的基线。
 
-讨论细节仍保留在 [docs/TRIAGE_WORKFLOW_DISCUSSION.md](../decisions/triage-workflow-discussion.md)。
+讨论细节仍保留在[排障流程讨论](../decisions/triage-workflow-discussion.md)。
 
 ## 1. 主流程
 
@@ -52,7 +52,7 @@ superseded_by: none
 - 已验证远程环境信息有效
 - 可执行基础 Kubernetes 操作
 - 已明确需要排查哪个中间件
-- 已提供的故障线索可以被理解
+- 如已提供故障线索，线索内容可以被理解（线索本身为可选输入，缺失不构成 `blocked`）
 
 ### 典型 `blocked` 条件
 
@@ -369,6 +369,8 @@ domains/mongodb/scripts/
 
 ### 三类接口输出的最小字段集
 
+> 三类文件在 incident 记录中的落点与职责以[单次排障记录规范](incident-record.spec.md)为准。
+
 #### `structured_record`
 
 - `summary`
@@ -402,50 +404,33 @@ domains/mongodb/scripts/
 - 暂不引入优先级或排序机制
 - 每条假设都应带证据、反证、验证动作和状态
 
-### 假设建议字段
+### 假设字段
+
+基线字段（以 [core/templates/analysis.template.yaml](../../core/templates/analysis.template.yaml) 为准，本清单为摘要）：
 
 - `hypothesis_id`
-- `title`
-- `overview`
-- `scope`
-- `suspected_root`
+- `statement`
 - `causal_path`
 - `supporting_evidence`
 - `counter_evidence`
 - `disconfirming_conditions`
 - `evidence_gaps`
-- `sources`
-- `validation_actions`
+- `validation_actions`（基线子字段：`action`、`status`、`result`）
 - `validation_result`
-- `confidence`
-- `next_step`
 
-> 字段命名以实现基线（`analyse-mvp.spec.md` 与 `core/templates/analysis.template.yaml`）为准，例如 MVP 用 `statement` 表达假设主体。
+以下为**尚未进入设计基线**的候选扩展字段，按需讨论后先补入模板再使用：
+
+- 假设描述类：`title`、`overview`、`scope`、`suspected_root`、`sources`
+- 假设评估类：`confidence`（`high` / `medium` / `low`）、`next_step`
+- 验证动作扩展：`action_id`、`purpose`、`target_objects`、`method`、`expected_signal`、`performed_at`
 
 ### `validation_result`
 
-实现基线（`analyse-mvp.spec.md` 与 `core/templates/analysis.template.yaml`）当前采用：
+取值枚举见 [core/taxonomies/status-types.yaml](../../core/taxonomies/status-types.yaml) 的 `hypothesis_validation_result`：
 
 - `supported`
 - `refuted`
 - `insufficient`
-
-### `confidence`
-
-- `high`
-- `medium`
-- `low`
-
-### `validation_actions` 最小字段
-
-- `action_id`
-- `purpose`
-- `target_objects`
-- `method`
-- `expected_signal`
-- `result`
-- `status`
-- `performed_at`
 
 ## 6. 第 5 段：结论整合与知识沉淀
 
@@ -461,7 +446,7 @@ domains/mongodb/scripts/
 
 ### `conclusion_summary` 建议字段
 
-实现基线（`analyse-mvp.spec.md` 与 `core/templates/analysis.template.yaml`）当前采用：
+设计基线（`core/templates/analysis.template.yaml`）当前采用：
 
 - `statement`
 - `confidence`
@@ -470,7 +455,9 @@ domains/mongodb/scripts/
 - `evidence`
 - `limitations`
 
-以下为可选扩展字段，按需使用：
+`next_actions` 不在 `conclusion_summary` 内，而是 `analysis.yaml` 的顶层块，与设计基线一致。
+
+以下为 `conclusion_summary` 的可选扩展字段，按需使用：
 
 - `current_findings`
 - `validated_hypotheses`
@@ -478,17 +465,11 @@ domains/mongodb/scripts/
 - `inconclusive_hypotheses`
 - `most_likely_conclusion`
 - `remaining_risks`
-- `next_actions`
 - `generated_at`
 
-### `knowledge_candidates` 建议字段
+### `knowledge_candidates` 字段
 
-- `candidate_type`
-- `title`
-- `source_scope`
-- `why_reusable`
-- `target_asset`
-- `status`
+完整模型以 [core/templates/knowledge-candidate.template.yaml](../../core/templates/knowledge-candidate.template.yaml) 为准；`analysis.yaml` 中的 `knowledge_candidates` 是其摘要子集，见 [core/templates/analysis.template.yaml](../../core/templates/analysis.template.yaml)。`candidate_type` 枚举见 [core/taxonomies/candidate-types.yaml](../../core/taxonomies/candidate-types.yaml)。
 
 ## 7. MongoDB 结构化记录
 
@@ -517,5 +498,5 @@ MongoDB 结构化记录样例见：
 
 当前外部参考归档见：
 
-- [docs/REFERENCES.md](../references.md)
-- [docs/SIGNAL_GOVERNANCE_PATTERNS.md](../concepts/signal-governance.md)
+- [外部参考资料](../references.md)
+- [信号治理模式](../concepts/signal-governance.md)

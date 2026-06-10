@@ -9,7 +9,7 @@ superseded_by: none
 
 本文件用于记录当前已识别、但暂未继续推进的事项。
 
-讨论过程和结论请同步记录到 [docs/DISCUSSIONS.md](../decisions/discussions-archive.md)。
+讨论过程和结论请同步记录到[讨论归档](../decisions/discussions-archive.md)。
 
 ## 待讨论
 
@@ -43,9 +43,9 @@ superseded_by: none
 
 ## 待实现
 
-近期执行优先级以 [docs/IMPLEMENTATION_PLAN.md](implementation-plan.md) 为准。
+近期执行优先级以[实施计划](implementation-plan.md)为准。
 
-测试、验证与优化闭环已作为最后一类实施需求记录在 [docs/IMPLEMENTATION_PLAN.md](implementation-plan.md#p3-测试验证与优化闭环)。
+测试、验证与优化闭环已作为最后一类实施需求记录在[实施计划](implementation-plan.md#p3-测试验证与优化闭环)。
 
 ### 1. 补齐共性层占位与规范
 
@@ -164,7 +164,7 @@ superseded_by: none
 - `tools/generators/generate-asset.py` 已支持 `--kind bundle` 批量生成一个场景下的 runbook、command、skill
 - 已补充 `tools/importers/import-runbook.py`，支持导入已有 Markdown 为标准 runbook 资产
 - `tools/importers/import-runbook.py` 已支持导入 runbook、command、skill 三类 Markdown 资产
-- 已补充 `docs/ANALYSE_MVP_SPEC.md`，明确第一版 `/plugin:analyse` 能力边界
+- 已补充 `docs/specs/analyse-mvp.spec.md`，明确第一版 `/plugin:analyse` 能力边界
 - 已补充跨资产引用校验：scenario 定义、领域资产 scenario 引用、skill required_assets 引用
 - 已补充 MongoDB 第二场景 `connection-failure` 的 scenario、runbook、command、skill 样例
 - validator 已改为校验 MongoDB 下所有 runbook、command、skill metadata

@@ -71,7 +71,7 @@
 - 主仓库中的脚本属于资产源文件，插件安装后运行的脚本应由适配器明确映射和调用；当前本地 Cursor 集成通过 `plugins/cursor/` 调用主仓库工具链
 - 脚本应使用稳定的 `script_id` 标识，当前最小规则为 `<middleware>.<phase>.<target>.<action>`
 - 每个中间件的脚本资产应使用单独的 `manifest.yaml` 统一登记，不为每个脚本单独维护一份 metadata
-- 脚本 `manifest.yaml` 已有轻量合同模型和最小校验
+- 脚本 `manifest.yaml` 采用轻量合同模型并纳入最小校验，不做重型 schema
 - 插件运行时应通过独立映射表将 `script_id` 映射到插件包内脚本路径
 - 第 3 段脚本统一采用 `context-file + output-file + artifact-dir` 调用合同
 - 远程执行属于 `remote executor`；它负责进入目标环境并执行脚本，脚本本身不内置 SSH 逻辑
@@ -80,20 +80,17 @@
 - 远程执行器错误至少应区分 SSH、认证、`kubectl`、`kubectl exec`、目标 Pod、Pod 内工具、脚本合同和结果回收问题
 - 远程执行器应将插件包内脚本投放到跳板机 `/tmp/<plugin_name>/` 下，再按 `incident_id/script_id` 创建单次执行目录
 - 第 3 段脚本应优先使用 Python 标准库，兼容 Python 3.6，不默认依赖跳板机预装 `PyYAML`
-- MongoDB MVP 第一批 11 个第 3 段脚本已完成合同级实现，并已通过真实 K8s 环境 smoke test
-- 本地插件原型已能消费 fixture、incident 或已完成的 remote smoke 结果目录来验证 analyse/review 文件流转
-- 本地插件原型已能通过 `.local` remote config 调度真实 MongoDB 只读采集并继续生成分析结果
-- 本地插件 `review` 已能基于 `analysis.yaml` 生成五维评分和改进建议
-- Cursor 集成源实现已收敛到 `plugins/cursor/`，可安装到临时 Cursor 项目并自动化 smoke test
 - Cursor 集成测试以 `/home/stephen/AI/` 下的临时项目或固定 sandbox 项目为目标，不把 midstack 源码仓库自己的 `.cursor/` 当作安装结果
-- 第 3 段 `context-file` / `output-file` 已有轻量合同模型和最小示例校验
-- `script-runtime-map` 和 `remote executor` 请求/结果已有轻量合同模型和最小示例校验
-- `runbook`、`command`、`skill` metadata 已有轻量合同模型和 MongoDB 样例校验
-- `runbook`、`command`、`skill`、诊断检查单和事件总结已有核心模板
-- 插件命令 `adapter output` 已有轻量合同模型和示例校验
-- 风险等级、状态、场景类型、能力类型和标签规范已有共性枚举
-- Kubernetes runtime 异常信号已有通用 taxonomy 和 validator，避免把故障分类做成单个案例的点对点规则
+- 第 3 段 `context-file` / `output-file` 采用轻量合同模型，并以最小示例校验，不引入重型 schema
+- `script-runtime-map` 和 `remote executor` 请求/结果采用轻量合同模型，并以最小示例校验
+- `runbook`、`command`、`skill` metadata 采用轻量合同模型，以 MongoDB 样例作为校验基准
+- `runbook`、`command`、`skill`、诊断检查单和事件总结统一使用 `core/templates/` 核心模板
+- 插件命令 `adapter output` 采用轻量合同模型，并以示例校验
+- 风险等级、状态、场景类型、能力类型、候选类型和标签规范统一使用 `core/taxonomies/` 共性枚举
+- Kubernetes runtime 异常信号采用通用 taxonomy 加 validator 的方式，避免把故障分类做成单个案例的点对点规则
 - 进入“稳定结论”的内容，必须同步更新 `README` 和对应 spec，不能只留在讨论文档中
+- 实现进展类断言（已完成、已验证、已能运行）不在本节维护，统一记录在[实现进展](docs/project/implementation-status.md)
+- 字段、结构和枚举类结论以 `core/models/`、`core/templates/`、`core/taxonomies/` 为唯一事实源；README 与 spec 只引用或摘抄子集，不平行定义
 
 ## 总体架构
 
@@ -144,6 +141,8 @@
   对插件排障效果做评价、打分和反馈，服务于后续优化
 
 ## 当前支持范围
+
+本节为状态摘要，完整的已实现 / 未实现清单见[实现进展](docs/project/implementation-status.md)。
 
 - 第一版正式支持 `MongoDB`
 - 当前 MongoDB 领域样例覆盖：
@@ -233,7 +232,11 @@ python3 plugins/cursor/install.py --target-dir /home/stephen/AI/<target-project>
   - [Skill 规范](docs/specs/skill.spec.md)
 - 项目管理：
   - [实施计划](docs/project/implementation-plan.md)
+  - [实现进展](docs/project/implementation-status.md)
   - [TODO](docs/project/todo.md)
+- 变更治理：
+  - [文档地图与变更流程](docs/README.md)
+  - [变更提案入口](docs/proposals/README.md)
 - 分析与参考：
   - [领域记录对照](docs/analysis/domain-record-comparison.md)
   - [外部参考资料](docs/references.md)

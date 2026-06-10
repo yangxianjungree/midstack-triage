@@ -53,7 +53,7 @@
   - `信号采集与治理`
   - `推理诊断与深入验证`
   - `结论整合与知识沉淀`
-- 插件对外主命令固定为 3 个：
+- 插件对外固定为 3 个面向用户的主命令（另有 1 个工程自检命令 `/<plugin_name>:validate`，不属于用户排障主路径）：
   - `/<plugin_name>:start`
   - `/<plugin_name>:analyse`
   - `/<plugin_name>:review`
@@ -134,7 +134,7 @@
 
 ## 插件使用方式
 
-当前插件对外保持 3 个主入口：
+当前插件对外保持 3 个面向用户的主入口（另有工程自检命令 `/<plugin_name>:validate`）：
 
 - `/<plugin_name>:start`
   启动一轮排障，完成输入收集、环境确认和 `ready / blocked` 判断
@@ -152,6 +152,7 @@
   - `resource-exhaustion`
   - `latency-spike`
   - `data-hotspot`
+  - `kubernetes-runtime`（运行时异常，当前归类到 `resource-exhaustion` 场景）
 - MongoDB 第 3 段 MVP 脚本已覆盖：
   - Pod、StatefulSet、Service、Node 采集
   - Kubernetes Events 采集
@@ -213,31 +214,42 @@ python3 plugins/cursor/install.py --target-dir /home/stephen/AI/<target-project>
 
 ## 文档导航
 
-- 排障流程概览：[docs/TRIAGE_WORKFLOW.md](/home/stephen/AI/midstack-triage/docs/TRIAGE_WORKFLOW.md)
-- 排障流程规范：[docs/TRIAGE_WORKFLOW_SPEC.md](/home/stephen/AI/midstack-triage/docs/TRIAGE_WORKFLOW_SPEC.md)
-- 排障流程讨论：[docs/TRIAGE_WORKFLOW_DISCUSSION.md](/home/stephen/AI/midstack-triage/docs/TRIAGE_WORKFLOW_DISCUSSION.md)
-- 插件使用规范：[docs/PLUGIN_USAGE_SPEC.md](/home/stephen/AI/midstack-triage/docs/PLUGIN_USAGE_SPEC.md)
-- 实施计划：[docs/IMPLEMENTATION_PLAN.md](/home/stephen/AI/midstack-triage/docs/IMPLEMENTATION_PLAN.md)
-- Analyse MVP 规范：[docs/ANALYSE_MVP_SPEC.md](/home/stephen/AI/midstack-triage/docs/ANALYSE_MVP_SPEC.md)
-- 单次排障记录结构规范：[docs/INCIDENT_RECORD_SPEC.md](/home/stephen/AI/midstack-triage/docs/INCIDENT_RECORD_SPEC.md)
-- 插件运行时规范：[docs/PLUGIN_RUNTIME_SPEC.md](/home/stephen/AI/midstack-triage/docs/PLUGIN_RUNTIME_SPEC.md)
-- Runbook 规范：[docs/runbook-spec.md](/home/stephen/AI/midstack-triage/docs/runbook-spec.md)
-- Command 规范：[docs/command-spec.md](/home/stephen/AI/midstack-triage/docs/command-spec.md)
-- Skill 规范：[docs/skill-spec.md](/home/stephen/AI/midstack-triage/docs/skill-spec.md)
-- 共性模型目录：[core/models/README.md](/home/stephen/AI/midstack-triage/core/models/README.md)
-- 共性模板目录：[core/templates/README.md](/home/stephen/AI/midstack-triage/core/templates/README.md)
-- 共性分类目录：[core/taxonomies/README.md](/home/stephen/AI/midstack-triage/core/taxonomies/README.md)
-- 领域记录对照：[docs/DOMAIN_RECORD_COMPARISON.md](/home/stephen/AI/midstack-triage/docs/DOMAIN_RECORD_COMPARISON.md)
-- 外部参考资料：[docs/REFERENCES.md](/home/stephen/AI/midstack-triage/docs/REFERENCES.md)
-- 信号治理模式对比：[docs/SIGNAL_GOVERNANCE_PATTERNS.md](/home/stephen/AI/midstack-triage/docs/SIGNAL_GOVERNANCE_PATTERNS.md)
-- 跨资产引用规范：[docs/ASSET_REFERENCE_SPEC.md](/home/stephen/AI/midstack-triage/docs/ASSET_REFERENCE_SPEC.md)
-- Golden path 测试：[tests/golden-paths/README.md](/home/stephen/AI/midstack-triage/tests/golden-paths/README.md)
-- 远程 smoke 工具：[tools/remote-smoke/README.md](/home/stephen/AI/midstack-triage/tools/remote-smoke/README.md)
-- 资产校验工具：[tools/validators/README.md](/home/stephen/AI/midstack-triage/tools/validators/README.md)
-- 资产生成工具：[tools/generators/README.md](/home/stephen/AI/midstack-triage/tools/generators/README.md)
-- 资产导入工具：[tools/importers/README.md](/home/stephen/AI/midstack-triage/tools/importers/README.md)
-- Analyse 工具：[tools/analyse/README.md](/home/stephen/AI/midstack-triage/tools/analyse/README.md)
-- 本地插件原型：[tools/plugin/README.md](/home/stephen/AI/midstack-triage/tools/plugin/README.md)
-- Replay 工具：[tools/replay/README.md](/home/stephen/AI/midstack-triage/tools/replay/README.md)
-- Cursor 集成：[plugins/cursor/README.md](/home/stephen/AI/midstack-triage/plugins/cursor/README.md)
-- 测试闭环目录：[tests/README.md](/home/stephen/AI/midstack-triage/tests/README.md)
+完整文档地图与权威分层规则见 [docs/README.md](docs/README.md)。常用入口：
+
+- 概念与架构：
+  - [架构设计](docs/concepts/architecture.md)
+  - [排障流程概览](docs/concepts/triage-workflow.md)
+  - [信号治理模式](docs/concepts/signal-governance.md)
+- 规范（唯一事实源）：
+  - [排障流程规范](docs/specs/triage-workflow.spec.md)
+  - [插件使用规范](docs/specs/plugin-usage.spec.md)
+  - [插件运行时规范](docs/specs/plugin-runtime.spec.md)
+  - [Analyse MVP 规范](docs/specs/analyse-mvp.spec.md)
+  - [单次排障记录规范](docs/specs/incident-record.spec.md)
+  - [增量合并规范](docs/specs/incident-patch-merge.spec.md)
+  - [跨资产引用规范](docs/specs/asset-reference.spec.md)
+  - [Runbook 规范](docs/specs/runbook.spec.md)
+  - [Command 规范](docs/specs/command.spec.md)
+  - [Skill 规范](docs/specs/skill.spec.md)
+- 项目管理：
+  - [实施计划](docs/project/implementation-plan.md)
+  - [TODO](docs/project/todo.md)
+- 分析与参考：
+  - [领域记录对照](docs/analysis/domain-record-comparison.md)
+  - [外部参考资料](docs/references.md)
+  - [汇报材料](docs/presentation.md)
+- 历史决策（已归档，非权威）：
+  - [排障流程讨论](docs/decisions/triage-workflow-discussion.md)
+  - [讨论归档](docs/decisions/discussions-archive.md)
+- 共性底座：
+  - [模型目录](core/models/README.md)
+  - [模板目录](core/templates/README.md)
+  - [分类目录](core/taxonomies/README.md)
+- 工具与测试：
+  - [Cursor 集成](plugins/cursor/README.md)
+  - [资产校验工具](tools/validators/README.md)
+  - [远程 smoke 工具](tools/remote-smoke/README.md)
+  - [Replay 工具](tools/replay/README.md)
+  - [Analyse 工具](tools/analyse/README.md)
+  - [Golden path 测试](tests/golden-paths/README.md)
+  - [测试闭环目录](tests/README.md)

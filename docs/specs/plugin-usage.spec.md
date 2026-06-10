@@ -1,3 +1,10 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Plugin Usage Spec
 
 本文件用于确认插件对外使用方式的当前规范。
@@ -12,11 +19,13 @@
 - 实际命令形态应为 `/<plugin_name>:start`、`/<plugin_name>:analyse`、`/<plugin_name>:review`
 - 当前 Cursor 集成使用的插件名前缀为 `/midstack`
 
-当前建议只保留 3 个主命令：
+当前对外保留 3 个面向用户的主命令：
 
 - `/midstack:start`
 - `/midstack:analyse`
 - `/midstack:review`
+
+此外保留 1 个工程自检命令 `/midstack:validate`，仅用于资产校验、replay、score gate 和 Cursor MCP smoke 自检，不属于用户排障主路径。
 
 内部仍然映射到项目的 5 段排障主流程，但对用户不暴露过多内部细节。
 
@@ -32,7 +41,7 @@
 
 ### 结论
 
-当前对外命令保持 3 个即可：
+面向用户的对外命令保持 3 个：
 
 - `/<plugin_name>:start`
 - `/<plugin_name>:analyse`
@@ -177,7 +186,7 @@
 
 模板：
 
-- [core/templates/review.template.yaml](/home/stephen/AI/midstack-triage/core/templates/review.template.yaml)
+- [core/templates/review.template.yaml](../../core/templates/review.template.yaml)
 
 ## 6. 命令之间的关系
 
@@ -201,11 +210,11 @@
 
 轻量合同模型：
 
-- [core/models/adapter-output.schema.yaml](/home/stephen/AI/midstack-triage/core/models/adapter-output.schema.yaml)
+- [core/models/adapter-output.schema.yaml](../../core/models/adapter-output.schema.yaml)
 
 接口样例：
 
-- [interfaces/plugin/adapter-output.example.yaml](/home/stephen/AI/midstack-triage/interfaces/plugin/adapter-output.example.yaml)
+- [interfaces/plugin/adapter-output.example.yaml](../../interfaces/plugin/adapter-output.example.yaml)
 
 ## 8. 设计结论
 

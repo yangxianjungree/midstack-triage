@@ -1,3 +1,10 @@
+---
+status: draft
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Midstack Triage — 中间件智能排障系统
 
 > 目标：将 PaaS 中间件生产排障经验工程化，沉淀为可执行、可验证、可复用的 Agent 排障能力。
@@ -8,7 +15,7 @@
 
 Midstack Triage 建议作为“中间件智能排障能力底座”继续投入建设。它不是再做一个监控系统，也不是把故障日志直接交给大模型猜结论；它是把专家排障路径拆成知识资产、只读采集、结构化证据、规则诊断和 Agent 协作，让一线工程师能按老手路径快速排查、交接和复盘。
 
-当前 MongoDB 已经跑通 MVP 主链路，Pulsar 已纳入 MVP 范围并完成领域骨架，完整排障资产链路仍在补齐。现阶段 MongoDB 知识资产、11 个只读脚本（含 collect + normalize）、规则诊断、fixture 回放、评分和 Cursor MCP 集成都已验证；但它还不是完整生产级自治排障系统，正式 Remote Executor、CI 门禁、历史经验检索和 Pulsar 完整链路仍需要下一阶段投入。
+当前 MongoDB 已经跑通 MVP 主链路，Pulsar 仅作为领域样例完成结构骨架（非第一版正式支持），完整排障资产链路仍在补齐。现阶段 MongoDB 知识资产、11 个只读脚本（含 collect + normalize）、规则诊断、fixture 回放、评分和 Cursor MCP 集成都已验证；但它还不是完整生产级自治排障系统，正式 Remote Executor、CI 门禁、历史经验检索和 Pulsar 完整链路仍需要下一阶段投入。
 
 ---
 
@@ -414,7 +421,7 @@ flowchart LR
 
 ### 7.4 演进总结
 
-除环境形态适配外，中间件覆盖也需要继续扩展。MongoDB 已跑通 MVP 主链路，Pulsar 已纳入 MVP 范围并完成领域骨架，完整排障资产链路仍在补齐；后续应按同一套结构继续适配 Redis、Elasticsearch、Kafka 等中间件。
+除环境形态适配外，中间件覆盖也需要继续扩展。MongoDB 已跑通 MVP 主链路，Pulsar 仅作为领域样例完成结构骨架（非第一版正式支持），完整排障资产链路仍在补齐；后续应按同一套结构继续适配 Redis、Elasticsearch、Kafka 等中间件。
 
 扩展时不重新设计一套新系统，而是复用现有的 `scenarios/`、`domains/`、`core/` 和 `interfaces/`：
 

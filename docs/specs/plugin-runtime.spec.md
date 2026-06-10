@@ -1,21 +1,30 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Plugin Runtime Spec
 
 本文件用于沉淀插件实现前已经确认的运行时规则，作为编码前的统一基线。
 
 相关文档：
 
-- [docs/PLUGIN_USAGE_SPEC.md](/home/stephen/AI/midstack-triage/docs/PLUGIN_USAGE_SPEC.md)
-- [docs/INCIDENT_RECORD_SPEC.md](/home/stephen/AI/midstack-triage/docs/INCIDENT_RECORD_SPEC.md)
-- [docs/TRIAGE_WORKFLOW_SPEC.md](/home/stephen/AI/midstack-triage/docs/TRIAGE_WORKFLOW_SPEC.md)
-- [docs/DISCUSSIONS.md](/home/stephen/AI/midstack-triage/docs/DISCUSSIONS.md)
+- [docs/PLUGIN_USAGE_SPEC.md](plugin-usage.spec.md)
+- [docs/INCIDENT_RECORD_SPEC.md](incident-record.spec.md)
+- [docs/TRIAGE_WORKFLOW_SPEC.md](triage-workflow.spec.md)
+- [docs/DISCUSSIONS.md](../decisions/discussions-archive.md)
 
 ## 1. 命令模型
 
-当前插件对外只保留 3 个主命令：
+当前插件对外保留 3 个面向用户的主命令：
 
 - `/<plugin_name>:start`
 - `/<plugin_name>:analyse`
 - `/<plugin_name>:review`
+
+此外保留 1 个工程自检命令 `/<plugin_name>:validate`，仅用于资产校验、replay、score gate 和 MCP smoke 自检，不属于用户排障主路径。
 
 说明：
 
@@ -150,7 +159,7 @@
 规则：
 
 - 无显式 `incident_id` 时，默认 review 当前会话里最近一次已分析的目标记录
-- 第一版只保留入口占位，不实现完整评分闭环
+- 第一版已实现基于 `analysis.yaml` 的五维评分与改进建议（原型级）
 
 后续版本预留：
 
@@ -209,7 +218,7 @@
 当前 MVP 范围如下：
 
 - 第一版只正式支持 `MongoDB`
-- `/plugin:review` 第一版只保留入口占位
+- `/plugin:review` 第一版已实现五维评分与改进建议原型
 - `/plugin:analyse` 第一版覆盖：
   - Kubernetes 对象采集
   - 日志采集
@@ -320,7 +329,7 @@ domains/mongodb/scripts/
 
 轻量合同模型：
 
-- [core/models/script-manifest.schema.yaml](/home/stephen/AI/midstack-triage/core/models/script-manifest.schema.yaml)
+- [core/models/script-manifest.schema.yaml](../../core/models/script-manifest.schema.yaml)
 
 ### 插件侧最小运行时映射文件
 
@@ -371,7 +380,7 @@ domains/mongodb/scripts/
 
 轻量合同模型：
 
-- [core/models/script-runtime-map.schema.yaml](/home/stephen/AI/midstack-triage/core/models/script-runtime-map.schema.yaml)
+- [core/models/script-runtime-map.schema.yaml](../../core/models/script-runtime-map.schema.yaml)
 
 当前不建议第一版：
 
@@ -417,7 +426,7 @@ domains/mongodb/scripts/
 
 轻量合同模型：
 
-- [core/models/script-context.schema.yaml](/home/stephen/AI/midstack-triage/core/models/script-context.schema.yaml)
+- [core/models/script-context.schema.yaml](../../core/models/script-context.schema.yaml)
 
 ### MongoDB 基础采集脚本的共享 `context-file` 字段
 
@@ -573,7 +582,7 @@ MongoDB 认证来源原则：
 
 轻量合同模型：
 
-- [core/models/script-output.schema.yaml](/home/stephen/AI/midstack-triage/core/models/script-output.schema.yaml)
+- [core/models/script-output.schema.yaml](../../core/models/script-output.schema.yaml)
 
 ### MongoDB `output-file` 示例约定
 
@@ -737,11 +746,11 @@ MongoDB 认证来源原则：
 
 接口样例：
 
-- [interfaces/plugin/remote-executor-request.example.yaml](/home/stephen/AI/midstack-triage/interfaces/plugin/remote-executor-request.example.yaml)
+- [interfaces/plugin/remote-executor-request.example.yaml](../../interfaces/plugin/remote-executor-request.example.yaml)
 
 轻量合同模型：
 
-- [core/models/remote-executor-request.schema.yaml](/home/stephen/AI/midstack-triage/core/models/remote-executor-request.schema.yaml)
+- [core/models/remote-executor-request.schema.yaml](../../core/models/remote-executor-request.schema.yaml)
 
 ### 最小结果模型
 
@@ -783,11 +792,11 @@ MongoDB 认证来源原则：
 
 接口样例：
 
-- [interfaces/plugin/remote-executor-result.example.yaml](/home/stephen/AI/midstack-triage/interfaces/plugin/remote-executor-result.example.yaml)
+- [interfaces/plugin/remote-executor-result.example.yaml](../../interfaces/plugin/remote-executor-result.example.yaml)
 
 轻量合同模型：
 
-- [core/models/remote-executor-result.schema.yaml](/home/stephen/AI/midstack-triage/core/models/remote-executor-result.schema.yaml)
+- [core/models/remote-executor-result.schema.yaml](../../core/models/remote-executor-result.schema.yaml)
 
 ### 状态边界
 
@@ -1045,17 +1054,19 @@ MongoDB 认证来源原则：
    - 再确认 Service、NodePort 和入口映射
 4. `mongodb.collect.nodes.state`
    - 再补节点状态、IP 和标签信息
-5. `mongodb.collect.mongos.get_shard_map`
+5. `mongodb.collect.events.yaml`
+   - 采集 Kubernetes Events，补充对象变更与异常事件信号
+6. `mongodb.collect.mongos.get_shard_map`
    - 先从 `mongos` 视角确认分片路由和 shard 拓扑
-6. `mongodb.collect.replicaset.rs_status`
+7. `mongodb.collect.replicaset.rs_status`
    - 再确认副本集成员状态、角色、选举和同步情况
-7. `mongodb.collect.logs.current`
+8. `mongodb.collect.logs.current`
    - 默认采当前日志
-8. `mongodb.collect.logs.previous`
+9. `mongodb.collect.logs.previous`
    - 对重启 Pod 补采前一轮日志
-9. `mongodb.normalize.logs.highlights`
+10. `mongodb.normalize.logs.highlights`
    - 先对日志做摘要和降噪
-10. `mongodb.normalize.signals.bundle`
+11. `mongodb.normalize.signals.bundle`
    - 最后做对象关联、时间线归并和信号打包
 
 #### `/plugin:review`
@@ -1078,10 +1089,8 @@ MongoDB 认证来源原则：
 
 #### `/plugin:review`
 
-- 正式评分逻辑
-- 评分结果持久化细则
-- 评分维度计算规则
-- 改进建议自动生成
+- 五维评分与改进建议已有原型实现（见 plugin-usage.spec.md）
+- 仍未实现：评分权重正式化、评分结果持久化归档细则
 
 #### MongoDB
 
@@ -1254,6 +1263,6 @@ incidents/
 
 后续未实现项可继续在：
 
-- [docs/TODO.md](/home/stephen/AI/midstack-triage/docs/TODO.md)
+- [docs/TODO.md](../project/todo.md)
 
 中持续追加。

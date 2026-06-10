@@ -1,8 +1,15 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Triage Workflow Spec
 
 本文件用于沉淀当前已经基本稳定的排障主流程规范，作为项目后续 `runbook`、`skill`、结构化记录、脚本和知识沉淀的基线。
 
-讨论细节仍保留在 [docs/TRIAGE_WORKFLOW_DISCUSSION.md](/home/stephen/AI/midstack-triage/docs/TRIAGE_WORKFLOW_DISCUSSION.md)。
+讨论细节仍保留在 [docs/TRIAGE_WORKFLOW_DISCUSSION.md](../decisions/triage-workflow-discussion.md)。
 
 ## 1. 主流程
 
@@ -252,6 +259,13 @@ domains/mongodb/scripts/
 - 一个脚本只做一类动作，不在一个脚本里混采集、治理和推理
 - 优先使用可读的动作名，不为追求短名牺牲可理解性
 
+### `script_id` 与文件名的关系
+
+- 文件名采用 `<phase>-<target>-<action>`：用连字符，不含中间件前缀
+- 资产登记用的 `script_id` 采用 `<middleware>.<phase>.<target>.<action>`：用点号，`action` 段用下划线
+- 两者一一对应，例如文件 `collect-replicaset-rs-status.sh` 对应 `script_id` `mongodb.collect.replicaset.rs_status`
+- `manifest.yaml` 以 `script_id` 为准登记，`source` 字段指向对应文件名
+
 ### 第 3 段脚本最小调用合同
 
 当前建议第 3 段脚本统一采用以下 3 个入口参数：
@@ -360,6 +374,7 @@ domains/mongodb/scripts/
 - `summary`
 - `details`
 - `generated_at`
+- `updated_at`
 
 #### `signal_bundle`
 
@@ -369,6 +384,7 @@ domains/mongodb/scripts/
 - `timeline_summary`
 - `processed_log_highlights`
 - `generated_at`
+- `updated_at`
 
 #### `collection_report`
 
@@ -378,6 +394,7 @@ domains/mongodb/scripts/
 - `blank_items`
 - `evidence_gaps`
 - `generated_at`
+- `updated_at`
 
 ### 假设管理原则
 
@@ -394,21 +411,24 @@ domains/mongodb/scripts/
 - `suspected_root`
 - `causal_path`
 - `supporting_evidence`
-- `contradicting_evidence`
-- `falsification_conditions`
+- `counter_evidence`
+- `disconfirming_conditions`
 - `evidence_gaps`
 - `sources`
 - `validation_actions`
-- `validation_status`
+- `validation_result`
 - `confidence`
 - `next_step`
 
-### `validation_status`
+> 字段命名以实现基线（`analyse-mvp.spec.md` 与 `core/templates/analysis.template.yaml`）为准，例如 MVP 用 `statement` 表达假设主体。
 
-- `pending`
+### `validation_result`
+
+实现基线（`analyse-mvp.spec.md` 与 `core/templates/analysis.template.yaml`）当前采用：
+
 - `supported`
-- `contradicted`
-- `inconclusive`
+- `refuted`
+- `insufficient`
 
 ### `confidence`
 
@@ -441,7 +461,17 @@ domains/mongodb/scripts/
 
 ### `conclusion_summary` 建议字段
 
-- `incident_scope`
+实现基线（`analyse-mvp.spec.md` 与 `core/templates/analysis.template.yaml`）当前采用：
+
+- `statement`
+- `confidence`
+- `impact_scope`
+- `primary_cause_category`
+- `evidence`
+- `limitations`
+
+以下为可选扩展字段，按需使用：
+
 - `current_findings`
 - `validated_hypotheses`
 - `rejected_hypotheses`
@@ -481,11 +511,11 @@ domains/mongodb/scripts/
 
 MongoDB 结构化记录样例见：
 
-- [domains/mongodb/examples/triage-record.example.yaml](/home/stephen/AI/midstack-triage/domains/mongodb/examples/triage-record.example.yaml)
+- [domains/mongodb/examples/triage-record.example.yaml](../../domains/mongodb/examples/triage-record.example.yaml)
 
 ## 8. 外部参考
 
 当前外部参考归档见：
 
-- [docs/REFERENCES.md](/home/stephen/AI/midstack-triage/docs/REFERENCES.md)
-- [docs/SIGNAL_GOVERNANCE_PATTERNS.md](/home/stephen/AI/midstack-triage/docs/SIGNAL_GOVERNANCE_PATTERNS.md)
+- [docs/REFERENCES.md](../references.md)
+- [docs/SIGNAL_GOVERNANCE_PATTERNS.md](../concepts/signal-governance.md)

@@ -1,3 +1,10 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Architecture
 
 ## 目标
@@ -49,6 +56,8 @@
 - `scenarios/connection-failure/`
 - `scenarios/resource-exhaustion/`
 - `scenarios/replica-inconsistency/`
+- `scenarios/latency-spike/`
+- `scenarios/data-hotspot/`
 
 场景层只定义场景本身，不存具体产品的 runbook、脚本或命令。
 

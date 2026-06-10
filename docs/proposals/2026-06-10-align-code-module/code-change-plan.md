@@ -103,18 +103,14 @@ superseded_by: none
 
 目标：补齐“第 3 段证据包之后”的第 4 段 Agent 推理编排边界。
 
-先确认触发方式：
-
-- 方案 A：`analyse` 只生成证据包和规则 runner 保底结果，由 Cursor Agent 根据 incident 继续推理
-- 方案 B：`analyse` 内部增加可配置 Agent / LLM 推理调用，直接生成第 4 段结果
-- 方案 C：规则 runner 生成初稿，Cursor Agent 读取初稿和证据包后做二次推理增强
-
-当前建议优先讨论方案 C：
+当前确认采用方案 C：
 
 - 保留规则 runner 的稳定回归价值
 - 让 Agent 只消费第 3 段整理后的证据包、证据缺口和 artifact 引用
 - 避免直接把全量原始日志交给模型
 - 保留未来适配不同 Agent 平台的空间
+- `analyse` 成功后额外落 `analysis.rule-draft.yaml` 和 `agent-reasoning-task.md`
+- Cursor Agent 按任务单继续回填正式 `analysis.yaml` 与 `report.md`
 
 验证：
 

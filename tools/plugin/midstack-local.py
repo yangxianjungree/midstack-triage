@@ -25,6 +25,8 @@ from patch_merge import apply_script_output  # noqa: E402
 MONGODB_DISCOVERY_HINTS = ("mongo", "mongodb", "mongos", "mongod", "configsvr", "shard", "psmdb", "percona")
 INCIDENT_ID_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789"
 ANALYSABLE_STATUSES = ("ready", "analysed")
+ANALYSIS_RULE_DRAFT_FILENAME = "analysis.rule-draft.yaml"
+AGENT_REASONING_TASK_FILENAME = "agent-reasoning-task.md"
 
 
 def now_iso() -> str:
@@ -1079,6 +1081,70 @@ def as_list(value: Any) -> List[Any]:
     return value if isinstance(value, list) else []
 
 
+def write_agent_reasoning_task(
+    output_dir: Path,
+    input_data: Dict[str, Any],
+    analysis_file: Path,
+    rule_draft_file: Path,
+    report_file: Path,
+) -> Path:
+    task_file = output_dir / AGENT_REASONING_TASK_FILENAME
+    lines = [
+        "# Midstack Agent Reasoning Task",
+        "",
+        "## Goal",
+        "",
+        "Use the stage-3 evidence package to complete stage-4 reasoning and stage-5 summarization.",
+        "Treat `%s` as a non-authoritative rules draft only." % rule_draft_file.name,
+        "",
+        "## Incident",
+        "",
+        "- Incident ID: `%s`" % input_data.get("incident_id", output_dir.name),
+        "- Middleware: `%s`" % input_data.get("middleware", "mongodb"),
+        "- Scenario: `%s`" % input_data.get("scenario", "unknown"),
+        "- Namespace: `%s`" % input_data.get("namespace", ""),
+        "- Cluster: `%s`" % input_data.get("cluster_id", ""),
+        "- Customer clue: %s" % input_data.get("customer_clue", ""),
+        "",
+        "## Read First",
+        "",
+        "- `input.yaml`: frozen start-stage input and customer clue.",
+        "- `structured_record.yaml`: structured object, topology, status, and log details.",
+        "- `signal_bundle.yaml`: curated abnormal signals, object links, and timeline hints.",
+        "- `collection_report.yaml`: collection coverage, failures, and evidence gaps.",
+        "- `%s`: current rules fallback draft for reference only." % rule_draft_file.name,
+        "",
+        "## Required Output Files",
+        "",
+        "- Update `%s` as the formal phase-4/5 output." % analysis_file.name,
+        "- Update `%s` so it matches the final `%s`." % (report_file.name, analysis_file.name),
+        "",
+        "## Analysis Contract",
+        "",
+        "- Produce multiple hypotheses when evidence supports multiple plausible paths.",
+        "- Each hypothesis must include `hypothesis_id`, `statement`, `causal_path`, `supporting_evidence`, `counter_evidence`, `disconfirming_conditions`, `evidence_gaps`, `validation_actions`, and `validation_result`.",
+        "- `validation_result` must be one of `supported`, `refuted`, or `insufficient`.",
+        "- `conclusion_summary` must include `statement`, `confidence`, `impact_scope`, `primary_cause_category`, `evidence`, and `limitations`.",
+        "- `next_actions` should stay read-only unless the evidence clearly justifies a higher-risk action.",
+        "- Distinguish missing evidence from evidence that disproves a hypothesis.",
+        "- If evidence is insufficient, keep the conclusion and hypothesis status conservative instead of forcing certainty.",
+        "",
+        "## Working Rules",
+        "",
+        "- Prefer `signal_bundle.yaml` and `collection_report.yaml` for reasoning inputs; use `structured_record.yaml` for necessary detail lookup.",
+        "- Do not silently rewrite `input.yaml` or other start-stage files.",
+        "- Keep raw evidence references explicit in `supporting_evidence`, `counter_evidence`, and `limitations`.",
+        "",
+        "## Deliverable Check",
+        "",
+        "- `analysis.yaml` reflects the final Agent reasoning rather than the rules-only draft.",
+        "- `report.md` matches the final conclusion, confidence, evidence gaps, and next actions.",
+        "",
+    ]
+    task_file.write_text("\n".join(lines), encoding="utf-8")
+    return task_file
+
+
 def write_report(output_dir: Path, input_data: Dict[str, Any], analysis: Dict[str, Any]) -> Path:
     conclusion = analysis.get("conclusion_summary") or {}
     report_file = output_dir / "report.md"
@@ -1312,8 +1378,30 @@ def command_analyse(args: argparse.Namespace) -> int:
         output["warnings"].append(proc.stderr.strip())
     else:
         analysis = load_yaml(analysis_file)
+        rule_draft_file = output_dir / ANALYSIS_RULE_DRAFT_FILENAME
+        write_yaml(rule_draft_file, analysis)
         report_file = write_report(output_dir, input_data, analysis)
+        task_file = write_agent_reasoning_task(output_dir, input_data, analysis_file, rule_draft_file, report_file)
+        output["record_refs"].append(
+            {
+                "name": "analysis_rule_draft",
+                "path": str(rule_draft_file),
+                "description": "rules fallback draft before Agent reasoning refinement",
+            }
+        )
+        output["record_refs"].append(
+            {
+                "name": "agent_reasoning_task",
+                "path": str(task_file),
+                "description": "phase-4/5 Agent reasoning task and output contract",
+            }
+        )
         output["record_refs"].append({"name": "report", "path": str(report_file), "description": "generated human-readable report"})
+        output["warnings"].append("analysis.yaml is currently a rules-based fallback draft; Agent reasoning should refine analysis.yaml and report.md.")
+        output["next_actions"] = [
+            "read agent-reasoning-task.md and update analysis.yaml with Agent-led phase-4 reasoning",
+            "refresh report.md so it matches the final analysis.yaml conclusion",
+        ]
         if incident_mode and incident_dir is not None:
             update_incident_meta(incident_dir, {"status": "analysed", "current_command": "analyse"})
             write_current_incident(output_root, incident_dir)

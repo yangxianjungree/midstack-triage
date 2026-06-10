@@ -134,6 +134,8 @@ def main() -> int:
         prompt_names = {item["name"] for item in prompts["result"]["prompts"]}
         if "midstack_start" not in prompt_names:
             raise AssertionError("missing midstack_start prompt")
+        if "midstack_analyse_reasoning" not in prompt_names:
+            raise AssertionError("missing midstack_analyse_reasoning prompt")
         analyse = request(
             proc,
             {
@@ -168,8 +170,14 @@ def main() -> int:
         if review["result"].get("isError"):
             raise AssertionError(review["result"])
         expected_analysis = temp_project / ".local" / "incidents" / "cursor-mcp-test" / "analysis.yaml"
+        expected_rule_draft = temp_project / ".local" / "incidents" / "cursor-mcp-test" / "analysis.rule-draft.yaml"
+        expected_reasoning_task = temp_project / ".local" / "incidents" / "cursor-mcp-test" / "agent-reasoning-task.md"
         if not expected_analysis.exists():
             raise AssertionError("expected Cursor workspace outputs were not created")
+        if not expected_rule_draft.exists():
+            raise AssertionError("expected rules draft output was not created")
+        if not expected_reasoning_task.exists():
+            raise AssertionError("expected agent reasoning task was not created")
         analysis_data = yaml.safe_load(expected_analysis.read_text(encoding="utf-8")) or {}
         if "review" not in analysis_data:
             raise AssertionError("expected review block in analysis.yaml")

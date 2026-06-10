@@ -19,10 +19,11 @@ python3 tools/analyse/mongodb-analyse.py \
 - 读取 `collection_report.yaml`
 - 基于 scenario 和 abnormal signals 生成初步假设与结论
 - 基于 MongoDB 资产 metadata 生成匹配场景的知识沉淀候选
+- 作为 `/midstack:analyse` 的规则保底草稿生成器，供后续 Agent 推理参考
 
 当前限制：
 
 - 不连接远程环境
 - 不调度采集脚本
-- 不替代正式插件命令
+- 不替代第 4 段正式 Agent 推理
 - 规则仍是 MongoDB MVP 原型

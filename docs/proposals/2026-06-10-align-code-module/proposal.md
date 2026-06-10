@@ -43,7 +43,7 @@ superseded_by: none
 4. 真实远程只读采集当前通过 `tools/remote-executor/mongodb-executor.py` 调度，`tools/remote-smoke/mongodb-smoke.py` 仅保留兼容 smoke 包装入口
 5. MongoDB 第 3 段脚本源位于 `domains/mongodb/scripts/`
 6. 脚本输出通过 `tools/lib/patch_merge.py` 合并为 incident 三类记录
-7. 第 4、5 段当前由 `tools/analyse/mongodb-analyse.py` 的规则 runner 生成 `analysis.yaml`
+7. 第 4、5 段当前由 `tools/analyse/mongodb-analyse.py` 先生成规则保底草稿，Cursor Agent 再基于 incident 证据包继续回填正式 `analysis.yaml`
 8. `review` 当前写入 `analysis.yaml.review`，并生成 `review-adapter-output.yaml`
 
 ## 已对齐项
@@ -84,12 +84,11 @@ superseded_by: none
 
 - `/start` 的第 2 段对象盘点仍是轻量只读线索，不执行 `rs.status()`、日志采集或 MongoDB shell 命令；副本集成员状态和深度验证仍属于 analyse 第 3 段
 - 兼容保留的 `remote-smoke.py` 现在只做 smoke 包装；当前 remote executor 已具备 run-level / per-script 请求结果落盘、基础 capability checks、关键 MongoDB 脚本的 target / pod tool preflight、`secret_ref` hint 传递和 blocked 导入链路，但错误分类覆盖度、能力检查深度和部分回收语义仍是轻量实现，未完全收敛到 L1 最终边界
-- 第 4 段当前由规则 runner 生成多假设和结论，尚未形成 L1 中“Agent 主导”的正式推理编排；现阶段应确认规则 runner 是 MVP 保底、离线 replay/score 工具，还是 Agent 推理输入
+- 第 4 段当前已明确采用“规则 runner 保底草稿 + Cursor Agent 回填正式分析”的共存方式；后续仍需继续验证该链路在不同 Agent 平台上的稳定性
 
 ## 建议优先确认
 
-1. 第 4 段 Agent 推理层与规则 runner 的边界：规则 runner 产物是最终 `analysis.yaml`，还是 Agent 推理的初稿/保底输入
-2. 当前 remote executor 的错误分类、能力检查和回收语义如何继续收敛到 L1 最终边界
+1. 当前 remote executor 的错误分类、能力检查和回收语义如何继续收敛到 L1 最终边界
 
 ## 影响范围
 
@@ -112,7 +111,11 @@ superseded_by: none
 
 ## 兼容性
 
-待确认。
+当前采用：
+
+- `analyse` 完成第 3 段后继续生成 `analysis.rule-draft.yaml` 和 `agent-reasoning-task.md`
+- Cursor Agent 读取 incident 证据与任务单，回填正式 `analysis.yaml` 与 `report.md`
+- 规则 runner 保留为 MVP 保底草稿与离线 replay / score 基线
 
 需要特别评估：
 

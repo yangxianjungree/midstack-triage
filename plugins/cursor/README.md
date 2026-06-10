@@ -106,6 +106,15 @@ MCP server 还暴露以下 resources，供 Cursor 在命令执行前读取简要
 - `midstack://commands/start`
 - `midstack://commands/analyse`
 
+analyse 成功后，incident 目录会额外生成：
+
+- `analysis.rule-draft.yaml`
+  - 当前规则 runner 生成的保底草稿，供 Agent 参考，不是第 4 段最终权威结论
+- `agent-reasoning-task.md`
+  - Agent 应读取的推理任务单，明确第 4、5 段输入证据、输出合同和回填要求
+
+Cursor Agent 在 `/midstack:analyse` 主路径中应继续读取该任务单，并回填正式 `analysis.yaml` 与 `report.md`。
+
 ## Automated Test
 
 运行 Cursor MCP smoke test：

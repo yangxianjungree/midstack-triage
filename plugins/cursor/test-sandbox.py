@@ -143,8 +143,12 @@ def main() -> int:
             proc.kill()
 
     analysis_file = sandbox / ".local" / "incidents" / "cursor-sandbox-k8s-runtime-test" / "analysis.yaml"
+    reasoning_task_file = sandbox / ".local" / "incidents" / "cursor-sandbox-k8s-runtime-test" / "agent-reasoning-task.md"
     if not analysis_file.exists():
         print("ERROR: sandbox analysis output was not created", file=sys.stderr)
+        return 1
+    if not reasoning_task_file.exists():
+        print("ERROR: sandbox agent reasoning task was not created", file=sys.stderr)
         return 1
     analysis = yaml.safe_load(analysis_file.read_text(encoding="utf-8")) or {}
     if "review" not in analysis:

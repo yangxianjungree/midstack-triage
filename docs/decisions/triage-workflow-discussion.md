@@ -1,3 +1,12 @@
+---
+status: archived
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
+> ⚠️ 已归档的历史讨论稿。结论以 `docs/specs/` 为准，本文内容可能已过时。
+
 # Triage Workflow Discussion
 
 本文件用于记录排障主流程的专项讨论。
@@ -7,7 +16,7 @@
 - 按 5 个主流程分章节
 - 每个主流程下继续按子主题记录讨论细节
 - 已确认结论、待继续讨论、外部参考都尽量落在对应章节下
-- 与流程无直接关系的其他讨论仍保留在 [docs/DISCUSSIONS.md](/home/stephen/AI/midstack-triage/docs/DISCUSSIONS.md)
+- 与流程无直接关系的其他讨论仍保留在 [docs/DISCUSSIONS.md](discussions-archive.md)
 
 ## 1. 受理与启动
 

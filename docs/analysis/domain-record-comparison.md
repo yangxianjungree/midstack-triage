@@ -1,3 +1,10 @@
+---
+status: draft
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Domain Record Comparison
 
 本文件用于对不同中间件的结构化排障记录做横向对照，识别：

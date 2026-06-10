@@ -1,3 +1,12 @@
+---
+status: archived
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
+> ⚠️ 已归档的历史讨论稿。结论以 `docs/specs/` 为准，本文内容可能已过时。
+
 # Discussions
 
 本文件用于记录项目讨论过程中的结论、分歧点和后续待继续的话题，便于后续翻阅。
@@ -15,7 +24,7 @@
 
 相关文档：
 
-- [README.md](/home/stephen/AI/midstack-triage/README.md)
+- [README.md](../../README.md)
 
 ### 主题：仓库结构总体方向
 
@@ -40,7 +49,7 @@
 
 相关文档：
 
-- [docs/architecture.md](/home/stephen/AI/midstack-triage/docs/architecture.md)
+- [docs/architecture.md](../concepts/architecture.md)
 
 ### 主题：MongoDB 样例落地
 
@@ -58,11 +67,11 @@
 
 相关文档：
 
-- [scenarios/replica-inconsistency/scenario.yaml](/home/stephen/AI/midstack-triage/scenarios/replica-inconsistency/scenario.yaml)
-- [domains/mongodb/metadata.yaml](/home/stephen/AI/midstack-triage/domains/mongodb/metadata.yaml)
-- [domains/mongodb/commands/replica-set/check-rs-status/command.md](/home/stephen/AI/midstack-triage/domains/mongodb/commands/replica-set/check-rs-status/command.md)
-- [domains/mongodb/skills/replica-set/triage-replica-member-not-healthy/skill.md](/home/stephen/AI/midstack-triage/domains/mongodb/skills/replica-set/triage-replica-member-not-healthy/skill.md)
-- [domains/mongodb/runbooks/replica-set/replica-member-not-healthy/runbook.md](/home/stephen/AI/midstack-triage/domains/mongodb/runbooks/replica-set/replica-member-not-healthy/runbook.md)
+- [scenarios/replica-inconsistency/scenario.yaml](../../scenarios/replica-inconsistency/scenario.yaml)
+- [domains/mongodb/metadata.yaml](../../domains/mongodb/metadata.yaml)
+- [domains/mongodb/commands/replica-set/check-rs-status/command.md](../../domains/mongodb/commands/replica-set/check-rs-status/command.md)
+- [domains/mongodb/skills/replica-set/triage-replica-member-not-healthy/skill.md](../../domains/mongodb/skills/replica-set/triage-replica-member-not-healthy/skill.md)
+- [domains/mongodb/runbooks/replica-set/replica-member-not-healthy/runbook.md](../../domains/mongodb/runbooks/replica-set/replica-member-not-healthy/runbook.md)
 
 ### 主题：已记账、暂不继续推进的事项
 
@@ -76,7 +85,7 @@
 
 相关文档：
 
-- [docs/TODO.md](/home/stephen/AI/midstack-triage/docs/TODO.md)
+- [docs/TODO.md](../project/todo.md)
 
 ### 主题：排障步骤框架（初稿）
 
@@ -1275,9 +1284,9 @@ updated_at:
 
 相关文档：
 
-- [docs/TRIAGE_WORKFLOW_SPEC.md](/home/stephen/AI/midstack-triage/docs/TRIAGE_WORKFLOW_SPEC.md)
-- [docs/PLUGIN_RUNTIME_SPEC.md](/home/stephen/AI/midstack-triage/docs/PLUGIN_RUNTIME_SPEC.md)
-- [domains/mongodb/scripts/README.md](/home/stephen/AI/midstack-triage/domains/mongodb/scripts/README.md)
+- [docs/TRIAGE_WORKFLOW_SPEC.md](../specs/triage-workflow.spec.md)
+- [docs/PLUGIN_RUNTIME_SPEC.md](../specs/plugin-runtime.spec.md)
+- [domains/mongodb/scripts/README.md](../../domains/mongodb/scripts/README.md)
 
 ### 主题：脚本资产源文件与插件运行时脚本的边界
 
@@ -1317,9 +1326,9 @@ updated_at:
 
 相关文档：
 
-- [README.md](/home/stephen/AI/midstack-triage/README.md)
-- [docs/architecture.md](/home/stephen/AI/midstack-triage/docs/architecture.md)
-- [docs/PLUGIN_RUNTIME_SPEC.md](/home/stephen/AI/midstack-triage/docs/PLUGIN_RUNTIME_SPEC.md)
+- [README.md](../../README.md)
+- [docs/architecture.md](../concepts/architecture.md)
+- [docs/PLUGIN_RUNTIME_SPEC.md](../specs/plugin-runtime.spec.md)
 
 ### 主题：脚本资产清单采用单中间件 manifest
 
@@ -1357,10 +1366,10 @@ updated_at:
 
 相关文档：
 
-- [README.md](/home/stephen/AI/midstack-triage/README.md)
-- [docs/architecture.md](/home/stephen/AI/midstack-triage/docs/architecture.md)
-- [docs/PLUGIN_RUNTIME_SPEC.md](/home/stephen/AI/midstack-triage/docs/PLUGIN_RUNTIME_SPEC.md)
-- [domains/mongodb/scripts/README.md](/home/stephen/AI/midstack-triage/domains/mongodb/scripts/README.md)
+- [README.md](../../README.md)
+- [docs/architecture.md](../concepts/architecture.md)
+- [docs/PLUGIN_RUNTIME_SPEC.md](../specs/plugin-runtime.spec.md)
+- [domains/mongodb/scripts/README.md](../../domains/mongodb/scripts/README.md)
 
 ### 主题：插件侧脚本运行时映射文件
 
@@ -1392,10 +1401,10 @@ updated_at:
 
 相关文档：
 
-- [README.md](/home/stephen/AI/midstack-triage/README.md)
-- [docs/PLUGIN_RUNTIME_SPEC.md](/home/stephen/AI/midstack-triage/docs/PLUGIN_RUNTIME_SPEC.md)
-- [interfaces/plugin/README.md](/home/stephen/AI/midstack-triage/interfaces/plugin/README.md)
-- [interfaces/plugin/script-runtime-map.example.yaml](/home/stephen/AI/midstack-triage/interfaces/plugin/script-runtime-map.example.yaml)
+- [README.md](../../README.md)
+- [docs/PLUGIN_RUNTIME_SPEC.md](../specs/plugin-runtime.spec.md)
+- [interfaces/plugin/README.md](../../interfaces/plugin/README.md)
+- [interfaces/plugin/script-runtime-map.example.yaml](../../interfaces/plugin/script-runtime-map.example.yaml)
 
 ### 主题：MongoDB 第一批实现脚本清单
 
@@ -1439,10 +1448,10 @@ updated_at:
 
 相关文档：
 
-- [docs/PLUGIN_RUNTIME_SPEC.md](/home/stephen/AI/midstack-triage/docs/PLUGIN_RUNTIME_SPEC.md)
-- [domains/mongodb/scripts/README.md](/home/stephen/AI/midstack-triage/domains/mongodb/scripts/README.md)
-- [domains/mongodb/scripts/manifest.yaml](/home/stephen/AI/midstack-triage/domains/mongodb/scripts/manifest.yaml)
-- [interfaces/plugin/script-runtime-map.example.yaml](/home/stephen/AI/midstack-triage/interfaces/plugin/script-runtime-map.example.yaml)
+- [docs/PLUGIN_RUNTIME_SPEC.md](../specs/plugin-runtime.spec.md)
+- [domains/mongodb/scripts/README.md](../../domains/mongodb/scripts/README.md)
+- [domains/mongodb/scripts/manifest.yaml](../../domains/mongodb/scripts/manifest.yaml)
+- [interfaces/plugin/script-runtime-map.example.yaml](../../interfaces/plugin/script-runtime-map.example.yaml)
 
 ### 主题：第 3 段脚本最小调用合同
 
@@ -1492,11 +1501,11 @@ updated_at:
 
 相关文档：
 
-- [README.md](/home/stephen/AI/midstack-triage/README.md)
-- [docs/TRIAGE_WORKFLOW_SPEC.md](/home/stephen/AI/midstack-triage/docs/TRIAGE_WORKFLOW_SPEC.md)
-- [docs/PLUGIN_RUNTIME_SPEC.md](/home/stephen/AI/midstack-triage/docs/PLUGIN_RUNTIME_SPEC.md)
-- [domains/mongodb/scripts/README.md](/home/stephen/AI/midstack-triage/domains/mongodb/scripts/README.md)
-- [domains/mongodb/examples/triage-record.example.yaml](/home/stephen/AI/midstack-triage/domains/mongodb/examples/triage-record.example.yaml)
+- [README.md](../../README.md)
+- [docs/TRIAGE_WORKFLOW_SPEC.md](../specs/triage-workflow.spec.md)
+- [docs/PLUGIN_RUNTIME_SPEC.md](../specs/plugin-runtime.spec.md)
+- [domains/mongodb/scripts/README.md](../../domains/mongodb/scripts/README.md)
+- [domains/mongodb/examples/triage-record.example.yaml](../../domains/mongodb/examples/triage-record.example.yaml)
 
 ### 主题：MongoDB 基础采集脚本的 `context-file` 约定
 
@@ -1690,9 +1699,9 @@ updated_at:
 
 相关文档：
 
-- [docs/PLUGIN_RUNTIME_SPEC.md](/home/stephen/AI/midstack-triage/docs/PLUGIN_RUNTIME_SPEC.md)
-- [interfaces/plugin/remote-executor-request.example.yaml](/home/stephen/AI/midstack-triage/interfaces/plugin/remote-executor-request.example.yaml)
-- [interfaces/plugin/remote-executor-result.example.yaml](/home/stephen/AI/midstack-triage/interfaces/plugin/remote-executor-result.example.yaml)
+- [docs/PLUGIN_RUNTIME_SPEC.md](../specs/plugin-runtime.spec.md)
+- [interfaces/plugin/remote-executor-request.example.yaml](../../interfaces/plugin/remote-executor-request.example.yaml)
+- [interfaces/plugin/remote-executor-result.example.yaml](../../interfaces/plugin/remote-executor-result.example.yaml)
 
 ### 主题：远程脚本投放目录
 

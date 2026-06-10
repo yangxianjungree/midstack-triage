@@ -1,8 +1,15 @@
+---
+status: draft
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # TODO
 
 本文件用于记录当前已识别、但暂未继续推进的事项。
 
-讨论过程和结论请同步记录到 [docs/DISCUSSIONS.md](/home/stephen/AI/midstack-triage/docs/DISCUSSIONS.md)。
+讨论过程和结论请同步记录到 [docs/DISCUSSIONS.md](../decisions/discussions-archive.md)。
 
 ## 待讨论
 
@@ -36,9 +43,9 @@
 
 ## 待实现
 
-近期执行优先级以 [docs/IMPLEMENTATION_PLAN.md](/home/stephen/AI/midstack-triage/docs/IMPLEMENTATION_PLAN.md) 为准。
+近期执行优先级以 [docs/IMPLEMENTATION_PLAN.md](implementation-plan.md) 为准。
 
-测试、验证与优化闭环已作为最后一类实施需求记录在 [docs/IMPLEMENTATION_PLAN.md](/home/stephen/AI/midstack-triage/docs/IMPLEMENTATION_PLAN.md#p3-测试验证与优化闭环)。
+测试、验证与优化闭环已作为最后一类实施需求记录在 [docs/IMPLEMENTATION_PLAN.md](implementation-plan.md#p3-测试验证与优化闭环)。
 
 ### 1. 补齐共性层占位与规范
 

@@ -9,7 +9,7 @@
 
 ## 检视范围
 - 对象：[提案 / 目录 / PR / 资产链路]
-- 基准：[README.md（MongoDB 首个样例）](../../../README.md)、[docs/architecture.md](../../../docs/architecture.md) 及关联 spec
+- 基准：[README.md（MongoDB 首个样例）](../../../README.md)、[docs/architecture.md](../../../docs/concepts/architecture.md) 及关联 spec
 - 范围：[全仓 / domain:X / scenario:Y / 单资产]
 
 ## 总判断

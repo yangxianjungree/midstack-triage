@@ -1,3 +1,10 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # References
 
 本文件用于归档项目在流程设计、排障方法、架构思路上的外部参考资料，便于后续遇到瓶颈时回看和借鉴。
@@ -137,7 +144,7 @@
 - 在结论阶段加入知识沉淀，而不是只停在一次性结论
 - 将历史案例和历史经验作为正式输入，而不是临时参考
 
-与第 3 段“信号采集与治理”实现方式相关的方案对比，见 [docs/SIGNAL_GOVERNANCE_PATTERNS.md](/home/stephen/AI/midstack-triage/docs/SIGNAL_GOVERNANCE_PATTERNS.md)。
+与第 3 段“信号采集与治理”实现方式相关的方案对比，见 [docs/SIGNAL_GOVERNANCE_PATTERNS.md](concepts/signal-governance.md)。
 
 ## 后续可继续扩展的参考方向
 

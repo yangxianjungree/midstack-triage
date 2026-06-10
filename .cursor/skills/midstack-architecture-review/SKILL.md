@@ -90,7 +90,7 @@ description: >-
 
 ## 与本仓库原则的硬约束
 
-检视时对照 [docs/architecture.md](../../../docs/architecture.md) 三条原则：
+检视时对照 [docs/architecture.md](../../../docs/concepts/architecture.md) 三条原则：
 
 - **单一事实来源**：runbook 只在 `domains/<product>/runbooks/` 存一份
 - **不重复存放**：顶层 `scenarios/` 不存产品专属命令/脚本/runbook

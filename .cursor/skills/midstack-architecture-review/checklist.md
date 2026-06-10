@@ -1,6 +1,6 @@
 # Architecture Review Checklist
 
-逐项检查，标记 `✅ 通过` / `⚠️ 风险` / `❌ 缺失`。细则冲突时以 [README.md](../../../README.md) 与 [docs/architecture.md](../../../docs/architecture.md) 为准。
+逐项检查，标记 `✅ 通过` / `⚠️ 风险` / `❌ 缺失`。细则冲突时以 [README.md](../../../README.md) 与 [docs/architecture.md](../../../docs/concepts/architecture.md) 为准。
 
 **首个落地样例**：`domains/mongodb/` + `scenarios/replica-inconsistency/`。检视新 domain/scenario 时，先与这两条链路对齐，再评估是否可扩展。
 

@@ -1,3 +1,10 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Runbook Spec
 
 ## 最小字段
@@ -38,4 +45,4 @@ rollback_or_safety_notes:
 
 ## 模型
 
-- [core/models/runbook.schema.yaml](/home/stephen/AI/midstack-triage/core/models/runbook.schema.yaml)
+- [core/models/runbook.schema.yaml](../../core/models/runbook.schema.yaml)

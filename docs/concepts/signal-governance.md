@@ -1,3 +1,10 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Signal Governance Patterns
 
 本文件用于记录“信号采集与治理”阶段可参考的实现模式，便于后续在脚本、规则、LLM 和人工协作之间做设计取舍。

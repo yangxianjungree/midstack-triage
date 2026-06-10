@@ -1,12 +1,19 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Incident Record Spec
 
 本文件用于确认单次排障记录的目录结构、核心文件职责和文件之间的关系，作为编码前的结构基线。
 
 相关讨论见：
 
-- [docs/DISCUSSIONS.md](/home/stephen/AI/midstack-triage/docs/DISCUSSIONS.md)
-- [docs/PLUGIN_USAGE_SPEC.md](/home/stephen/AI/midstack-triage/docs/PLUGIN_USAGE_SPEC.md)
-- [docs/TRIAGE_WORKFLOW_SPEC.md](/home/stephen/AI/midstack-triage/docs/TRIAGE_WORKFLOW_SPEC.md)
+- [docs/DISCUSSIONS.md](../decisions/discussions-archive.md)
+- [docs/PLUGIN_USAGE_SPEC.md](plugin-usage.spec.md)
+- [docs/TRIAGE_WORKFLOW_SPEC.md](triage-workflow.spec.md)
 
 ## 1. 目录结构
 

@@ -1,11 +1,18 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Incident Patch Merge Spec
 
 本文件定义第 3 段脚本 `output-file` 如何合并进 incident 记录。
 
 相关实现：
 
-- [tools/lib/patch_merge.py](../tools/lib/patch_merge.py)
-- [core/models/incident-patch-merge.schema.yaml](../core/models/incident-patch-merge.schema.yaml)
+- [tools/lib/patch_merge.py](../../tools/lib/patch_merge.py)
+- [core/models/incident-patch-merge.schema.yaml](../../core/models/incident-patch-merge.schema.yaml)
 
 ## 1. 合并对象
 

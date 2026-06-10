@@ -1,3 +1,10 @@
+---
+status: draft
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Implementation Plan
 
 本文件用于把当前剩余工作收敛为可执行计划。

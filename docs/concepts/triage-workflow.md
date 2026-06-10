@@ -1,8 +1,15 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Triage Workflow
 
 本文件用于确认项目统一采用的排障主流程。
 
-流程细节讨论见 [docs/TRIAGE_WORKFLOW_DISCUSSION.md](/home/stephen/AI/midstack-triage/docs/TRIAGE_WORKFLOW_DISCUSSION.md)。
+流程细节讨论见 [docs/TRIAGE_WORKFLOW_DISCUSSION.md](../decisions/triage-workflow-discussion.md)。
 
 ## 结论
 

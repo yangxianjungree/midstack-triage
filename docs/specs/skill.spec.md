@@ -1,3 +1,10 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Skill Spec
 
 ## 最小字段
@@ -30,7 +37,7 @@ safety_constraints:
 `required_assets` 支持：
 
 - 路径字符串（过渡期）
-- 结构化引用：`type` + `id`，见 [docs/ASSET_REFERENCE_SPEC.md](ASSET_REFERENCE_SPEC.md)
+- 结构化引用：`type` + `id`，见 [docs/ASSET_REFERENCE_SPEC.md](asset-reference.spec.md)
 
 ## 组织规则
 
@@ -41,6 +48,6 @@ safety_constraints:
 
 ## 模型
 
-- [core/models/skill.schema.yaml](../core/models/skill.schema.yaml)
-- [core/models/asset-reference.schema.yaml](../core/models/asset-reference.schema.yaml)
-- [docs/ASSET_REFERENCE_SPEC.md](ASSET_REFERENCE_SPEC.md)
+- [core/models/skill.schema.yaml](../../core/models/skill.schema.yaml)
+- [core/models/asset-reference.schema.yaml](../../core/models/asset-reference.schema.yaml)
+- [docs/ASSET_REFERENCE_SPEC.md](asset-reference.spec.md)

@@ -48,4 +48,4 @@ principles:
 
 implementation:
   python_module: tools/lib/patch_merge.py
-  spec: docs/INCIDENT_PATCH_MERGE_SPEC.md
+  spec: docs/specs/incident-patch-merge.spec.md

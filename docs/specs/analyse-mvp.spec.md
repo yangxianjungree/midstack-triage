@@ -1,3 +1,10 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Analyse MVP Spec
 
 本文件定义第一版 `/<plugin_name>:analyse` 的能力边界。
@@ -6,11 +13,11 @@
 
 相关文档：
 
-- [docs/PLUGIN_USAGE_SPEC.md](/home/stephen/AI/midstack-triage/docs/PLUGIN_USAGE_SPEC.md)
-- [docs/TRIAGE_WORKFLOW_SPEC.md](/home/stephen/AI/midstack-triage/docs/TRIAGE_WORKFLOW_SPEC.md)
-- [docs/PLUGIN_RUNTIME_SPEC.md](/home/stephen/AI/midstack-triage/docs/PLUGIN_RUNTIME_SPEC.md)
-- [docs/INCIDENT_RECORD_SPEC.md](/home/stephen/AI/midstack-triage/docs/INCIDENT_RECORD_SPEC.md)
-- [docs/IMPLEMENTATION_PLAN.md](/home/stephen/AI/midstack-triage/docs/IMPLEMENTATION_PLAN.md)
+- [docs/PLUGIN_USAGE_SPEC.md](plugin-usage.spec.md)
+- [docs/TRIAGE_WORKFLOW_SPEC.md](triage-workflow.spec.md)
+- [docs/PLUGIN_RUNTIME_SPEC.md](plugin-runtime.spec.md)
+- [docs/INCIDENT_RECORD_SPEC.md](incident-record.spec.md)
+- [docs/IMPLEMENTATION_PLAN.md](../project/implementation-plan.md)
 
 ## 1. 定位
 
@@ -156,7 +163,7 @@
 
 模板：
 
-- [core/templates/analysis.template.yaml](/home/stephen/AI/midstack-triage/core/templates/analysis.template.yaml)
+- [core/templates/analysis.template.yaml](../../core/templates/analysis.template.yaml)
 
 ## 7. 第 5 段输出
 
@@ -188,7 +195,7 @@
 
 模板：
 
-- [core/templates/knowledge-candidate.template.yaml](/home/stephen/AI/midstack-triage/core/templates/knowledge-candidate.template.yaml)
+- [core/templates/knowledge-candidate.template.yaml](../../core/templates/knowledge-candidate.template.yaml)
 
 第 5 段原则：
 

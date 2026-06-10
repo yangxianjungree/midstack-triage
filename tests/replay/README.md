@@ -11,7 +11,7 @@
 
 当前最小 replay 工具：
 
-- [tools/replay/mongodb-replay.py](/home/stephen/AI/midstack-triage/tools/replay/mongodb-replay.py)
+- [tools/replay/mongodb-replay.py](../../tools/replay/mongodb-replay.py)
 
 第一版 replay 工具只输出 fixture 摘要，不执行完整 analyse 推理引擎。
 

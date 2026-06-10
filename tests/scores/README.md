@@ -18,4 +18,4 @@
 
 当前最小评分汇总工具：
 
-- [tools/replay/mongodb-score-summary.py](/home/stephen/AI/midstack-triage/tools/replay/mongodb-score-summary.py)
+- [tools/replay/mongodb-score-summary.py](../../tools/replay/mongodb-score-summary.py)

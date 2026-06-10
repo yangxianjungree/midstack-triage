@@ -6,8 +6,8 @@
 
 | 文件 | 用途 |
 |------|------|
-| [README.md](../../../README.md) | 项目目标、MongoDB 首个样例 |
-| [docs/architecture.md](../../../docs/architecture.md) | 三层结构、职责边界 |
+| [README.md](../../../../README.md) | 项目目标、MongoDB 首个样例 |
+| [docs/architecture.md](../../../../docs/concepts/architecture.md) | 三层结构、职责边界 |
 
 ## 按检视范围追加
 
@@ -15,10 +15,10 @@
 |----------|----------|
 | `scenarios/` | `scenarios/*/scenario.yaml`，对照 `scenarios/replica-inconsistency/` |
 | `domains/<mw>/` | 该 domain 的 `metadata.yaml`，对照 `domains/mongodb/` |
-| runbook | [docs/runbook-spec.md](../../../docs/runbook-spec.md) + MongoDB 样例 runbook |
-| skill | [docs/skill-spec.md](../../../docs/skill-spec.md) + MongoDB 样例 skill |
-| command | [docs/command-spec.md](../../../docs/command-spec.md) + MongoDB 样例 command |
-| `core/shared/` | [docs/architecture.md](../../../docs/architecture.md) 中 shared 准入条件 |
+| runbook | [docs/runbook-spec.md](../../../../docs/specs/runbook.spec.md) + MongoDB 样例 runbook |
+| skill | [docs/skill-spec.md](../../../../docs/specs/skill.spec.md) + MongoDB 样例 skill |
+| command | [docs/command-spec.md](../../../../docs/specs/command.spec.md) + MongoDB 样例 command |
+| `core/shared/` | [docs/architecture.md](../../../../docs/concepts/architecture.md) 中 shared 准入条件 |
 | `interfaces/` | `interfaces/` 下 README 与 plugin 约定 |
 | PR / diff | 仅检视 diff 触及路径及其关联 metadata 引用链 |
 

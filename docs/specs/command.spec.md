@@ -1,3 +1,10 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Command Spec
 
 ## 最小字段
@@ -32,4 +39,4 @@ expected_signal:
 
 ## 模型
 
-- [core/models/command.schema.yaml](/home/stephen/AI/midstack-triage/core/models/command.schema.yaml)
+- [core/models/command.schema.yaml](../../core/models/command.schema.yaml)

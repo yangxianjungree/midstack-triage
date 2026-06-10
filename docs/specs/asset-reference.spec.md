@@ -1,13 +1,20 @@
+---
+status: authoritative
+last_updated: 2026-06-10
+supersedes: none
+superseded_by: none
+---
+
 # Asset Reference Spec
 
 本文件定义跨资产引用协议，用于连接 `scenarios/`、`runbooks/`、`commands/`、`skills/` 与 `scripts/`。
 
 相关文档：
 
-- [docs/architecture.md](architecture.md)
-- [docs/TRIAGE_WORKFLOW_SPEC.md](TRIAGE_WORKFLOW_SPEC.md)
-- [docs/PLUGIN_RUNTIME_SPEC.md](PLUGIN_RUNTIME_SPEC.md)
-- [core/models/asset-reference.schema.yaml](../core/models/asset-reference.schema.yaml)
+- [docs/architecture.md](../concepts/architecture.md)
+- [docs/TRIAGE_WORKFLOW_SPEC.md](triage-workflow.spec.md)
+- [docs/PLUGIN_RUNTIME_SPEC.md](plugin-runtime.spec.md)
+- [core/models/asset-reference.schema.yaml](../../core/models/asset-reference.schema.yaml)
 
 ## 1. 目标
 

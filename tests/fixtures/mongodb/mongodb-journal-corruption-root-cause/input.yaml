@@ -1,0 +1,8 @@
+incident_id: mongodb-journal-corruption-root-cause
+middleware: mongodb
+scenario: unknown
+namespace: psmdb-test
+cluster_id: fixture
+customer_clue: MongoDB member Pod repeatedly restarts and kubectl logs are shallow.
+input_source: fixture
+received_at: "2026-06-11T00:00:00+08:00"

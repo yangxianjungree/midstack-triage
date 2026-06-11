@@ -30,7 +30,9 @@ AGENT_REASONING_TASK_FILENAME = "agent-reasoning-task.md"
 DIRECTED_RECOLLECTION_CAP = 3
 SCRIPT_LOG_SINK_DISCOVER = "mongodb.collect.logs.discover_sink"
 SCRIPT_LOG_FILE_TAIL = "mongodb.collect.logs.file_tail"
+SCRIPT_LOG_NODE_FILE_TAIL = "mongodb.collect.logs.node_file_tail"
 SCRIPT_DNS_COREDNS = "mongodb.collect.dns.coredns"
+SCRIPT_NETWORK_OVERLAY = "mongodb.collect.network.overlay"
 SCRIPT_PODS_DESCRIBE = "mongodb.collect.pods.describe"
 DIRECT_ERROR_TERMS = ("fatal", "wiredtiger", "corrupt", "journal", "bad magic number", "assertion", "unclean shutdown")
 
@@ -1350,10 +1352,26 @@ def should_run_log_file_tail_recollection(structured_record: Dict[str, Any], sel
     return False
 
 
+def should_run_log_node_file_tail_recollection(structured_record: Dict[str, Any], selected: List[str]) -> bool:
+    if has_file_tail_logs(structured_record):
+        return False
+    if SCRIPT_LOG_SINK_DISCOVER in selected or SCRIPT_LOG_FILE_TAIL in selected:
+        return True
+    if has_file_backed_log_sink(structured_record):
+        return True
+    return False
+
+
 def should_run_dns_recollection(structured_record: Dict[str, Any], signal_bundle: Dict[str, Any], collection_report: Dict[str, Any]) -> bool:
     if details_has_items(structured_record, "dns_checks"):
         return False
     return evidence_mentions_dns_issue(structured_record, signal_bundle, collection_report)
+
+
+def should_run_network_overlay_recollection(structured_record: Dict[str, Any], signal_bundle: Dict[str, Any], collection_report: Dict[str, Any]) -> bool:
+    if details_has_items(structured_record, "network_overlay"):
+        return False
+    return evidence_mentions_dns_issue(structured_record, signal_bundle, collection_report) or signal_bundle_has(signal_bundle, "dns-resolution-failed")
 
 
 def should_run_pod_describe_recollection(structured_record: Dict[str, Any], signal_bundle: Dict[str, Any]) -> bool:
@@ -1369,12 +1387,21 @@ def directed_recollection_script_ids(output_dir: Path) -> List[str]:
     signal_bundle = load_yaml(output_dir / "signal_bundle.yaml")
     collection_report = load_yaml(output_dir / "collection_report.yaml")
     selected: List[str] = []
-    if should_run_log_sink_recollection(structured_record, signal_bundle, collection_report):
-        selected.append(SCRIPT_LOG_SINK_DISCOVER)
-    if should_run_log_file_tail_recollection(structured_record, selected):
-        selected.append(SCRIPT_LOG_FILE_TAIL)
-    if should_run_dns_recollection(structured_record, signal_bundle, collection_report):
+
+    dns_path = evidence_mentions_dns_issue(structured_record, signal_bundle, collection_report) or signal_bundle_has(signal_bundle, "dns-resolution-failed")
+    if dns_path and should_run_dns_recollection(structured_record, signal_bundle, collection_report):
         selected.append(SCRIPT_DNS_COREDNS)
+    if dns_path and should_run_network_overlay_recollection(structured_record, signal_bundle, collection_report):
+        selected.append(SCRIPT_NETWORK_OVERLAY)
+    if dns_path and signal_bundle_has(signal_bundle, "pod-crashloop") and not has_file_tail_logs(structured_record):
+        selected.append(SCRIPT_LOG_NODE_FILE_TAIL)
+    if not dns_path:
+        if should_run_log_sink_recollection(structured_record, signal_bundle, collection_report):
+            selected.append(SCRIPT_LOG_SINK_DISCOVER)
+        if should_run_log_file_tail_recollection(structured_record, selected):
+            selected.append(SCRIPT_LOG_FILE_TAIL)
+        if should_run_log_node_file_tail_recollection(structured_record, selected):
+            selected.append(SCRIPT_LOG_NODE_FILE_TAIL)
     if should_run_pod_describe_recollection(structured_record, signal_bundle):
         selected.append(SCRIPT_PODS_DESCRIBE)
     return selected[:DIRECTED_RECOLLECTION_CAP]
@@ -1434,6 +1461,18 @@ def direct_error_terms_present(analysis: Dict[str, Any]) -> bool:
     return text_has_direct_error_terms(text)
 
 
+def direct_root_cause_terms_present(analysis: Dict[str, Any], signal_bundle: Dict[str, Any]) -> bool:
+    text = analysis_text(analysis)
+    if text_has_direct_error_terms(text):
+        return True
+    if any(token in text for token in ("flannel-vxlan-down", "flannel.1", "vxlan", "overlay partition", "pod-subnet-isolated")):
+        return True
+    return any(
+        signal_bundle_has_id(signal_bundle, signal_id)
+        for signal_id in ("flannel-vxlan-down", "flannel-route-install-failed", "pod-subnet-isolated", "kube-dns-backend-on-overlay-partition")
+    )
+
+
 def append_limitation(conclusion: Dict[str, Any], limitation: Dict[str, Any]) -> None:
     limitations = conclusion.setdefault("limitations", [])
     if not isinstance(limitations, list):
@@ -1465,19 +1504,20 @@ def apply_analysis_guardrails(analysis: Dict[str, Any], collection_report: Dict[
     if not isinstance(conclusion, dict):
         return False
     changed = False
+    direct_root_cause_supported = direct_root_cause_terms_present(analysis, signal_bundle)
     if not conclusion.get("deepest_supported_level"):
         category = str(conclusion.get("primary_cause_category") or "")
-        if category.startswith("kubernetes-") or category in ("container-restart", "service-routing"):
-            conclusion["deepest_supported_level"] = "impact"
-        elif direct_error_terms_present(analysis):
+        if direct_root_cause_supported:
             conclusion["deepest_supported_level"] = "root_cause"
+        elif category.startswith("kubernetes-") or category in ("container-restart", "service-routing"):
+            conclusion["deepest_supported_level"] = "impact"
         else:
             conclusion["deepest_supported_level"] = "phenomenon"
         changed = True
 
     level = str(conclusion.get("deepest_supported_level") or "")
     confidence = str(conclusion.get("confidence") or "")
-    if collection_report_has_critical_gap(collection_report) and level == "root_cause" and confidence == "high":
+    if collection_report_has_critical_gap(collection_report) and level == "root_cause" and confidence == "high" and not direct_root_cause_supported:
         conclusion["confidence"] = "medium"
         append_limitation(
             conclusion,
@@ -1489,7 +1529,7 @@ def apply_analysis_guardrails(analysis: Dict[str, Any], collection_report: Dict[
             },
         )
         changed = True
-    if signal_bundle_has_id(signal_bundle, "pod-crashloop") and level == "root_cause" and not direct_error_terms_present(analysis):
+    if signal_bundle_has_id(signal_bundle, "pod-crashloop") and level == "root_cause" and not direct_root_cause_supported:
         conclusion["deepest_supported_level"] = "impact"
         if confidence == "high":
             conclusion["confidence"] = "medium"
@@ -1575,13 +1615,13 @@ def write_agent_reasoning_task(
         "",
         "- This task does not authorize arbitrary shell execution.",
         "- If a `critical_gap` can be closed by a known read-only playbook, record it as a `validation_action` with status `planned` or `blocked` and include it in `next_actions`.",
-        "- Examples include healthy peer `rs.status`, `kubectl logs --previous`, peer connectivity checks, discovering the application log sink when `kubectl logs` is shallow, collecting MongoDB file log tails after log sink discovery, pod describe/termination detail, and CoreDNS/DNS probes for DNS lookup failures.",
+        "- Examples include healthy peer `rs.status`, `kubectl logs --previous`, peer connectivity checks, discovering the application log sink when `kubectl logs` is shallow, collecting MongoDB file log tails after log sink discovery, node-side file log tail from kubelet pod volumes for fast-crashing containers, pod describe/termination detail, CoreDNS/DNS probes for DNS lookup failures, and flannel overlay checks for DNS timeouts with suspicious Service backends.",
         "- DNS lookup errors in MongoDB startup logs support a DNS hypothesis; they should not become a mechanism-level conclusion unless CoreDNS state or an in-cluster DNS probe also supports it.",
         "",
         "## Working Rules",
         "",
         "- Prefer `signal_bundle.yaml` and `collection_report.yaml` for reasoning inputs; use `structured_record.yaml` for necessary detail lookup.",
-        "- Before finalizing, inspect `signal_bundle.log_highlights`, `structured_record.details.dns_checks`, `structured_record.details.pod_terminations`, and any `file_tail` log evidence.",
+        "- Before finalizing, inspect `signal_bundle.log_highlights`, `structured_record.details.dns_checks`, `structured_record.details.network_overlay`, `structured_record.details.kube_dns_endpoints`, `structured_record.details.pod_terminations`, and any `file_tail` log evidence.",
         "- Treat `dns_checks.status=failed` with DNS-layer error text differently from `dns_checks.status=blocked`; blocked probes are evidence gaps, not DNS-failure evidence.",
         "- Do not silently rewrite `input.yaml` or other start-stage files.",
         "- Keep raw evidence references explicit in `supporting_evidence`, `counter_evidence`, and `limitations`.",
@@ -1631,7 +1671,18 @@ def write_report(output_dir: Path, input_data: Dict[str, Any], analysis: Dict[st
         lines.append("- `%s` %s: %s" % (item.get("status", ""), item.get("hypothesis_id", ""), item.get("statement", "")))
     lines.extend(["", "## Evidence Gaps", ""])
     gaps = as_list(conclusion.get("limitations"))
-    lines.extend(["- %s" % item for item in gaps] if gaps else ["- No explicit evidence gaps recorded."])
+    if gaps:
+        for item in gaps:
+            if isinstance(item, dict):
+                gap_type = str(item.get("gap_type") or "gap")
+                gap = str(item.get("gap") or item)
+                why = str(item.get("why_important") or "").strip()
+                suffix = " %s" % why if why else ""
+                lines.append("- `[%s]` %s%s" % (gap_type, gap, suffix))
+            else:
+                lines.append("- %s" % item)
+    else:
+        lines.append("- No explicit evidence gaps recorded.")
     lines.extend(["", "## Next Read-Only Actions", ""])
     actions = as_list(analysis.get("next_actions"))
     lines.extend(["- %s" % ((item or {}).get("action") if isinstance(item, dict) else item) for item in actions] if actions else ["- No next actions recorded."])
@@ -1719,6 +1770,7 @@ def command_finalize_analysis(args: argparse.Namespace) -> int:
     if apply_analysis_guardrails(analysis, collection_report, signal_bundle):
         analysis["updated_at"] = now_iso()
         write_yaml(analysis_file, analysis)
+    write_report(incident_dir, input_data, analysis)
     incident_id = str(input_data.get("incident_id") or incident_dir.name)
     middleware = str(input_data.get("middleware") or "mongodb")
     output = adapter_output("analyse", incident_id, middleware, "completed", analysis_summary_text(analysis), incident_dir)

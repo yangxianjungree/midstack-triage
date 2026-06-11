@@ -1,0 +1,8 @@
+incident_id: kubernetes-flannel-overlay-partition-root-cause
+middleware: mongodb
+scenario: unknown
+namespace: psmdb-test
+cluster_id: fixture
+customer_clue: MongoDB Pods report DNS timeouts through kube-dns.
+input_source: fixture
+received_at: "2026-06-11T00:00:00+08:00"

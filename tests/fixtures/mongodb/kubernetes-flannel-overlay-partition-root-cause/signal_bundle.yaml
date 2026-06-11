@@ -1,0 +1,32 @@
+incident_id: kubernetes-flannel-overlay-partition-root-cause
+middleware: mongodb
+signal_overview:
+  status: abnormal
+  abnormal_signal_count: 5
+abnormal_signals:
+  - signal_id: pod-not-ready
+    severity: high
+    object_ref: pod/bnmongo-mongos-6dc67fdd8f-dm6vx
+    detail: MongoDB Pod is not ready and startup logs show lookup timeout on 10.96.0.10:53.
+  - signal_id: dns-resolution-failed
+    severity: high
+    object_ref: pod/bnmongo-mongos-6dc67fdd8f-rtpz4
+    detail: DNS probe failed for kube-dns Service with timeout.
+  - signal_id: flannel-vxlan-down
+    severity: critical
+    object_ref: node/k8s-253
+    detail: "flannel.1 is not UP on node/k8s-253: state=DOWN flags=BROADCAST,MULTICAST pod_cidr=10.244.1.0/24."
+  - signal_id: flannel-route-install-failed
+    severity: high
+    object_ref: node/k8s-253
+    detail: flannel logs on node/k8s-253 contain network-is-down and failed-to-add-vxlanRoute errors.
+  - signal_id: kube-dns-backend-on-overlay-partition
+    severity: high
+    object_ref: endpoint/10.244.1.10
+    detail: kube-dns endpoint 10.244.1.10 is on node/k8s-253 where flannel.1 is not UP.
+object_signal_links: []
+timeline_summary: []
+processed_log_highlights: []
+log_highlights: []
+generated_at: "2026-06-11T00:00:00+08:00"
+updated_at: "2026-06-11T00:00:00+08:00"

@@ -69,5 +69,7 @@ superseded_by: none
 - [x] 本地 `review` smoke 能反映过程偏差
 - [x] MongoDB collect script validator 覆盖新 playbook
 - [x] fixture / replay 不因新增运行时软字段而回归失败
-- [ ] 至少一个“日志很短 -> discover_log_sink -> 根因收敛”的案例回归
+- [x] 至少一个“日志很短 -> 真实文件日志源 / node-side file tail -> 根因收敛”的案例回归
 - [x] 至少一个“critical_gap 未关闭 -> 正确止步而非强行根因”的案例回归
+- [x] 至少一个“DNS timeout -> kube-dns Endpoint -> flannel overlay 根因”的案例回归
+- [x] 保留现场验证：`k8s-253` flannel overlay partition 达到 `root_cause`，并识别并发 MongoDB storage corruption 故障线

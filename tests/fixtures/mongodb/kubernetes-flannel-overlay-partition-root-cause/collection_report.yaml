@@ -1,0 +1,16 @@
+collection_actions:
+  - action_id: mongodb-collect-network-overlay
+    name: collect Kubernetes overlay network evidence
+    target: kube-dns endpoints and flannel nodes
+    method: kubectl get + node SSH read-only network commands
+    status: success
+    performed_at: "2026-06-11T00:00:00+08:00"
+successful_items:
+  - item: network/overlay_nodes
+    source: node SSH read-only commands
+    note: 3 node(s) inspected
+failed_items: []
+blank_items: []
+evidence_gaps: []
+generated_at: "2026-06-11T00:00:00+08:00"
+updated_at: "2026-06-11T00:00:00+08:00"

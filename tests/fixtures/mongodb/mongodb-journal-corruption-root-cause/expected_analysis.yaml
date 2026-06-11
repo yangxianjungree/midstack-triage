@@ -1,0 +1,6 @@
+conclusion_summary:
+  statement: MongoDB fails to start because WiredTiger journal corruption is reported in MongoDB file logs.
+  confidence: high
+  impact_scope: Affected MongoDB member cannot start.
+  primary_cause_category: mongodb-storage-corruption
+  deepest_supported_level: root_cause

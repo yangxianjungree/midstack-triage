@@ -279,6 +279,26 @@ def evidence_text(evidence: List[Dict[str, str]]) -> str:
     return "\n".join(str(item.get("detail") or "") for item in evidence).lower()
 
 
+def mongodb_storage_corruption_evidence(evidence: List[Dict[str, str]]) -> bool:
+    text = evidence_text(evidence)
+    return (
+        ("wiredtiger" in text and any(token in text for token in ("corrupt", "checksum", "bad magic", "wt_panic", "try_salvage")))
+        or ("journal" in text and "corrupt" in text)
+        or ("metadata corruption" in text)
+        or ("wiredtiger" in text and "fatal read error" in text)
+        or ("wt_error" in text and "fatal read error" in text)
+    )
+
+
+def storage_evidence_items(evidence: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    result = []
+    for item in evidence:
+        detail = str(item.get("detail") or "").lower()
+        if any(token in detail for token in ("wiredtiger", "journal", "corrupt", "checksum", "bad magic", "wt_panic", "try_salvage", "fatal read error", "wt_error")):
+            result.append(item)
+    return result or evidence
+
+
 def has_peer_connection_log_evidence(evidence: List[Dict[str, str]]) -> bool:
     text = evidence_text(evidence)
     return ("hostunreachable" in text or "host failed in replica set" in text or "rsm received error response" in text) and "connection refused" in text
@@ -287,6 +307,18 @@ def has_peer_connection_log_evidence(evidence: List[Dict[str, str]]) -> bool:
 def has_dns_startup_log_evidence(evidence: List[Dict[str, str]]) -> bool:
     text = evidence_text(evidence)
     return "cannot resolve host" in text and any(token in text for token in ("10.96.0.10:53", "i/o timeout", "connection refused", "temporary failure"))
+
+
+def has_overlay_root_evidence(ids: Set[str]) -> bool:
+    return "flannel-vxlan-down" in ids and (
+        "flannel-route-install-failed" in ids
+        or "pod-subnet-isolated" in ids
+        or "kube-dns-backend-on-overlay-partition" in ids
+    )
+
+
+def direct_root_cause_evidence(evidence: List[Dict[str, str]], ids: Set[str]) -> bool:
+    return mongodb_storage_corruption_evidence(evidence) or has_overlay_root_evidence(ids)
 
 
 def apply_conclusion_ceiling(conclusion: Dict[str, Any], evidence: List[Dict[str, str]], gaps: List[Dict[str, Any]], ids: set) -> Dict[str, Any]:
@@ -305,7 +337,7 @@ def apply_conclusion_ceiling(conclusion: Dict[str, Any], evidence: List[Dict[str
     level = str(result.get("deepest_supported_level") or "")
     confidence = str(result.get("confidence") or "low")
     limitations = list(result.get("limitations") or [])
-    if has_critical_gap(gaps):
+    if has_critical_gap(gaps) and not direct_root_cause_evidence(evidence, set(ids)):
         limitations.append(
             {
                 "gap": "unresolved critical_gap limits deeper conclusion",
@@ -316,7 +348,7 @@ def apply_conclusion_ceiling(conclusion: Dict[str, Any], evidence: List[Dict[str
         )
         if level == "root_cause" and confidence == "high":
             result["confidence"] = "medium"
-    if "pod-crashloop" in ids and not direct_mongodb_error_evidence(evidence) and level == "root_cause":
+    if "pod-crashloop" in ids and not direct_mongodb_error_evidence(evidence) and not has_overlay_root_evidence(set(ids)) and level == "root_cause":
         result["deepest_supported_level"] = "impact"
         if confidence == "high":
             result["confidence"] = "medium"
@@ -331,6 +363,193 @@ def apply_conclusion_ceiling(conclusion: Dict[str, Any], evidence: List[Dict[str
         )
     result["limitations"] = limitations
     return result
+
+
+def mongodb_storage_corruption_conclusion(ids: Set[str], evidence: List[Dict[str, str]], gaps: List[Dict[str, Any]]) -> Dict[str, Any]:
+    if not mongodb_storage_corruption_evidence(evidence):
+        return {}
+    root_evidence = storage_evidence_items(evidence)
+    hypotheses = [
+        hypothesis_with_actions(
+            "H1",
+            "MongoDB startup fails because WiredTiger storage or journal corruption is reported by MongoDB file logs.",
+            root_evidence,
+            gaps,
+            "supported",
+            [
+                {
+                    "action": "Discover the MongoDB log sink and collect file-backed logs from the crashing Pod or its node-side volume.",
+                    "result": "Supported by MongoDB file-tail evidence containing WiredTiger corruption terms.",
+                    "risk_level": "read-only",
+                },
+                {
+                    "action": "Correlate the corrupted file name with the affected Pod/PVC before any remediation.",
+                    "result": "Recommended as a safety check before repair or restore actions.",
+                    "risk_level": "read-only",
+                },
+            ],
+            [
+                "Kubernetes reports the MongoDB member as restarting or unavailable",
+                "kubectl logs may be shallow because MongoDB writes application logs to a file sink",
+                "MongoDB file logs contain WiredTiger/journal corruption or WT_PANIC evidence",
+                "mongod exits during startup after the storage engine reports the fatal error",
+            ],
+            [
+                "MongoDB file logs show a non-storage fatal error for the same restart window",
+                "The affected Pod becomes stable without changing storage or journal files",
+            ],
+        ),
+        hypothesis_with_actions(
+            "H2",
+            "Kubernetes scheduling, image pull, or probe configuration caused the restart symptom.",
+            evidence,
+            gaps,
+            "refuted" if "pod-crashloop" in ids else "insufficient",
+            [
+                {
+                    "action": "Inspect Pod status, previous logs, and termination details.",
+                    "result": "Refuted as primary root cause when MongoDB file logs contain direct WiredTiger fatal evidence.",
+                    "risk_level": "read-only",
+                }
+            ],
+            [],
+            ["No MongoDB file-log fatal storage evidence is present"],
+        ),
+    ]
+    return {
+        "hypotheses": hypotheses,
+        "conclusion": {
+            "statement": "MongoDB fails to start because WiredTiger storage or journal corruption is reported in MongoDB file logs.",
+            "confidence": "high",
+            "impact_scope": "Affected MongoDB member cannot start; its replica set or shard may run with reduced redundancy.",
+            "primary_cause_category": "mongodb-storage-corruption",
+            "evidence": [item["detail"] for item in root_evidence],
+            "limitations": gaps,
+            "deepest_supported_level": "root_cause",
+        },
+        "next_actions": [
+            {
+                "action": "Preserve the affected PVC and file logs before attempting repair, restore, or pod recreation.",
+                "risk_level": "read-only",
+                "requires_confirmation": False,
+            },
+            {
+                "action": "Use MongoDB/vendor recovery guidance to decide between restore, resync, or salvage; do not mutate data files during triage.",
+                "risk_level": "read-only",
+                "requires_confirmation": False,
+            },
+        ],
+    }
+
+
+def network_overlay_conclusion(ids: Set[str], evidence: List[Dict[str, str]], gaps: List[Dict[str, Any]]) -> Dict[str, Any]:
+    if not has_overlay_root_evidence(ids):
+        return {}
+    overlay_evidence = [
+        item
+        for item in evidence
+        if any(
+            token in str(item.get("detail") or "").lower()
+            for token in ("flannel", "vxlan", "overlay", "pod-subnet", "kube-dns endpoint")
+        )
+    ] or evidence
+    hypotheses = [
+        hypothesis_with_actions(
+            "H1",
+            "DNS timeouts are caused by a node-level flannel overlay partition rather than CoreDNS process failure.",
+            overlay_evidence,
+            gaps,
+            "supported",
+            [
+                {
+                    "action": "Inspect kube-dns endpoints and identify whether a backend is located on the node with unhealthy flannel.1.",
+                    "result": "Supported when kube-dns has an endpoint on the overlay-partitioned node.",
+                    "risk_level": "read-only",
+                },
+                {
+                    "action": "Compare flannel.1 state, PodCIDR routes, FDB entries, and flannel logs across nodes.",
+                    "result": "Supported when the affected node has flannel.1 down or route install failures.",
+                    "risk_level": "read-only",
+                },
+            ],
+            [
+                "Workload logs report DNS lookup timeouts through kube-dns Service",
+                "kube-dns has at least one backend on the affected node",
+                "The affected node has flannel.1 not UP or flannel route installation failures",
+                "Pod network reachability to that node's PodCIDR is impaired",
+            ],
+            [
+                "flannel.1 is UP on all nodes with complete PodCIDR routes and FDB entries",
+                "All kube-dns endpoints are reachable from multiple source Pods",
+                "CoreDNS logs show an internal DNS server failure independent of node networking",
+            ],
+        )
+    ]
+    if mongodb_storage_corruption_evidence(evidence):
+        hypotheses.append(
+            hypothesis_with_actions(
+                "H2",
+                "A separate MongoDB storage corruption line is also present for at least one member.",
+                storage_evidence_items(evidence),
+                gaps,
+                "supported",
+                [
+                    {
+                        "action": "Keep storage corruption evidence separate from the DNS/overlay failure line.",
+                        "result": "Supported by WiredTiger corruption or WT_PANIC log evidence.",
+                        "risk_level": "read-only",
+                    }
+                ],
+                [
+                    "A MongoDB member reports WiredTiger corruption or WT_PANIC",
+                    "This fatal storage signal is process-internal and not explained by DNS timeout alone",
+                ],
+                ["The same Pod has no WiredTiger or storage fatal evidence in the failure window"],
+            )
+        )
+    else:
+        hypotheses.append(
+            hypothesis_with_actions(
+                "H2",
+                "CoreDNS itself is the primary failed component.",
+                evidence,
+                gaps,
+                "refuted" if "kube-dns-backend-on-overlay-partition" in ids else "insufficient",
+                [
+                    {
+                        "action": "Check CoreDNS pod readiness, logs, and endpoint distribution.",
+                        "result": "CoreDNS process failure is not the primary explanation when the failing backend sits on an overlay-partitioned node.",
+                        "risk_level": "read-only",
+                    }
+                ],
+                [],
+                ["CoreDNS pods crash or all endpoints fail regardless of node placement"],
+            )
+        )
+    return {
+        "hypotheses": hypotheses,
+        "conclusion": {
+            "statement": "Kubernetes DNS timeouts are caused by a flannel overlay partition: a node's flannel.1 is not UP and kube-dns has a backend on that node.",
+            "confidence": "high",
+            "impact_scope": "Pods on or targeting the affected node's PodCIDR can lose cross-node connectivity; Services with backends on that node may fail randomly or completely.",
+            "primary_cause_category": "kubernetes-overlay-network-partition",
+            "evidence": [item["detail"] for item in overlay_evidence],
+            "limitations": gaps,
+            "deepest_supported_level": "root_cause",
+        },
+        "next_actions": [
+            {
+                "action": "Confirm affected node flannel.1 state, PodCIDR routes, and flannel logs before remediation.",
+                "risk_level": "read-only",
+                "requires_confirmation": False,
+            },
+            {
+                "action": "Keep MongoDB storage corruption evidence on a separate fault line if WiredTiger fatal logs are present.",
+                "risk_level": "read-only",
+                "requires_confirmation": False,
+            },
+        ],
+    }
 
 
 def kubernetes_runtime_conclusion(ids: set, evidence: List[Dict[str, str]], gaps: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -582,8 +801,18 @@ def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collectio
     evidence = evidence_from_signals(signal_bundle)
     gaps = collection_gaps(collection_report)
 
+    overlay_result = network_overlay_conclusion(ids, evidence, gaps)
+    storage_result = mongodb_storage_corruption_conclusion(ids, evidence, gaps)
     runtime_result = kubernetes_runtime_conclusion(ids, evidence, gaps)
-    if runtime_result:
+    if overlay_result:
+        hypotheses = overlay_result["hypotheses"]
+        conclusion = overlay_result["conclusion"]
+        next_actions = overlay_result["next_actions"]
+    elif storage_result:
+        hypotheses = storage_result["hypotheses"]
+        conclusion = storage_result["conclusion"]
+        next_actions = storage_result["next_actions"]
+    elif runtime_result:
         hypotheses = runtime_result["hypotheses"]
         conclusion = runtime_result["conclusion"]
         next_actions = runtime_result["next_actions"]

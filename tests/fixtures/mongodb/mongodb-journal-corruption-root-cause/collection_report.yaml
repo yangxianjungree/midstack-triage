@@ -1,0 +1,16 @@
+collection_actions:
+  - action_id: mongodb-collect-logs-node_file_tail
+    name: collect MongoDB node-side file log tail
+    target: bnmongo-shard1-data-2
+    method: ssh to pod node + read-only tail /opt/bitnami/mongodb/logs/mongodb.log
+    status: success
+    performed_at: "2026-06-11T00:00:00+08:00"
+successful_items:
+  - item: pod/bnmongo-shard1-data-2 node file log
+    source: /var/lib/kubelet/pods/example/volumes/kubernetes.io~empty-dir/empty-dir/app-logs-dir/mongodb.log
+    note: 5 line(s), 3 highlight(s)
+failed_items: []
+blank_items: []
+evidence_gaps: []
+generated_at: "2026-06-11T00:00:00+08:00"
+updated_at: "2026-06-11T00:00:00+08:00"

@@ -189,7 +189,7 @@ After the analyse tool returns `completed`:
 - Classify material evidence gaps as `expected_gap` or `critical_gap`, and keep root-cause confidence capped when a `critical_gap` remains unresolved.
 - Distinguish current incident evidence from customer clues, historical cases, runbooks, and experience-based hypothesis sources.
 - When evidence only supports phenomenon, impact, or mechanism level, keep the final conclusion at that level and use `deepest_supported_level` when useful.
-- Treat DNS lookup errors and shallow bootstrap logs as hypotheses until CoreDNS/DNS probe evidence or MongoDB file-log evidence supports the deeper mechanism.
+- Treat DNS lookup errors and shallow bootstrap logs as hypotheses until CoreDNS/DNS probe evidence, flannel overlay evidence, MongoDB file-log evidence, or node-side file-log evidence supports the deeper mechanism.
 - Update `report.md` so it matches the final `analysis.yaml`.
 - Call `midstack_finalize_analysis` so adapter-output.yaml and meta.yaml reflect the finalized result.
 

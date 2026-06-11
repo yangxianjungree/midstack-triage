@@ -110,11 +110,31 @@ scripts:
     default_packaged: true
     mvp: false
 
+  - script_id: mongodb.collect.logs.node_file_tail
+    source: collect/collect-log-node-file-tail.sh
+    phase: collect
+    target: logs
+    action: node_file_tail
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: false
+
   - script_id: mongodb.collect.dns.coredns
     source: collect/collect-dns-coredns.sh
     phase: collect
     target: dns
     action: coredns
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: false
+
+  - script_id: mongodb.collect.network.overlay
+    source: collect/collect-network-overlay.sh
+    phase: collect
+    target: network
+    action: overlay
     runtime: shell
     readonly: true
     default_packaged: true

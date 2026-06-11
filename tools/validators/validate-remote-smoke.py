@@ -140,9 +140,9 @@ def validate_directed_recollection_gate() -> None:
         )
         selected = module.directed_recollection_script_ids(incident)
         expected = [
-            "mongodb.collect.logs.discover_sink",
-            "mongodb.collect.logs.file_tail",
             "mongodb.collect.dns.coredns",
+            "mongodb.collect.network.overlay",
+            "mongodb.collect.logs.node_file_tail",
         ]
         if selected != expected:
             raise AssertionError("directed recollection gate selected %r, expected %r" % (selected, expected))

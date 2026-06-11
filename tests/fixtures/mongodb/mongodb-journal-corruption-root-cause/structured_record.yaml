@@ -1,0 +1,23 @@
+summary:
+  middleware: mongodb
+  topology_type: sharded_cluster
+  deployment_architecture: bitnami
+  namespace: psmdb-test
+  cluster_id: fixture
+details:
+  raw_logs:
+    - pod_ref: bnmongo-shard1-data-2
+      namespace: psmdb-test
+      node_ref: k8s-252
+      log_type: file_tail
+      source_method: node_file_tail
+      artifact_path: raw/logs-node-file-tail/bnmongo-shard1-data-2.log
+      source_path: /opt/bitnami/mongodb/logs/mongodb.log
+      node_source_path: /var/lib/kubelet/pods/example/volumes/kubernetes.io~empty-dir/empty-dir/app-logs-dir/mongodb.log
+      line_count: 5
+      byte_size: 512
+      tail_lines: 500
+      highlight_count: 5
+      collected_at: "2026-06-11T00:00:00+08:00"
+generated_at: "2026-06-11T00:00:00+08:00"
+updated_at: "2026-06-11T00:00:00+08:00"

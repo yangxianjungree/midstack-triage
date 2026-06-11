@@ -683,6 +683,7 @@ def build_context(
     remote_root: str,
     script_ids: List[str],
     context_profile: Dict[str, Any],
+    access: Dict[str, Any] = None,
 ) -> Dict[str, Any]:
     run_root = "%s/runs/%s" % (remote_root, incident_id)
     auth_secret_ref = context_profile.get("auth_secret_ref") or {}
@@ -712,6 +713,7 @@ def build_context(
         "artifact_root": str(local_artifact_root),
         "deployment_architecture": context_profile.get("deployment_architecture") or "unknown",
         "topology_type": context_profile.get("topology_type") or "unknown",
+        "access": dict(access or {}),
         "targets": context_profile.get("targets") or default_targets(namespace),
         "capabilities": {
             "kubectl_available": True,
@@ -955,7 +957,7 @@ def run_script(
     script_capability_checks = list(capability_checks)
 
     try:
-        context = build_context(incident_id, script_id, namespace, local_script_dir / "artifacts", remote_root, script_ids, context_profile)
+        context = build_context(incident_id, script_id, namespace, local_script_dir / "artifacts", remote_root, script_ids, context_profile, access)
         capabilities_ok, context, script_capability_checks, capability_error, capability_warnings = validate_script_capabilities(
             access, namespace, script_id, context, capability_checks
         )

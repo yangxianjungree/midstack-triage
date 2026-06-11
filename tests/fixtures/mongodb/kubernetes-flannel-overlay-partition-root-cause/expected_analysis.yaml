@@ -1,0 +1,6 @@
+conclusion_summary:
+  statement: Kubernetes DNS timeouts are caused by a flannel overlay partition on k8s-253.
+  confidence: high
+  impact_scope: Pods on or targeting the affected node's PodCIDR lose cross-node connectivity.
+  primary_cause_category: kubernetes-overlay-network-partition
+  deepest_supported_level: root_cause

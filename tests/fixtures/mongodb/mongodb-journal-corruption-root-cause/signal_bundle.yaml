@@ -1,0 +1,34 @@
+incident_id: mongodb-journal-corruption-root-cause
+middleware: mongodb
+signal_overview:
+  status: abnormal
+  abnormal_signal_count: 1
+abnormal_signals:
+  - signal_id: pod-crashloop
+    severity: high
+    object_ref: pod/bnmongo-shard1-data-2
+    detail: Pod container is restarting with CrashLoopBackOff and exit code 14.
+object_signal_links: []
+timeline_summary: []
+processed_log_highlights: []
+log_highlights:
+  - pod_ref: bnmongo-shard1-data-2
+    log_type: file_tail
+    source_method: node_file_tail
+    line_no: 1
+    category: storage
+    message: "__log_open_verify:938:log file journal/WiredTigerLog.0000000007 corrupted: Bad magic number 4294967295"
+  - pod_ref: bnmongo-shard1-data-2
+    log_type: file_tail
+    source_method: node_file_tail
+    line_no: 2
+    category: storage
+    message: "WT_TRY_SALVAGE: database corruption detected"
+  - pod_ref: bnmongo-shard1-data-2
+    log_type: file_tail
+    source_method: node_file_tail
+    line_no: 3
+    category: fatal
+    message: Failed to start up WiredTiger under any compatibility version
+generated_at: "2026-06-11T00:00:00+08:00"
+updated_at: "2026-06-11T00:00:00+08:00"

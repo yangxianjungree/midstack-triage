@@ -57,8 +57,18 @@ scripts:
     runtime: shell
     readonly: true
 
+  - script_id: mongodb.collect.logs.node_file_tail
+    runtime_path: assets/scripts/mongodb/collect-log-node-file-tail.sh
+    runtime: shell
+    readonly: true
+
   - script_id: mongodb.collect.dns.coredns
     runtime_path: assets/scripts/mongodb/collect-dns-coredns.sh
+    runtime: shell
+    readonly: true
+
+  - script_id: mongodb.collect.network.overlay
+    runtime_path: assets/scripts/mongodb/collect-network-overlay.sh
     runtime: shell
     readonly: true
 

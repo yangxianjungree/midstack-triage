@@ -27,6 +27,12 @@ INCIDENT_ID_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789"
 ANALYSABLE_STATUSES = ("ready", "analysed")
 ANALYSIS_RULE_DRAFT_FILENAME = "analysis.rule-draft.yaml"
 AGENT_REASONING_TASK_FILENAME = "agent-reasoning-task.md"
+DIRECTED_RECOLLECTION_CAP = 3
+SCRIPT_LOG_SINK_DISCOVER = "mongodb.collect.logs.discover_sink"
+SCRIPT_LOG_FILE_TAIL = "mongodb.collect.logs.file_tail"
+SCRIPT_DNS_COREDNS = "mongodb.collect.dns.coredns"
+SCRIPT_PODS_DESCRIBE = "mongodb.collect.pods.describe"
+DIRECT_ERROR_TERMS = ("fatal", "wiredtiger", "corrupt", "journal", "bad magic number", "assertion", "unclean shutdown")
 
 
 def now_iso() -> str:
@@ -921,6 +927,69 @@ def merge_remote_executor_result(collection_report: Dict[str, Any], script_id: s
         )
 
 
+def infer_gap_type(gap_text: str, item: Dict[str, Any]) -> str:
+    explicit = str(item.get("gap_type") or item.get("type") or "").strip()
+    if explicit in ("expected_gap", "critical_gap"):
+        return explicit
+    text = gap_text.lower()
+    if "critical_gap" in text or "critical gap" in text:
+        return "critical_gap"
+    if "log sink" in text or "real log" in text or "true log" in text or "logs too short" in text or "file log" in text or "application log source" in text:
+        return "critical_gap"
+    if "script output missing" in text or "remote executor" in text or "signal bundle depends" in text:
+        return "critical_gap"
+    if "rs.status" in text and any(token in text for token in ("no healthy", "all", "not collected from any", "missing")):
+        return "critical_gap"
+    if any(token in text for token in ("affected pod", "faulty pod", "bad pod", "current pod")) and ("rs.status" in text or "fatal tail" in text):
+        return "expected_gap"
+    return "expected_gap"
+
+
+def normalize_collection_report_gaps(collection_report: Dict[str, Any]) -> None:
+    normalized: List[Any] = []
+    for item in collection_report.get("evidence_gaps") or []:
+        if isinstance(item, dict):
+            gap = str(item.get("gap") or item)
+            item = dict(item)
+            item["gap_type"] = infer_gap_type(gap, item)
+            if not item.get("related_stage"):
+                item["related_stage"] = "signal_collection"
+            if not item.get("why_important"):
+                item["why_important"] = "This gap affects evidence completeness."
+            normalized.append(item)
+        else:
+            gap = str(item)
+            normalized.append(
+                {
+                    "gap": gap,
+                    "gap_type": infer_gap_type(gap, {}),
+                    "related_stage": "signal_collection",
+                    "why_important": "This gap affects evidence completeness.",
+                }
+            )
+    collection_report["evidence_gaps"] = normalized
+
+
+def gap_closed_by_file_tail(gap_text: str) -> bool:
+    text = gap_text.lower()
+    return (
+        ("file-backed" in text or "file log" in text or "log sink" in text or "application logs" in text)
+        and any(token in text for token in ("kubectl logs", "collect", "not proven", "may only appear", "insufficient"))
+    )
+
+
+def drop_closed_evidence_gaps(structured_record: Dict[str, Any], collection_report: Dict[str, Any]) -> None:
+    if not has_file_tail_logs(structured_record):
+        return
+    kept: List[Any] = []
+    for item in collection_report.get("evidence_gaps") or []:
+        gap_text = str((item or {}).get("gap") if isinstance(item, dict) else item)
+        if gap_closed_by_file_tail(gap_text):
+            continue
+        kept.append(item)
+    collection_report["evidence_gaps"] = kept
+
+
 def build_input_from_remote_run(remote_run_dir: Path, args: argparse.Namespace) -> Dict[str, Any]:
     context = first_context(remote_run_dir)
     run_result = load_remote_executor_run_result(remote_run_dir)
@@ -1024,6 +1093,8 @@ def build_incident_from_remote_run(remote_run_dir: Path, output_dir: Path, args:
         if (item_dir / "artifacts").exists():
             shutil.copytree(item_dir / "artifacts", target_dir / "artifacts", dirs_exist_ok=True)
     merge_remote_executor_run_result(collection_report, run_result, bool(item_dirs))
+    drop_closed_evidence_gaps(structured_record, collection_report)
+    normalize_collection_report_gaps(collection_report)
 
     if not preserve_existing_input or not input_file.exists():
         write_yaml(input_file, input_data)
@@ -1032,7 +1103,7 @@ def build_incident_from_remote_run(remote_run_dir: Path, output_dir: Path, args:
     write_yaml(output_dir / "collection_report.yaml", collection_report)
 
 
-def run_remote_smoke(args: argparse.Namespace, output_dir: Path) -> Path:
+def run_remote_smoke(args: argparse.Namespace, output_dir: Path, script_ids: List[str] = None) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     command = [
         sys.executable,
@@ -1046,6 +1117,8 @@ def run_remote_smoke(args: argparse.Namespace, output_dir: Path) -> Path:
         command.extend(["--inventory-file", str(resolve_path(args.object_inventory))])
     if args.remote_namespace:
         command.extend(["--namespace", args.remote_namespace])
+    for script_id in script_ids or []:
+        command.extend(["--script-id", script_id])
     try:
         proc = subprocess.run(
             command,
@@ -1077,8 +1150,361 @@ def run_remote_smoke(args: argparse.Namespace, output_dir: Path) -> Path:
     raise RuntimeError("remote executor output did not include local_dir")
 
 
+def merge_remote_run_outputs(remote_run_dir: Path, output_dir: Path) -> None:
+    structured_record = load_yaml(output_dir / "structured_record.yaml")
+    signal_bundle = load_yaml(output_dir / "signal_bundle.yaml")
+    collection_report = load_yaml(output_dir / "collection_report.yaml")
+    run_result = load_remote_executor_run_result(remote_run_dir)
+    item_dirs = script_run_dirs(remote_run_dir)
+    merge_remote_executor_run_result(collection_report, run_result, bool(item_dirs))
+    script_outputs_dir = output_dir / "script_outputs"
+    for item_dir in item_dirs:
+        executor_result = load_yaml(item_dir / "remote-executor-result.yaml") if (item_dir / "remote-executor-result.yaml").exists() else {}
+        output = load_yaml(item_dir / "output.yaml") if (item_dir / "output.yaml").exists() else {}
+        script_id = str(output.get("script_id") or executor_result.get("script_id") or item_dir.name)
+        if executor_result:
+            merge_remote_executor_result(collection_report, script_id, executor_result)
+        if output:
+            apply_script_output(structured_record, signal_bundle, collection_report, output)
+        target_dir = script_outputs_dir / script_id
+        target_dir.mkdir(parents=True, exist_ok=True)
+        for filename in (
+            "output.yaml",
+            "context.yaml",
+            "remote-executor-request.yaml",
+            "remote-executor-result.yaml",
+            "remote.stdout.txt",
+            "remote.stderr.txt",
+            "exit_code.txt",
+            "artifact_retrieval_error.txt",
+        ):
+            if (item_dir / filename).exists():
+                shutil.copy2(item_dir / filename, target_dir / filename)
+        if (item_dir / "artifacts").exists():
+            shutil.copytree(item_dir / "artifacts", target_dir / "artifacts", dirs_exist_ok=True)
+    if (remote_run_dir / "remote-executor-run.yaml").exists():
+        shutil.copy2(remote_run_dir / "remote-executor-run.yaml", output_dir / "directed-recollection-run.yaml")
+    drop_closed_evidence_gaps(structured_record, collection_report)
+    normalize_collection_report_gaps(collection_report)
+    timestamp = now_iso()
+    structured_record["updated_at"] = timestamp
+    signal_bundle["updated_at"] = timestamp
+    collection_report["updated_at"] = timestamp
+    write_yaml(output_dir / "structured_record.yaml", structured_record)
+    write_yaml(output_dir / "signal_bundle.yaml", signal_bundle)
+    write_yaml(output_dir / "collection_report.yaml", collection_report)
+
+
+def signal_bundle_has(signal_bundle: Dict[str, Any], signal_id: str) -> bool:
+    for item in signal_bundle.get("abnormal_signals") or []:
+        if isinstance(item, dict) and str(item.get("signal_id") or "") == signal_id:
+            return True
+    return False
+
+
+def has_log_sink_record(structured_record: Dict[str, Any]) -> bool:
+    details = structured_record.get("details") or {}
+    return bool(details.get("log_sinks"))
+
+
+def has_file_backed_log_sink(structured_record: Dict[str, Any]) -> bool:
+    details = structured_record.get("details") or {}
+    for item in details.get("log_sinks") or []:
+        if not isinstance(item, dict):
+            continue
+        if item.get("path") and not bool(item.get("is_stdout_link")):
+            return True
+    return False
+
+
+def details_has_items(structured_record: Dict[str, Any], key: str) -> bool:
+    details = structured_record.get("details") or {}
+    value = details.get(key)
+    return bool(value)
+
+
+def has_file_tail_logs(structured_record: Dict[str, Any]) -> bool:
+    details = structured_record.get("details") or {}
+    for item in details.get("raw_logs") or []:
+        if isinstance(item, dict) and str(item.get("log_type") or "") == "file_tail":
+            return True
+    processed = details.get("processed_logs") or {}
+    return bool(isinstance(processed, dict) and processed.get("file_tail_highlights"))
+
+
+def text_has_direct_error_terms(text: str) -> bool:
+    lowered = text.lower()
+    return any(token in lowered for token in DIRECT_ERROR_TERMS)
+
+
+def signal_bundle_text(signal_bundle: Dict[str, Any]) -> str:
+    return json.dumps(signal_bundle, ensure_ascii=False).lower()
+
+
+def incident_evidence_text(structured_record: Dict[str, Any], signal_bundle: Dict[str, Any], collection_report: Dict[str, Any]) -> str:
+    return json.dumps(
+        {
+            "structured_record": structured_record,
+            "signal_bundle": signal_bundle,
+            "collection_report": collection_report,
+        },
+        ensure_ascii=False,
+    ).lower()
+
+
+def signal_object_pods(signal_bundle: Dict[str, Any], signal_ids: List[str]) -> List[str]:
+    wanted = set(signal_ids)
+    pods: List[str] = []
+    for item in signal_bundle.get("abnormal_signals") or []:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("signal_id") or "") not in wanted:
+            continue
+        object_ref = str(item.get("object_ref") or "")
+        if object_ref.startswith("pod/"):
+            pod = object_ref.split("/", 1)[1]
+            if pod and pod not in pods:
+                pods.append(pod)
+    return pods
+
+
+def current_logs_are_short(structured_record: Dict[str, Any]) -> bool:
+    details = structured_record.get("details") or {}
+    for item in details.get("raw_logs") or []:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("log_type") or "") != "current":
+            continue
+        line_count = int(item.get("line_count") or 0)
+        byte_size = int(item.get("byte_size") or 0)
+        if line_count <= 5 or byte_size <= 512:
+            return True
+    return False
+
+
+def crashloop_logs_are_shallow(structured_record: Dict[str, Any], signal_bundle: Dict[str, Any]) -> bool:
+    crashloop_pods = set(signal_object_pods(signal_bundle, ["pod-crashloop"]))
+    if not crashloop_pods:
+        return False
+    highlights_text = signal_bundle_text(signal_bundle)
+    if text_has_direct_error_terms(highlights_text):
+        return False
+    details = structured_record.get("details") or {}
+    for item in details.get("raw_logs") or []:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("log_type") or "") not in ("current", "previous"):
+            continue
+        if str(item.get("pod_ref") or "") not in crashloop_pods:
+            continue
+        line_count = int(item.get("line_count") or 0)
+        byte_size = int(item.get("byte_size") or 0)
+        if line_count <= 25 or byte_size <= 4096:
+            return True
+    return False
+
+
+def collection_report_mentions_log_sink_gap(collection_report: Dict[str, Any]) -> bool:
+    text = json.dumps(collection_report.get("evidence_gaps") or [], ensure_ascii=False).lower()
+    return (
+        "log sink" in text
+        or "logs too short" in text
+        or "real log" in text
+        or "true log" in text
+        or "file log" in text
+        or "application log source" in text
+    )
+
+
+def evidence_mentions_dns_issue(structured_record: Dict[str, Any], signal_bundle: Dict[str, Any], collection_report: Dict[str, Any]) -> bool:
+    text = incident_evidence_text(structured_record, signal_bundle, collection_report)
+    return any(
+        token in text
+        for token in (
+            "cannot resolve host",
+            "lookup ",
+            "10.96.0.10:53",
+            "kube-dns",
+            "coredns",
+            "dns",
+            "no servers could be reached",
+        )
+    ) and any(token in text for token in ("timed out", "timeout", "connection refused", "temporary failure", "i/o timeout"))
+
+
+def should_run_log_sink_recollection(structured_record: Dict[str, Any], signal_bundle: Dict[str, Any], collection_report: Dict[str, Any]) -> bool:
+    if has_log_sink_record(structured_record):
+        return False
+    if collection_report_mentions_log_sink_gap(collection_report):
+        return True
+    if signal_bundle_has(signal_bundle, "pod-crashloop") and current_logs_are_short(structured_record):
+        return True
+    return crashloop_logs_are_shallow(structured_record, signal_bundle)
+
+
+def should_run_log_file_tail_recollection(structured_record: Dict[str, Any], selected: List[str]) -> bool:
+    if SCRIPT_LOG_SINK_DISCOVER in selected:
+        return True
+    if has_file_backed_log_sink(structured_record) and not has_file_tail_logs(structured_record):
+        return True
+    return False
+
+
+def should_run_dns_recollection(structured_record: Dict[str, Any], signal_bundle: Dict[str, Any], collection_report: Dict[str, Any]) -> bool:
+    if details_has_items(structured_record, "dns_checks"):
+        return False
+    return evidence_mentions_dns_issue(structured_record, signal_bundle, collection_report)
+
+
+def should_run_pod_describe_recollection(structured_record: Dict[str, Any], signal_bundle: Dict[str, Any]) -> bool:
+    if details_has_items(structured_record, "pod_describes"):
+        return False
+    if details_has_items(structured_record, "pod_terminations"):
+        return False
+    return bool(signal_object_pods(signal_bundle, ["pod-crashloop", "pod-not-ready"]))
+
+
+def directed_recollection_script_ids(output_dir: Path) -> List[str]:
+    structured_record = load_yaml(output_dir / "structured_record.yaml")
+    signal_bundle = load_yaml(output_dir / "signal_bundle.yaml")
+    collection_report = load_yaml(output_dir / "collection_report.yaml")
+    selected: List[str] = []
+    if should_run_log_sink_recollection(structured_record, signal_bundle, collection_report):
+        selected.append(SCRIPT_LOG_SINK_DISCOVER)
+    if should_run_log_file_tail_recollection(structured_record, selected):
+        selected.append(SCRIPT_LOG_FILE_TAIL)
+    if should_run_dns_recollection(structured_record, signal_bundle, collection_report):
+        selected.append(SCRIPT_DNS_COREDNS)
+    if should_run_pod_describe_recollection(structured_record, signal_bundle):
+        selected.append(SCRIPT_PODS_DESCRIBE)
+    return selected[:DIRECTED_RECOLLECTION_CAP]
+
+
+def run_directed_recollection_if_needed(args: argparse.Namespace, output_dir: Path) -> bool:
+    if not args.remote_config:
+        return False
+    script_ids = directed_recollection_script_ids(output_dir)
+    if not script_ids:
+        return False
+    trace_dir = output_dir / "directed-recollection"
+    remote_run_dir = run_remote_smoke(args, trace_dir, script_ids)
+    merge_remote_run_outputs(remote_run_dir, output_dir)
+    return True
+
+
 def as_list(value: Any) -> List[Any]:
     return value if isinstance(value, list) else []
+
+
+def analysis_summary_text(analysis: Dict[str, Any]) -> str:
+    conclusion = analysis.get("conclusion_summary") or {}
+    statement = str(conclusion.get("statement") or "").strip()
+    confidence = str(conclusion.get("confidence") or "").strip()
+    if statement and confidence:
+        return "finalized analysis: %s (confidence=%s)" % (statement, confidence)
+    if statement:
+        return "finalized analysis: %s" % statement
+    return "finalized analysis is available"
+
+
+def analysis_next_action_texts(analysis: Dict[str, Any]) -> List[str]:
+    items: List[str] = []
+    for item in as_list(analysis.get("next_actions")):
+        if isinstance(item, dict):
+            action = str(item.get("action") or "").strip()
+            if action:
+                items.append(action)
+        elif item:
+            items.append(str(item))
+    return items
+
+
+def analysis_matches_rule_draft(analysis: Dict[str, Any], output_dir: Path) -> bool:
+    rule_draft_file = output_dir / ANALYSIS_RULE_DRAFT_FILENAME
+    if not rule_draft_file.exists():
+        return False
+    try:
+        return analysis == load_yaml(rule_draft_file)
+    except Exception:
+        return False
+
+
+def direct_error_terms_present(analysis: Dict[str, Any]) -> bool:
+    text = analysis_text(analysis)
+    return text_has_direct_error_terms(text)
+
+
+def append_limitation(conclusion: Dict[str, Any], limitation: Dict[str, Any]) -> None:
+    limitations = conclusion.setdefault("limitations", [])
+    if not isinstance(limitations, list):
+        limitations = [limitations]
+        conclusion["limitations"] = limitations
+    text = json.dumps(limitation, sort_keys=True)
+    for item in limitations:
+        if json.dumps(item, sort_keys=True) == text:
+            return
+    limitations.append(limitation)
+
+
+def collection_report_has_critical_gap(collection_report: Dict[str, Any]) -> bool:
+    for item in collection_report.get("evidence_gaps") or []:
+        if isinstance(item, dict) and str(item.get("gap_type") or "") == "critical_gap":
+            return True
+    return False
+
+
+def signal_bundle_has_id(signal_bundle: Dict[str, Any], signal_id: str) -> bool:
+    for item in signal_bundle.get("abnormal_signals") or []:
+        if isinstance(item, dict) and str(item.get("signal_id") or "") == signal_id:
+            return True
+    return False
+
+
+def apply_analysis_guardrails(analysis: Dict[str, Any], collection_report: Dict[str, Any], signal_bundle: Dict[str, Any]) -> bool:
+    conclusion = analysis.get("conclusion_summary")
+    if not isinstance(conclusion, dict):
+        return False
+    changed = False
+    if not conclusion.get("deepest_supported_level"):
+        category = str(conclusion.get("primary_cause_category") or "")
+        if category.startswith("kubernetes-") or category in ("container-restart", "service-routing"):
+            conclusion["deepest_supported_level"] = "impact"
+        elif direct_error_terms_present(analysis):
+            conclusion["deepest_supported_level"] = "root_cause"
+        else:
+            conclusion["deepest_supported_level"] = "phenomenon"
+        changed = True
+
+    level = str(conclusion.get("deepest_supported_level") or "")
+    confidence = str(conclusion.get("confidence") or "")
+    if collection_report_has_critical_gap(collection_report) and level == "root_cause" and confidence == "high":
+        conclusion["confidence"] = "medium"
+        append_limitation(
+            conclusion,
+            {
+                "gap": "unresolved critical_gap limits root-cause confidence",
+                "gap_type": "critical_gap",
+                "related_stage": "finalize",
+                "why_important": "Final root-cause confidence was capped because critical evidence gaps remain open.",
+            },
+        )
+        changed = True
+    if signal_bundle_has_id(signal_bundle, "pod-crashloop") and level == "root_cause" and not direct_error_terms_present(analysis):
+        conclusion["deepest_supported_level"] = "impact"
+        if confidence == "high":
+            conclusion["confidence"] = "medium"
+        append_limitation(
+            conclusion,
+            {
+                "gap": "MongoDB process-internal fatal evidence is not present",
+                "gap_type": "critical_gap",
+                "related_stage": "finalize",
+                "why_important": "CrashLoopBackOff supports process failure but not the internal MongoDB root cause.",
+                "recommended_action": "discover application log sink and collect MongoDB file logs if kubectl logs is too short",
+            },
+        )
+        changed = True
+    return changed
 
 
 def write_agent_reasoning_task(
@@ -1124,21 +1550,47 @@ def write_agent_reasoning_task(
         "- Produce multiple hypotheses when evidence supports multiple plausible paths.",
         "- Each hypothesis must include `hypothesis_id`, `statement`, `causal_path`, `supporting_evidence`, `counter_evidence`, `disconfirming_conditions`, `evidence_gaps`, `validation_actions`, and `validation_result`.",
         "- `validation_result` must be one of `supported`, `refuted`, or `insufficient`.",
+        "- Classify material evidence gaps as `expected_gap` or `critical_gap` in the relevant hypothesis or conclusion text.",
+        "- `expected_gap` means the missing evidence is common or has a reasonable substitute; `critical_gap` means the missing evidence limits hypothesis validation or conclusion depth.",
         "- `conclusion_summary` must include `statement`, `confidence`, `impact_scope`, `primary_cause_category`, `evidence`, and `limitations`.",
+        "- When useful, include `deepest_supported_level` in `conclusion_summary` with one of `phenomenon`, `impact`, `mechanism`, or `root_cause`.",
         "- `next_actions` should stay read-only unless the evidence clearly justifies a higher-risk action.",
         "- Distinguish missing evidence from evidence that disproves a hypothesis.",
         "- If evidence is insufficient, keep the conclusion and hypothesis status conservative instead of forcing certainty.",
         "",
+        "## Evidence and Source Boundaries",
+        "",
+        "- Current incident artifacts are evidence; customer clues, historical cases, runbooks, and experience patterns are hypothesis or validation-path sources only.",
+        "- Do not use a user clue or known historical answer as direct support for the current incident conclusion unless current evidence confirms it.",
+        "- If a hypothesis came from a clue, runbook, or historical pattern, say so in the hypothesis statement, evidence gap, or validation action.",
+        "",
+        "## Conclusion Ceiling",
+        "",
+        "- Keep `conclusion_summary.statement` within the deepest level directly supported by current evidence.",
+        "- Kubernetes runtime, event, and readiness signals can support phenomenon or impact conclusions; they do not by themselves prove process-internal root cause.",
+        "- Missing peer `rs.status`, missing MongoDB fatal logs, or unresolved `critical_gap` should cap root-cause confidence at low or medium.",
+        "- If the root cause is not directly supported, write the likely path as a hypothesis and put the required read-only validation in `next_actions`.",
+        "",
+        "## Directed Recollection Guidance",
+        "",
+        "- This task does not authorize arbitrary shell execution.",
+        "- If a `critical_gap` can be closed by a known read-only playbook, record it as a `validation_action` with status `planned` or `blocked` and include it in `next_actions`.",
+        "- Examples include healthy peer `rs.status`, `kubectl logs --previous`, peer connectivity checks, discovering the application log sink when `kubectl logs` is shallow, collecting MongoDB file log tails after log sink discovery, pod describe/termination detail, and CoreDNS/DNS probes for DNS lookup failures.",
+        "- DNS lookup errors in MongoDB startup logs support a DNS hypothesis; they should not become a mechanism-level conclusion unless CoreDNS state or an in-cluster DNS probe also supports it.",
+        "",
         "## Working Rules",
         "",
         "- Prefer `signal_bundle.yaml` and `collection_report.yaml` for reasoning inputs; use `structured_record.yaml` for necessary detail lookup.",
+        "- Before finalizing, inspect `signal_bundle.log_highlights`, `structured_record.details.dns_checks`, `structured_record.details.pod_terminations`, and any `file_tail` log evidence.",
+        "- Treat `dns_checks.status=failed` with DNS-layer error text differently from `dns_checks.status=blocked`; blocked probes are evidence gaps, not DNS-failure evidence.",
         "- Do not silently rewrite `input.yaml` or other start-stage files.",
         "- Keep raw evidence references explicit in `supporting_evidence`, `counter_evidence`, and `limitations`.",
         "",
         "## Deliverable Check",
         "",
         "- `analysis.yaml` reflects the final Agent reasoning rather than the rules-only draft.",
-        "- `report.md` matches the final conclusion, confidence, evidence gaps, and next actions.",
+        "- `analysis.yaml` records multi-hypothesis reasoning, gap severity, source boundaries, and conclusion ceiling where relevant.",
+        "- `report.md` matches the final conclusion, confidence, evidence gaps, supported level, and next actions.",
         "",
     ]
     task_file.write_text("\n".join(lines), encoding="utf-8")
@@ -1163,6 +1615,7 @@ def write_report(output_dir: Path, input_data: Dict[str, Any], analysis: Dict[st
         "",
         "- Statement: %s" % conclusion.get("statement", ""),
         "- Confidence: `%s`" % conclusion.get("confidence", ""),
+        "- Deepest supported level: `%s`" % conclusion.get("deepest_supported_level", ""),
         "- Primary cause category: `%s`" % conclusion.get("primary_cause_category", ""),
         "- Impact scope: %s" % conclusion.get("impact_scope", ""),
         "",
@@ -1193,6 +1646,97 @@ def write_report(output_dir: Path, input_data: Dict[str, Any], analysis: Dict[st
     lines.append("")
     report_file.write_text("\n".join(lines), encoding="utf-8")
     return report_file
+
+
+def command_finalize_analysis(args: argparse.Namespace) -> int:
+    output_root = path_from_arg(args.output_root)
+    if args.incident_dir:
+        incident_dir = resolve_path(args.incident_dir)
+    else:
+        try:
+            incident_dir = read_current_incident(output_root)
+        except (FileNotFoundError, ValueError) as exc:
+            return write_blocked_output(
+                "analyse",
+                "none",
+                "mongodb",
+                output_root,
+                "current incident is not available for finalize",
+                [
+                    {
+                        "code": "missing_current_incident",
+                        "message": str(exc),
+                        "required_user_action": "run /midstack:analyse first or provide an explicit incident directory",
+                    }
+                ],
+                ["run /midstack:analyse first or provide an incident directory"],
+            )
+    if not incident_dir.exists():
+        return write_blocked_output(
+            "analyse",
+            incident_dir.name,
+            "mongodb",
+            incident_dir.parent,
+            "incident directory does not exist",
+            [
+                {
+                    "code": "incident_dir_not_found",
+                    "message": "incident dir does not exist: %s" % incident_dir,
+                    "required_user_action": "provide an existing incident directory",
+                }
+            ],
+            ["provide an existing incident directory"],
+        )
+
+    input_file = incident_dir / "input.yaml"
+    analysis_file = incident_dir / "analysis.yaml"
+    report_file = incident_dir / "report.md"
+    if not input_file.exists() or not analysis_file.exists() or not report_file.exists():
+        missing = [str(path.name) for path in (input_file, analysis_file, report_file) if not path.exists()]
+        return write_blocked_output(
+            "analyse",
+            incident_dir.name,
+            "mongodb",
+            incident_dir,
+            "analysis finalization is blocked",
+            [
+                {
+                    "code": "missing_finalize_inputs",
+                    "message": "missing required finalize input(s): %s" % ", ".join(missing),
+                    "required_user_action": "complete analysis.yaml and report.md generation before finalize",
+                }
+            ],
+            ["complete the missing analysis artifacts and rerun finalize"],
+        )
+
+    input_data = load_yaml(input_file)
+    analysis = load_yaml(analysis_file)
+    collection_report = load_yaml(incident_dir / "collection_report.yaml") if (incident_dir / "collection_report.yaml").exists() else {}
+    signal_bundle = load_yaml(incident_dir / "signal_bundle.yaml") if (incident_dir / "signal_bundle.yaml").exists() else {}
+    if collection_report:
+        normalize_collection_report_gaps(collection_report)
+        write_yaml(incident_dir / "collection_report.yaml", collection_report)
+    if apply_analysis_guardrails(analysis, collection_report, signal_bundle):
+        analysis["updated_at"] = now_iso()
+        write_yaml(analysis_file, analysis)
+    incident_id = str(input_data.get("incident_id") or incident_dir.name)
+    middleware = str(input_data.get("middleware") or "mongodb")
+    output = adapter_output("analyse", incident_id, middleware, "completed", analysis_summary_text(analysis), incident_dir)
+    output["user_message"] = output["summary"]
+    add_record_ref_if_exists(output, incident_dir, "analysis", "analysis.yaml", "finalized analysis result")
+    add_record_ref_if_exists(output, incident_dir, "analysis_rule_draft", ANALYSIS_RULE_DRAFT_FILENAME, "rules fallback draft before Agent reasoning refinement")
+    add_record_ref_if_exists(output, incident_dir, "agent_reasoning_task", AGENT_REASONING_TASK_FILENAME, "phase-4/5 Agent reasoning task and output contract")
+    add_record_ref_if_exists(output, incident_dir, "report", "report.md", "finalized human-readable report")
+    add_record_ref_if_exists(output, incident_dir, "collection_report", "collection_report.yaml", "stage-3 collection summary")
+    output["next_actions"] = analysis_next_action_texts(analysis)
+    if analysis_matches_rule_draft(analysis, incident_dir):
+        output["warnings"].append("analysis.yaml still matches the rules draft; no additional Agent reasoning was detected.")
+
+    update_incident_meta(incident_dir, {"status": "analysed", "current_command": "analyse"})
+    write_current_incident(output_root, incident_dir)
+    write_yaml(incident_dir / "adapter-output.yaml", output)
+    print(str(incident_dir))
+    return 0
 
 
 def command_analyse(args: argparse.Namespace) -> int:
@@ -1355,6 +1899,21 @@ def command_analyse(args: argparse.Namespace) -> int:
             write_yaml(output_dir / "adapter-output.yaml", output)
             print("ERROR: %s" % error_message, file=sys.stderr)
             return 1
+        try:
+            run_directed_recollection_if_needed(args, output_dir)
+        except Exception as exc:
+            collection_report = load_yaml(output_dir / "collection_report.yaml")
+            collection_report.setdefault("evidence_gaps", []).append(
+                {
+                    "gap": "directed recollection failed: %s" % exc,
+                    "gap_type": "critical_gap",
+                    "related_stage": "directed_recollection",
+                    "why_important": "The first directed recollection loop could not close a critical evidence gap.",
+                    "recommended_action": "inspect directed-recollection logs and rerun the read-only playbook manually",
+                }
+            )
+            collection_report["updated_at"] = now_iso()
+            write_yaml(output_dir / "collection_report.yaml", collection_report)
     analysis_file = output_dir / "analysis.yaml"
     proc = subprocess.run(
         [
@@ -1378,6 +1937,14 @@ def command_analyse(args: argparse.Namespace) -> int:
         output["warnings"].append(proc.stderr.strip())
     else:
         analysis = load_yaml(analysis_file)
+        collection_report = load_yaml(output_dir / "collection_report.yaml") if (output_dir / "collection_report.yaml").exists() else {}
+        signal_bundle = load_yaml(output_dir / "signal_bundle.yaml") if (output_dir / "signal_bundle.yaml").exists() else {}
+        if collection_report:
+            normalize_collection_report_gaps(collection_report)
+            write_yaml(output_dir / "collection_report.yaml", collection_report)
+        if apply_analysis_guardrails(analysis, collection_report, signal_bundle):
+            analysis["updated_at"] = now_iso()
+            write_yaml(analysis_file, analysis)
         rule_draft_file = output_dir / ANALYSIS_RULE_DRAFT_FILENAME
         write_yaml(rule_draft_file, analysis)
         report_file = write_report(output_dir, input_data, analysis)
@@ -1399,7 +1966,7 @@ def command_analyse(args: argparse.Namespace) -> int:
         output["record_refs"].append({"name": "report", "path": str(report_file), "description": "generated human-readable report"})
         output["warnings"].append("analysis.yaml is currently a rules-based fallback draft; Agent reasoning should refine analysis.yaml and report.md.")
         output["next_actions"] = [
-            "read agent-reasoning-task.md and update analysis.yaml with Agent-led phase-4 reasoning",
+            "read agent-reasoning-task.md and update analysis.yaml with Agent-led multi-hypothesis reasoning, gap classification, and conclusion ceiling",
             "refresh report.md so it matches the final analysis.yaml conclusion",
         ]
         if incident_mode and incident_dir is not None:
@@ -1429,6 +1996,167 @@ def overall_level(score: Dict[str, Dict[str, str]]) -> str:
     if average >= 1.67:
         return "medium"
     return "low"
+
+
+def downgrade_level(level: str, target: str) -> str:
+    current_value = LEVEL_VALUE.get(level, 1)
+    target_value = LEVEL_VALUE.get(target, 1)
+    if target_value < current_value:
+        return target
+    return level
+
+
+def append_reason(item: Dict[str, str], reason: str) -> None:
+    current = str(item.get("reason") or "").strip()
+    item["reason"] = ("%s %s" % (current, reason)).strip() if current else reason
+
+
+def flatten_strings(value: Any) -> List[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        result: List[str] = []
+        for item in value.values():
+            result.extend(flatten_strings(item))
+        return result
+    if isinstance(value, list):
+        result = []
+        for item in value:
+            result.extend(flatten_strings(item))
+        return result
+    return []
+
+
+def analysis_text(analysis: Dict[str, Any]) -> str:
+    return "\n".join(flatten_strings(analysis)).lower()
+
+
+def conclusion_level(conclusion: Dict[str, Any]) -> str:
+    level = str(conclusion.get("deepest_supported_level") or "").strip()
+    if level:
+        return level
+    statement = str(conclusion.get("statement") or "").lower()
+    category = str(conclusion.get("primary_cause_category") or "").lower()
+    if "root" in statement or "root" in category or "corrupt" in statement or "journal" in statement or "fatal" in statement:
+        return "root_cause"
+    if "caused by" in statement or "because" in statement or "mechanism" in statement:
+        return "mechanism"
+    if "impact" in statement or "availability" in statement or "ready" in statement:
+        return "impact"
+    return "phenomenon"
+
+
+def has_critical_gap(analysis: Dict[str, Any]) -> bool:
+    text = analysis_text(analysis)
+    return "critical_gap" in text or "critical gap" in text
+
+
+def has_next_actions(analysis: Dict[str, Any]) -> bool:
+    return bool(as_list(analysis.get("next_actions")))
+
+
+def supported_hypotheses(analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+    hypotheses = [item for item in analysis.get("hypotheses") or [] if isinstance(item, dict)]
+    return [item for item in hypotheses if item.get("status") == "supported" or item.get("validation_result") == "supported"]
+
+
+def insufficient_hypotheses(analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+    hypotheses = [item for item in analysis.get("hypotheses") or [] if isinstance(item, dict)]
+    return [item for item in hypotheses if item.get("status") == "insufficient" or item.get("validation_result") == "insufficient"]
+
+
+def review_process_findings(analysis: Dict[str, Any]) -> List[Dict[str, str]]:
+    conclusion = analysis.get("conclusion_summary") or {}
+    confidence = str(conclusion.get("confidence") or "low")
+    level = conclusion_level(conclusion)
+    text = analysis_text(analysis)
+    findings: List[Dict[str, str]] = []
+
+    if any(token in text for token in ("answer-led", "answer_led", "known answer", "historical answer", "user disclosed", "customer clue as evidence")):
+        findings.append(
+            {
+                "code": "answer_led_bias",
+                "severity": "must_fix",
+                "message": "Potential answer-led bias: clue, historical answer, or disclosed answer appears to support the conclusion.",
+            }
+        )
+
+    if level == "root_cause" and confidence == "high" and not supported_hypotheses(analysis):
+        findings.append(
+            {
+                "code": "surface_to_root_cause_jump",
+                "severity": "should_fix",
+                "message": "Root-cause conclusion is high confidence without a supported hypothesis path.",
+            }
+        )
+
+    if level == "root_cause" and not as_list(conclusion.get("evidence")):
+        findings.append(
+            {
+                "code": "missing_evidence_bridge",
+                "severity": "should_fix",
+                "message": "Root-cause conclusion has no explicit evidence bridge in conclusion_summary.evidence.",
+            }
+        )
+
+    if has_critical_gap(analysis):
+        if not has_next_actions(analysis):
+            findings.append(
+                {
+                    "code": "critical_gap_ignored",
+                    "severity": "must_fix",
+                    "message": "A critical gap is recorded but no next action explains how to close or escalate it.",
+                }
+            )
+        if level == "root_cause" and confidence == "high":
+            findings.append(
+                {
+                    "code": "overconfident_conclusion",
+                    "severity": "must_fix",
+                    "message": "Root-cause conclusion remains high confidence despite an unresolved critical gap.",
+                }
+            )
+
+    if insufficient_hypotheses(analysis) and confidence == "high" and level in ("mechanism", "root_cause"):
+        findings.append(
+            {
+                "code": "overconfident_conclusion",
+                "severity": "must_fix",
+                "message": "Conclusion is high confidence at mechanism/root-cause level while one or more hypotheses remain insufficient.",
+            }
+        )
+
+    if (has_critical_gap(analysis) or insufficient_hypotheses(analysis)) and not has_next_actions(analysis):
+        findings.append(
+            {
+                "code": "missing_next_action",
+                "severity": "should_fix",
+                "message": "Evidence is insufficient but analysis does not provide read-only next actions.",
+            }
+        )
+
+    return findings
+
+
+def apply_process_findings_to_score(score: Dict[str, Dict[str, str]], findings: List[Dict[str, str]]) -> None:
+    impact = {
+        "answer_led_bias": ("hypothesis_coverage", "validation_depth"),
+        "surface_to_root_cause_jump": ("validation_depth", "conclusion_confidence"),
+        "missing_evidence_bridge": ("evidence_completeness", "validation_depth"),
+        "critical_gap_ignored": ("validation_depth", "conclusion_confidence"),
+        "overconfident_conclusion": ("conclusion_confidence",),
+        "missing_next_action": ("knowledge_reusability", "validation_depth"),
+    }
+    for finding in findings:
+        code = str(finding.get("code") or "")
+        severity = str(finding.get("severity") or "")
+        target_level = "low" if severity == "must_fix" else "medium"
+        for dimension in impact.get(code, ()):
+            item = score.get(dimension)
+            if not item:
+                continue
+            item["level"] = downgrade_level(str(item.get("level") or "low"), target_level)
+            append_reason(item, "Process finding %s: %s" % (code, finding.get("message") or "review required."))
 
 
 def review_score_from_analysis(analysis: Dict[str, Any]) -> Dict[str, Dict[str, str]]:
@@ -1476,16 +2204,18 @@ def review_score_from_analysis(analysis: Dict[str, Any]) -> Dict[str, Dict[str, 
     else:
         knowledge_score = score_item("low", "No knowledge candidates generated.")
 
-    return {
+    score = {
         "evidence_completeness": evidence_score,
         "hypothesis_coverage": hypothesis_score,
         "validation_depth": validation_score,
         "conclusion_confidence": confidence_score,
         "knowledge_reusability": knowledge_score,
     }
+    apply_process_findings_to_score(score, review_process_findings(analysis))
+    return score
 
 
-def review_suggestions(score: Dict[str, Dict[str, str]], analysis: Dict[str, Any]) -> List[str]:
+def review_suggestions(score: Dict[str, Dict[str, str]], analysis: Dict[str, Any], findings: List[Dict[str, str]] = None) -> List[str]:
     conclusion = analysis.get("conclusion_summary") or {}
     is_baseline = conclusion.get("primary_cause_category") == "baseline"
     suggestions: List[str] = []
@@ -1497,7 +2227,29 @@ def review_suggestions(score: Dict[str, Dict[str, str]], analysis: Dict[str, Any
         suggestions.append("Add explicit validation actions for supported and refuted hypotheses.")
     if score["knowledge_reusability"]["level"] != "high" and not is_baseline:
         suggestions.append("Improve knowledge candidate generation from matching assets and incident evidence.")
+    for finding in findings or []:
+        code = str(finding.get("code") or "")
+        if code == "answer_led_bias":
+            suggestions.append("Separate current incident evidence from user clues, historical answers, and runbook-derived hypotheses.")
+        elif code == "critical_gap_ignored":
+            suggestions.append("Add a read-only validation action or next action for each unresolved critical_gap.")
+        elif code == "overconfident_conclusion":
+            suggestions.append("Lower conclusion confidence or conclusion depth until the relevant critical gaps are closed.")
+        elif code == "missing_evidence_bridge":
+            suggestions.append("Add the evidence bridge from observed signals to the claimed mechanism or root cause.")
+        elif code == "surface_to_root_cause_jump":
+            suggestions.append("Keep root-cause claims as hypotheses until direct process-internal or application-log evidence supports them.")
+        elif code == "missing_next_action":
+            suggestions.append("Add the highest-value read-only next action for insufficient hypotheses or unresolved critical gaps.")
     return suggestions
+
+
+def review_regression_risks(findings: List[Dict[str, str]]) -> List[str]:
+    risks: List[str] = []
+    for finding in findings:
+        if finding.get("severity") == "must_fix":
+            risks.append("%s: %s" % (finding.get("code"), finding.get("message")))
+    return risks
 
 
 def command_review(args: argparse.Namespace) -> int:
@@ -1548,13 +2300,14 @@ def command_review(args: argparse.Namespace) -> int:
         print("ERROR: missing analysis.yaml: %s" % analysis_file, file=sys.stderr)
         return 1
     analysis = load_yaml(analysis_file)
+    findings = review_process_findings(analysis)
     score = review_score_from_analysis(analysis)
     level = overall_level(score)
     analysis["review"] = {
         "score": score,
         "overall": {"level": level, "reason": "Average of local review score dimensions."},
-        "improvement_suggestions": review_suggestions(score, analysis),
-        "regression_risks": [],
+        "improvement_suggestions": review_suggestions(score, analysis, findings),
+        "regression_risks": review_regression_risks(findings),
         "generated_at": now_iso(),
     }
     analysis["updated_at"] = now_iso()
@@ -1607,6 +2360,11 @@ def parse_args() -> argparse.Namespace:
     review.add_argument("--incident-dir")
     review.add_argument("--output-root", default=".local/incidents")
     review.set_defaults(func=command_review)
+
+    finalize = subparsers.add_parser("finalize-analysis")
+    finalize.add_argument("--incident-dir")
+    finalize.add_argument("--output-root", default=".local/incidents")
+    finalize.set_defaults(func=command_finalize_analysis)
 
     return parser.parse_args()
 

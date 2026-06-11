@@ -128,6 +128,17 @@ TOOLS = [
             },
         },
     },
+    {
+        "name": "midstack_finalize_analysis",
+        "description": "Refresh adapter-output.yaml and meta.yaml after Agent reasoning finalizes analysis.yaml and report.md.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "incident_dir": {"type": "string", "default": ""},
+                "output_root": {"type": "string", "default": ".local/incidents"},
+            },
+        },
+    },
 ]
 
 START_USAGE = """# Midstack Start Usage
@@ -135,7 +146,17 @@ START_USAGE = """# Midstack Start Usage
 When the user runs `/midstack:start ...`, extract fields from the user's natural language and call the `midstack_start` MCP tool directly.
 
 Do not inspect the plugin source tree before calling the tool.
-Do not manually invoke `tools/plugin/midstack-local.py` unless MCP tool calls are unavailable.
+Do not manually invoke `tools/plugin/midstack-local.py` for `/midstack:start`.
+
+Hard boundary: `/midstack:start` only creates or recovers an incident record. It must not run analysis.
+
+Even if the MCP call times out or appears unavailable:
+
+- Do not call `midstack_analyse_current`, `midstack_analyse_incident`, or `midstack_finalize_analysis`.
+- Do not read `.cursor/commands/midstack:analyse.md`.
+- Do not read, create, or edit `analysis.yaml`, `analysis.rule-draft.yaml`, `agent-reasoning-task.md`, `report.md`, `signal_bundle.yaml`, or `collection_report.yaml`.
+- If an incident directory was created, only read `adapter-output.yaml`, `meta.yaml`, `input.yaml`, or `object-inventory.yaml` to report the start status.
+- If the start status cannot be recovered, tell the user the start request timed out and ask them to rerun `/midstack:start`; do not continue to analyse automatically.
 
 Field extraction rules:
 
@@ -164,8 +185,13 @@ After the analyse tool returns `completed`:
 - Read `agent-reasoning-task.md`.
 - Treat `analysis.rule-draft.yaml` as a fallback draft, not the final answer.
 - Read `input.yaml`, `structured_record.yaml`, `signal_bundle.yaml`, and `collection_report.yaml`.
-- Update `analysis.yaml` with Agent-led phase-4 hypotheses and phase-5 conclusion.
+- Update `analysis.yaml` with Agent-led multi-hypothesis phase-4 reasoning and phase-5 conclusion.
+- Classify material evidence gaps as `expected_gap` or `critical_gap`, and keep root-cause confidence capped when a `critical_gap` remains unresolved.
+- Distinguish current incident evidence from customer clues, historical cases, runbooks, and experience-based hypothesis sources.
+- When evidence only supports phenomenon, impact, or mechanism level, keep the final conclusion at that level and use `deepest_supported_level` when useful.
+- Treat DNS lookup errors and shallow bootstrap logs as hypotheses until CoreDNS/DNS probe evidence or MongoDB file-log evidence supports the deeper mechanism.
 - Update `report.md` so it matches the final `analysis.yaml`.
+- Call `midstack_finalize_analysis` so adapter-output.yaml and meta.yaml reflect the finalized result.
 
 If the analyse tool returns `blocked` or `failed`, summarize the blocking items or warnings instead of inventing a diagnosis.
 """
@@ -446,6 +472,18 @@ def tool_call(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
             command.extend(["--incident-dir", resolve_input_path(str(arguments.get("incident_dir") or ""))])
         return run_command(command)
 
+    if name == "midstack_finalize_analysis":
+        command = [
+            sys.executable,
+            "tools/plugin/midstack-local.py",
+            "finalize-analysis",
+            "--output-root",
+            resolve_output_path(str(arguments.get("output_root") or ".local/incidents")),
+        ]
+        if arguments.get("incident_dir"):
+            command.extend(["--incident-dir", resolve_input_path(str(arguments.get("incident_dir") or ""))])
+        return run_command(command)
+
     return {
         "content": [{"type": "text", "text": "unknown tool: %s" % name}],
         "isError": True,
@@ -543,9 +581,12 @@ def handle(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                                 "text": (
                                     "Read `%s` first. Then read the referenced evidence files in `%s`, "
                                     "treat `%s` as a fallback draft only, update `%s` as the final phase-4/5 result, "
-                                    "and update `%s` so it matches the final analysis."
+                                    "including multi-hypothesis reasoning, expected_gap/critical_gap classification, "
+                                    "source-boundary handling, and conclusion-depth limits. Update `%s` so it matches "
+                                    "the final analysis, and then call "
+                                    "`midstack_finalize_analysis` for `%s`."
                                 )
-                                % (task_file, incident_dir, rule_draft_file, analysis_file, report_file),
+                                % (task_file, incident_dir, rule_draft_file, analysis_file, report_file, incident_dir),
                             },
                         }
                     ],

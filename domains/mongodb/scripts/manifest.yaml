@@ -90,6 +90,46 @@ scripts:
     default_packaged: true
     mvp: true
 
+  - script_id: mongodb.collect.logs.discover_sink
+    source: collect/collect-log-sink.sh
+    phase: collect
+    target: logs
+    action: discover_sink
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: false
+
+  - script_id: mongodb.collect.logs.file_tail
+    source: collect/collect-log-file-tail.sh
+    phase: collect
+    target: logs
+    action: file_tail
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: false
+
+  - script_id: mongodb.collect.dns.coredns
+    source: collect/collect-dns-coredns.sh
+    phase: collect
+    target: dns
+    action: coredns
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: false
+
+  - script_id: mongodb.collect.pods.describe
+    source: collect/collect-pods-describe.sh
+    phase: collect
+    target: pods
+    action: describe
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: false
+
   - script_id: mongodb.normalize.logs.highlights
     source: normalize/normalize-logs-highlights.py
     phase: normalize

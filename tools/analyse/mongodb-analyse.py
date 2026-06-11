@@ -2,8 +2,9 @@
 
 import argparse
 import json
+import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set, Tuple
 
 import yaml
 
@@ -51,20 +52,148 @@ def evidence_from_signals(signal_bundle: Dict[str, Any]) -> List[Dict[str, str]]
                 "detail": "%s: %s" % (item.get("signal_id"), item.get("detail")),
             }
         )
+    evidence.extend(evidence_from_log_highlights(signal_bundle))
     return evidence
 
 
-def collection_gaps(collection_report: Dict[str, Any]) -> List[str]:
-    gaps: List[str] = []
+def log_highlight_signature(message: str) -> str:
+    text = message.lower()
+    host_match = re.search(r'"host"\s*:\s*"([^"]+)"', message)
+    if "cannot resolve host" in text:
+        quoted = re.search(r'cannot resolve host "([^"]+)"', message)
+        host = quoted.group(1) if quoted else ""
+        return "dns-lookup:%s" % host
+    if "hostunreachable" in text or "host failed in replica set" in text or "rsm received error response" in text:
+        return "peer-unreachable:%s" % (host_match.group(1) if host_match else "")
+    if "connection refused" in text:
+        return "connection-refused:%s" % (host_match.group(1) if host_match else "")
+    if "wiredtiger" in text:
+        return "wiredtiger"
+    if "segmentation fault" in text:
+        return "segmentation-fault"
+    normalized = re.sub(r"\d{2,}", "<n>", text)
+    return normalized[:180]
+
+
+def log_highlight_is_material(item: Dict[str, Any]) -> bool:
+    category = str(item.get("category") or "")
+    message = str(item.get("message") or "")
+    if category in ("fatal", "storage", "error", "timeout", "connection", "resource"):
+        return True
+    text = message.lower()
+    return any(
+        token in text
+        for token in (
+            "cannot resolve host",
+            "hostunreachable",
+            "connection refused",
+            "wiredtiger",
+            "segmentation fault",
+            "unclean shutdown",
+            "i/o timeout",
+            "timed out",
+        )
+    )
+
+
+def log_highlight_priority(item: Dict[str, Any]) -> int:
+    message = str(item.get("message") or "").lower()
+    log_type = str(item.get("log_type") or "")
+    category = str(item.get("category") or "")
+    score = 0
+    if log_type == "file_tail":
+        score += 50
+    if category in ("fatal", "storage", "resource"):
+        score += 80
+    if "hostunreachable" in message or "host failed in replica set" in message or "rsm received error response" in message:
+        score += 70
+    if "cannot resolve host" in message:
+        score += 65
+    if "connection refused" in message:
+        score += 35
+    if "10.96.0.10:53" in message:
+        score += 20
+    if "timeout reached before the port went into state" in message:
+        score -= 20
+    return score
+
+
+def evidence_from_log_highlights(signal_bundle: Dict[str, Any], limit: int = 12) -> List[Dict[str, str]]:
+    evidence: List[Dict[str, str]] = []
+    seen: Set[Tuple[str, str, str, str]] = set()
+    candidates = [item for item in signal_bundle.get("log_highlights") or [] if isinstance(item, dict)]
+    candidates.sort(key=log_highlight_priority, reverse=True)
+    for item in candidates:
+        if not isinstance(item, dict) or not log_highlight_is_material(item):
+            continue
+        pod_ref = str(item.get("pod_ref") or "unknown")
+        log_type = str(item.get("log_type") or "unknown")
+        category = str(item.get("category") or "log")
+        message = str(item.get("message") or "")
+        key = (pod_ref, log_type, category, log_highlight_signature(message))
+        if key in seen:
+            continue
+        seen.add(key)
+        evidence.append(
+            {
+                "source": "signal_bundle.log_highlights",
+                "detail": "log-highlight[%s] pod/%s %s: %s" % (log_type, pod_ref, category, message[:700]),
+            }
+        )
+        if len(evidence) >= limit:
+            break
+    return evidence
+
+
+def classify_gap_type(gap_text: str, item: Dict[str, Any]) -> str:
+    explicit = str(item.get("gap_type") or item.get("type") or "").strip()
+    if explicit in ("expected_gap", "critical_gap"):
+        return explicit
+    text = gap_text.lower()
+    if "critical_gap" in text or "critical gap" in text:
+        return "critical_gap"
+    if "log sink" in text or "real log" in text or "true log" in text or "logs too short" in text or "file log" in text or "application log source" in text:
+        return "critical_gap"
+    if "script output missing" in text or "remote executor" in text or "signal bundle depends" in text:
+        return "critical_gap"
+    if "rs.status" in text and any(token in text for token in ("no healthy", "all", "not collected", "missing")):
+        return "critical_gap"
+    if any(token in text for token in ("affected pod", "faulty pod", "bad pod", "current pod")) and ("rs.status" in text or "fatal tail" in text):
+        return "expected_gap"
+    return "expected_gap"
+
+
+def normalize_gap(item: Any) -> Dict[str, Any]:
+    if isinstance(item, str):
+        gap_text = item
+        raw: Dict[str, Any] = {}
+    elif isinstance(item, dict):
+        raw = dict(item)
+        gap_text = str(raw.get("gap") or raw)
+    else:
+        raw = {}
+        gap_text = str(item)
+    normalized = {
+        "gap": gap_text,
+        "gap_type": classify_gap_type(gap_text, raw),
+        "related_stage": str(raw.get("related_stage") or "signal_collection"),
+        "why_important": str(raw.get("why_important") or "This gap affects evidence completeness."),
+    }
+    if raw.get("affects"):
+        normalized["affects"] = raw.get("affects")
+    if raw.get("recommended_action"):
+        normalized["recommended_action"] = raw.get("recommended_action")
+    return normalized
+
+
+def collection_gaps(collection_report: Dict[str, Any]) -> List[Dict[str, Any]]:
+    gaps: List[Dict[str, Any]] = []
     for item in collection_report.get("evidence_gaps") or []:
-        if isinstance(item, str):
-            gaps.append(item)
-        elif isinstance(item, dict):
-            gaps.append(str(item.get("gap") or item))
+        gaps.append(normalize_gap(item))
     return gaps
 
 
-def hypothesis(hid: str, statement: str, evidence: List[Dict[str, str]], gaps: List[str], status: str) -> Dict[str, Any]:
+def hypothesis(hid: str, statement: str, evidence: List[Dict[str, str]], gaps: List[Dict[str, Any]], status: str) -> Dict[str, Any]:
     return {
         "hypothesis_id": hid,
         "statement": statement,
@@ -83,7 +212,7 @@ def hypothesis_with_actions(
     hid: str,
     statement: str,
     evidence: List[Dict[str, str]],
-    gaps: List[str],
+    gaps: List[Dict[str, Any]],
     status: str,
     actions: List[Dict[str, Any]],
     causal_path: List[str],
@@ -106,6 +235,8 @@ def knowledge_candidates_for_scenario(scenario: str, primary_cause_category: str
         "kubernetes-runtime",
     }
     if scenario in ("", "unknown") and primary_cause_category in runtime_categories:
+        scenario = "kubernetes-runtime"
+    if scenario in ("", "unknown") and primary_cause_category == "dns-startup-failure":
         scenario = "kubernetes-runtime"
     if scenario in ("", "unknown", "baseline"):
         return []
@@ -135,7 +266,74 @@ def knowledge_candidates_for_scenario(scenario: str, primary_cause_category: str
     return candidates
 
 
-def kubernetes_runtime_conclusion(ids: set, evidence: List[Dict[str, str]], gaps: List[str]) -> Dict[str, Any]:
+def has_critical_gap(gaps: List[Dict[str, Any]]) -> bool:
+    return any(str(item.get("gap_type") or "") == "critical_gap" for item in gaps if isinstance(item, dict))
+
+
+def direct_mongodb_error_evidence(evidence: List[Dict[str, str]]) -> bool:
+    text = "\n".join(str(item.get("detail") or "") for item in evidence).lower()
+    return any(token in text for token in ("fatal", "wiredtiger", "corrupt", "journal", "bad magic number", "assertion", "unclean shutdown"))
+
+
+def evidence_text(evidence: List[Dict[str, str]]) -> str:
+    return "\n".join(str(item.get("detail") or "") for item in evidence).lower()
+
+
+def has_peer_connection_log_evidence(evidence: List[Dict[str, str]]) -> bool:
+    text = evidence_text(evidence)
+    return ("hostunreachable" in text or "host failed in replica set" in text or "rsm received error response" in text) and "connection refused" in text
+
+
+def has_dns_startup_log_evidence(evidence: List[Dict[str, str]]) -> bool:
+    text = evidence_text(evidence)
+    return "cannot resolve host" in text and any(token in text for token in ("10.96.0.10:53", "i/o timeout", "connection refused", "temporary failure"))
+
+
+def apply_conclusion_ceiling(conclusion: Dict[str, Any], evidence: List[Dict[str, str]], gaps: List[Dict[str, Any]], ids: set) -> Dict[str, Any]:
+    result = dict(conclusion)
+    category = str(result.get("primary_cause_category") or "")
+    if not result.get("deepest_supported_level"):
+        if category.startswith("kubernetes-") or category in ("container-restart", "service-routing"):
+            result["deepest_supported_level"] = "impact"
+        elif direct_mongodb_error_evidence(evidence):
+            result["deepest_supported_level"] = "root_cause"
+        elif category in ("replication",):
+            result["deepest_supported_level"] = "mechanism"
+        else:
+            result["deepest_supported_level"] = "phenomenon"
+
+    level = str(result.get("deepest_supported_level") or "")
+    confidence = str(result.get("confidence") or "low")
+    limitations = list(result.get("limitations") or [])
+    if has_critical_gap(gaps):
+        limitations.append(
+            {
+                "gap": "unresolved critical_gap limits deeper conclusion",
+                "gap_type": "critical_gap",
+                "related_stage": "reasoning",
+                "why_important": "Root-cause confidence must stay capped until critical evidence gaps are closed.",
+            }
+        )
+        if level == "root_cause" and confidence == "high":
+            result["confidence"] = "medium"
+    if "pod-crashloop" in ids and not direct_mongodb_error_evidence(evidence) and level == "root_cause":
+        result["deepest_supported_level"] = "impact"
+        if confidence == "high":
+            result["confidence"] = "medium"
+        limitations.append(
+            {
+                "gap": "MongoDB process-internal fatal evidence is not present",
+                "gap_type": "critical_gap",
+                "related_stage": "reasoning",
+                "why_important": "CrashLoopBackOff supports process failure, but not the internal MongoDB root cause.",
+                "recommended_action": "discover application log sink and collect MongoDB file logs if kubectl logs is too short",
+            }
+        )
+    result["limitations"] = limitations
+    return result
+
+
+def kubernetes_runtime_conclusion(ids: set, evidence: List[Dict[str, str]], gaps: List[Dict[str, Any]]) -> Dict[str, Any]:
     rules = [
         (
             "pod-node-selector-mismatch",
@@ -190,6 +388,9 @@ def kubernetes_runtime_conclusion(ids: set, evidence: List[Dict[str, str]], gaps
     for signal_id, category, confidence, conclusion_statement, hypothesis_statement in rules:
         if signal_id not in ids:
             continue
+        peer_log_supported = has_peer_connection_log_evidence(evidence)
+        dns_probe_supported = "dns-resolution-failed" in ids
+        dns_log_seen = has_dns_startup_log_evidence(evidence)
         hypotheses = [
             hypothesis_with_actions(
                 "H1",
@@ -220,8 +421,67 @@ def kubernetes_runtime_conclusion(ids: set, evidence: List[Dict[str, str]], gaps
                     "Pod condition does not support the inferred Kubernetes runtime category",
                 ],
             ),
+        ]
+        if peer_log_supported:
+            hypotheses.append(
+                hypothesis_with_actions(
+                    "H2",
+                    "MongoDB peers observe the affected member as unreachable with connection refused.",
+                    [item for item in evidence if "HostUnreachable" in item.get("detail", "") or "connection refused" in item.get("detail", "")],
+                    gaps,
+                    "supported",
+                    [
+                        {
+                            "action": "Correlate peer HostUnreachable timestamps with the affected Pod restart timestamps.",
+                            "result": "Supported by MongoDB file-log RSM/HostUnreachable evidence.",
+                            "risk_level": "read-only",
+                        },
+                        {
+                            "action": "Collect rs.status from a healthy member to confirm replica-set member state.",
+                            "result": "Still required for replica-set state details when mongosh is available.",
+                            "risk_level": "read-only",
+                        },
+                    ],
+                    [
+                        "MongoDB file logs were discovered and collected from the mounted log sink",
+                        "ReplicaSetMonitor reports the member host as HostUnreachable",
+                        "The reported failure is connection refused to the member Pod IP and MongoDB port",
+                    ],
+                    [
+                        "Peer logs show successful checks for the same member during the incident window",
+                        "rs.status from healthy peers reports the member healthy",
+                    ],
+                )
+            )
+        if dns_log_seen or dns_probe_supported:
+            hypotheses.append(
+                hypothesis_with_actions(
+                    "H%s" % (len(hypotheses) + 1),
+                    "MongoDB startup is blocked by DNS lookup failures for MongoDB service names.",
+                    [item for item in evidence if "cannot resolve host" in item.get("detail", "") or "dns-resolution-failed" in item.get("detail", "")],
+                    gaps,
+                    "supported" if dns_probe_supported else "insufficient",
+                    [
+                        {
+                            "action": "Use CoreDNS pod state and an in-cluster DNS probe to validate current DNS behavior.",
+                            "result": "Supported only when DNS probe or CoreDNS evidence confirms the lookup failure.",
+                            "risk_level": "read-only",
+                        },
+                    ],
+                    [
+                        "MongoDB bootstrap logs contain cannot-resolve-host errors",
+                        "The lookup path targets kube-dns/CoreDNS for MongoDB service names",
+                        "Startup waits for the MongoDB port but the process does not become ready",
+                    ],
+                    [
+                        "In-cluster lookup succeeds from affected or comparable Pods during the incident window",
+                        "CoreDNS pods and kube-dns endpoints are healthy and no DNS probe failure is observed",
+                    ],
+                )
+            )
+        hypotheses.append(
             hypothesis_with_actions(
-                "H2",
+                "H%s" % (len(hypotheses) + 1),
                 "MongoDB internal replica set state caused the unavailable member symptom.",
                 evidence,
                 gaps,
@@ -235,13 +495,24 @@ def kubernetes_runtime_conclusion(ids: set, evidence: List[Dict[str, str]], gaps
                 ],
                 [],
                 ["All Kubernetes Pod and StatefulSet signals are healthy while rs.status shows an internal member state issue"],
-            ),
-        ]
+            )
+        )
+        conclusion_level = "impact"
+        if dns_probe_supported:
+            conclusion_statement = "MongoDB containers are restarting or not ready with supported DNS lookup failure evidence."
+            category = "dns-startup-failure"
+            confidence = "medium"
+            conclusion_level = "mechanism"
+        elif peer_log_supported:
+            conclusion_statement = "MongoDB containers are restarting or not ready, and peer logs confirm the affected member is refusing connections."
+            confidence = "high"
+            conclusion_level = "mechanism"
         if signal_id == "pod-node-selector-mismatch":
-            hypotheses[1]["statement"] = "MongoDB shard member is unavailable because of storage binding failure."
-            hypotheses[1]["validation_result"] = "refuted"
-            hypotheses[1]["status"] = "refuted"
-            hypotheses[1]["disconfirming_conditions"] = ["PVC is unbound or scheduler event reports volume binding failure"]
+            alternate = hypotheses[-1]
+            alternate["statement"] = "MongoDB shard member is unavailable because of storage binding failure."
+            alternate["validation_result"] = "refuted"
+            alternate["status"] = "refuted"
+            alternate["disconfirming_conditions"] = ["PVC is unbound or scheduler event reports volume binding failure"]
             hypotheses[0]["causal_path"] = [
                 "StatefulSet creates MongoDB member Pod",
                 "Pod has nodeSelector or affinity constraint",
@@ -298,6 +569,7 @@ def kubernetes_runtime_conclusion(ids: set, evidence: List[Dict[str, str]], gaps
                 "primary_cause_category": category,
                 "evidence": [item["detail"] for item in evidence],
                 "limitations": gaps,
+                "deepest_supported_level": conclusion_level,
             },
             "next_actions": next_actions,
         }
@@ -326,6 +598,7 @@ def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collectio
             "primary_cause_category": "baseline",
             "evidence": ["no abnormal signals in baseline fixture"],
             "limitations": gaps,
+            "deepest_supported_level": "phenomenon",
         }
         next_actions = [
             {
@@ -359,6 +632,7 @@ def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collectio
             "primary_cause_category": "service-routing" if supported else "unknown",
             "evidence": [item["detail"] for item in evidence],
             "limitations": gaps,
+            "deepest_supported_level": "mechanism" if supported else "phenomenon",
         }
         next_actions = [
             {
@@ -392,6 +666,7 @@ def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collectio
             "primary_cause_category": "replication" if supported else "unknown",
             "evidence": [item["detail"] for item in evidence],
             "limitations": gaps,
+            "deepest_supported_level": "mechanism" if supported else "phenomenon",
         }
         next_actions = [
             {
@@ -411,6 +686,7 @@ def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collectio
             "primary_cause_category": "unknown",
             "evidence": [item["detail"] for item in evidence],
             "limitations": gaps,
+            "deepest_supported_level": "phenomenon",
         }
         next_actions = [
             {
@@ -419,6 +695,8 @@ def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collectio
                 "requires_confirmation": False,
             }
         ]
+
+    conclusion = apply_conclusion_ceiling(conclusion, evidence, gaps, ids)
 
     return {
         "hypotheses": hypotheses,

@@ -112,6 +112,16 @@ superseded_by: none
 - `analyse` 成功后额外落 `analysis.rule-draft.yaml` 和 `agent-reasoning-task.md`
 - Cursor Agent 按任务单继续回填正式 `analysis.yaml` 与 `report.md`
 
+进入下一步代码前，应先参考：
+
+- [2026-06-10 推理分析流程复盘](2026-06-10-reasoning-flow-review.md)
+
+其中已额外确认：
+
+- 第 3/4 段后续应优先评估“小循环”而不是严格单向串行
+- MongoDB 内部查询目标应逐步收敛到“拓扑单元 + 候选健康执行点”
+- 根因级结论需要更明确的证据充分性和置信度上限约束
+
 验证：
 
 - 固定 fixture 下的推理输出可检查

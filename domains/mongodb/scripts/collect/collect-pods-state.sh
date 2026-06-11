@@ -102,6 +102,36 @@ def last_restart_at(container_statuses: List[Dict[str, Any]]) -> Optional[str]:
     return max(candidates) if candidates else None
 
 
+def last_termination_records(pod: Dict[str, Any], container_statuses: List[Dict[str, Any]], collected_at: str) -> List[Dict[str, Any]]:
+    metadata = pod.get("metadata") or {}
+    pod_name = metadata.get("name")
+    namespace = metadata.get("namespace")
+    records: List[Dict[str, Any]] = []
+    for status in container_statuses:
+        last_state = status.get("lastState") or {}
+        terminated = last_state.get("terminated") or {}
+        if not terminated:
+            continue
+        container_name = status.get("name")
+        records.append(
+            {
+                "pod_container_ref": "%s/%s" % (pod_name, container_name),
+                "pod_ref": pod_name,
+                "namespace": namespace,
+                "container_name": container_name,
+                "reason": terminated.get("reason"),
+                "exit_code": terminated.get("exitCode"),
+                "signal": terminated.get("signal"),
+                "message": terminated.get("message"),
+                "started_at": terminated.get("startedAt"),
+                "finished_at": terminated.get("finishedAt"),
+                "restart_count": status.get("restartCount"),
+                "collected_at": collected_at,
+            }
+        )
+    return records
+
+
 def restart_count(container_statuses: List[Dict[str, Any]]) -> int:
     return sum(int(status.get("restartCount", 0) or 0) for status in container_statuses)
 
@@ -204,6 +234,7 @@ def pod_record(pod: Dict[str, Any], collected_at: str) -> Dict[str, Any]:
         "created_at": metadata.get("creationTimestamp"),
         "restart_count": restarts,
         "last_restart_at": last_restart_at(container_statuses),
+        "last_terminations": last_termination_records(pod, container_statuses, collected_at),
         "container_status": container_status,
         "yaml": {
             "metadata": {
@@ -391,6 +422,11 @@ def main() -> int:
 
     finished_at = now_iso()
     pod_records = [pod_record(item, finished_at) for item in selected]
+    pod_terminations = [
+        termination
+        for record in pod_records
+        for termination in (record.get("last_terminations") or [])
+    ]
     warnings: List[str] = []
     failed_items: List[Dict[str, Any]] = []
     evidence_gaps: List[Dict[str, Any]] = []
@@ -472,6 +508,7 @@ def main() -> int:
         "structured_record_patch": {
             "details": {
                 "pods": pod_records,
+                "pod_terminations": pod_terminations,
             }
         },
         "signal_bundle_patch": {},

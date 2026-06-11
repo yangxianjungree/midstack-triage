@@ -236,6 +236,7 @@ def main() -> int:
 
     log_records: List[Dict[str, Any]] = []
     failed_items: List[Dict[str, Any]] = []
+    blank_items: List[Dict[str, Any]] = []
     evidence_gaps: List[Dict[str, Any]] = []
 
     for pod in target_pods:
@@ -256,14 +257,28 @@ def main() -> int:
             failed_items.append({"item": "pod/%s" % pod, "reason": proc.stderr.strip() or "kubectl logs returned non-zero exit code", "impact": "missing %s logs for this Pod" % log_type})
             evidence_gaps.append({"gap": "%s logs not collected from pod/%s" % (log_type, pod), "related_stage": "signal_collection", "why_important": "missing pod logs may hide MongoDB runtime errors"})
             continue
+        current_line_count = line_count(proc.stdout)
+        current_byte_size = len(proc.stdout.encode("utf-8"))
+        if log_type == "current" and current_line_count <= 5:
+            blank_items.append({"item": "pod/%s current logs" % pod, "reason": "kubectl logs returned only %d line(s)" % current_line_count, "impact": "stdout/stderr may not contain MongoDB application logs"})
+            evidence_gaps.append(
+                {
+                    "gap": "kubectl logs are too short for pod/%s; MongoDB application log sink is unknown" % pod,
+                    "gap_type": "critical_gap",
+                    "related_stage": "signal_collection",
+                    "why_important": "MongoDB startup failures often write the root cause to file-backed application logs rather than container stdout/stderr.",
+                    "recommended_action": "run mongodb.collect.logs.discover_sink to inspect MongoDB log destination and path",
+                    "affects": ["root_cause"],
+                }
+            )
         log_records.append(
             {
                 "pod_ref": pod,
                 "namespace": namespace,
                 "log_type": log_type,
                 "artifact_path": log_relpath,
-                "line_count": line_count(proc.stdout),
-                "byte_size": len(proc.stdout.encode("utf-8")),
+                "line_count": current_line_count,
+                "byte_size": current_byte_size,
                 "tail_lines": tail_lines,
                 "collected_at": now_iso(),
             }
@@ -309,7 +324,7 @@ def main() -> int:
                 for item in log_records
             ],
             "failed_items": failed_items,
-            "blank_items": [],
+            "blank_items": blank_items,
             "evidence_gaps": evidence_gaps,
         },
         "warnings": warnings,

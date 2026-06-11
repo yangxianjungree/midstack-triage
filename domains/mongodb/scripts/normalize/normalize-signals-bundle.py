@@ -116,6 +116,7 @@ def inventory_signals(outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
                     "phase": item.get("phase"),
                     "ready": item.get("ready"),
                     "restart_count": item.get("restart_count"),
+                    "last_terminations": item.get("last_terminations") or [],
                     "container_status": item.get("container_status"),
                     "status_hint": item.get("status_hint"),
                     "node_selector": item.get("node_selector") or {},
@@ -232,6 +233,15 @@ def abnormal_signals_from_inventory(inventory: Dict[str, Any], events: Dict[str,
         phase = str(pod.get("phase") or "")
         ready = pod.get("ready")
         container_status = str(pod.get("container_status") or "")
+        last_terminations = pod.get("last_terminations") or []
+        termination_text = ""
+        if last_terminations:
+            sample = last_terminations[0]
+            termination_text = " last_termination=%s exit_code=%s message=%s" % (
+                sample.get("reason") or "unknown",
+                sample.get("exit_code"),
+                str(sample.get("message") or "")[:200],
+            )
         condition = scheduling_condition(pod)
         reason = str(condition.get("reason") or "")
         message = str(condition.get("message") or "")
@@ -277,7 +287,7 @@ def abnormal_signals_from_inventory(inventory: Dict[str, Any], events: Dict[str,
                 "pod-crashloop",
                 "high",
                 pod_ref,
-                "Pod container is restarting; restart_count=%s phase=%s ready=%s" % (pod.get("restart_count"), phase, ready),
+                "Pod container is restarting; restart_count=%s phase=%s ready=%s%s" % (pod.get("restart_count"), phase, ready, termination_text),
             )
         elif phase != "Running" or ready is False:
             add(

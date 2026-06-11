@@ -13,6 +13,10 @@ superseded_by: none
 
 本文是过程性提案，不是事实源。事实源以 `docs/specs/`、`core/models/`、`core/templates/`、`core/taxonomies/` 为准；历史讨论位于 `docs/decisions/`，不作为当前实现裁决依据。
 
+相关过程讨论：
+
+- [2026-06-10 推理分析流程复盘](2026-06-10-reasoning-flow-review.md)
+
 ## 变更类型
 
 本轮对齐可能影响：
@@ -85,10 +89,16 @@ superseded_by: none
 - `/start` 的第 2 段对象盘点仍是轻量只读线索，不执行 `rs.status()`、日志采集或 MongoDB shell 命令；副本集成员状态和深度验证仍属于 analyse 第 3 段
 - 兼容保留的 `remote-smoke.py` 现在只做 smoke 包装；当前 remote executor 已具备 run-level / per-script 请求结果落盘、基础 capability checks、关键 MongoDB 脚本的 target / pod tool preflight、`secret_ref` hint 传递和 blocked 导入链路，但错误分类覆盖度、能力检查深度和部分回收语义仍是轻量实现，未完全收敛到 L1 最终边界
 - 第 4 段当前已明确采用“规则 runner 保底草稿 + Cursor Agent 回填正式分析”的共存方式；后续仍需继续验证该链路在不同 Agent 平台上的稳定性
+- 当前 MongoDB analyse 的采集目标模型仍偏 Pod-centric，尚未按 replica set / shard / configsvr / mongos 的候选健康执行点来建模，详见[推理分析流程复盘](2026-06-10-reasoning-flow-review.md)
+- 当前第 3/4 段仍以单向串行为主，尚未形成“初始采集 -> 假设 -> 定向补采 -> 收敛”的小循环
+- 当前 evidence gap 仍未显式区分 `expected_gap` 与 `critical_gap`，因此根因级结论的置信度上限约束还不够清晰
 
 ## 建议优先确认
 
 1. 当前 remote executor 的错误分类、能力检查和回收语义如何继续收敛到 L1 最终边界
+2. MongoDB 第 3 段采集目标是否应从单 Pod 调用提升为“拓扑单元 + 候选健康执行点”模型
+3. 第 3/4 段是否应从单向串行改为允许假设驱动补采的小循环
+4. `collection_report` 是否应区分 `expected_gap` 与 `critical_gap`，并据此限制根因级结论置信度
 
 ## 影响范围
 
@@ -116,6 +126,7 @@ superseded_by: none
 - `analyse` 完成第 3 段后继续生成 `analysis.rule-draft.yaml` 和 `agent-reasoning-task.md`
 - Cursor Agent 读取 incident 证据与任务单，回填正式 `analysis.yaml` 与 `report.md`
 - 规则 runner 保留为 MVP 保底草稿与离线 replay / score 基线
+- 但上述链路仍需结合[推理分析流程复盘](2026-06-10-reasoning-flow-review.md)继续收敛第 3 段采集模型和第 4 段置信度约束
 
 需要特别评估：
 

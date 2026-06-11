@@ -102,11 +102,12 @@ def try_load_yaml(path: Path) -> Dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def load_script_entries(manifest_path: Path, runtime_map_path: Path) -> List[Dict[str, Any]]:
+def load_script_entries(manifest_path: Path, runtime_map_path: Path, selected_script_ids: List[str] = None) -> List[Dict[str, Any]]:
     manifest = load_config(manifest_path)
     runtime_map = load_config(runtime_map_path)
     manifest_root = manifest_path.parent
     source_by_id = {}
+    selected = set(selected_script_ids or [])
     for item in manifest.get("scripts") or []:
         if isinstance(item, dict) and item.get("default_packaged") is True:
             source_by_id[str(item.get("script_id") or "")] = item
@@ -119,6 +120,11 @@ def load_script_entries(manifest_path: Path, runtime_map_path: Path) -> List[Dic
         manifest_item = source_by_id.get(script_id)
         if not manifest_item:
             raise RuntimeError("runtime map script is missing from default_packaged manifest: %s" % script_id)
+        if selected:
+            if script_id not in selected:
+                continue
+        elif manifest_item.get("mvp") is not True:
+            continue
         source = str(manifest_item.get("source") or "")
         entry = {
             "script_id": script_id,
@@ -131,7 +137,9 @@ def load_script_entries(manifest_path: Path, runtime_map_path: Path) -> List[Dic
             raise RuntimeError("script source does not exist for %s: %s" % (script_id, entry["source_path"]))
         entries.append(entry)
     if not entries:
-        raise RuntimeError("runtime map contains no scripts: %s" % runtime_map_path)
+        if selected:
+            raise RuntimeError("selected script ids are not runtime-map-backed default_packaged scripts: %s" % sorted(selected))
+        raise RuntimeError("runtime map contains no MVP scripts: %s" % runtime_map_path)
     return entries
 
 
@@ -1035,6 +1043,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--plugin-name", default=DEFAULT_PLUGIN_NAME, help="Plugin name used for remote executor workspace layout.")
     parser.add_argument("--runtime-map", default=str(DEFAULT_RUNTIME_MAP), help="Runtime map used to resolve packaged script paths.")
     parser.add_argument("--manifest", default=str(DEFAULT_MANIFEST), help="Manifest used to resolve source script paths.")
+    parser.add_argument("--script-id", action="append", default=[], help="Run only the selected script id. May be repeated.")
     parser.add_argument("--namespace", default="", help="Explicit namespace. If omitted, a known MongoDB namespace is selected.")
     parser.add_argument("--namespace-candidates", default="mongo,psmdb-test,mongodb,default", help="Comma-separated namespace candidates.")
     parser.add_argument("--inventory-file", default="", help="Optional object-inventory.yaml from /start for topology and target hints.")
@@ -1060,7 +1069,7 @@ def main() -> int:
         cfg = load_config(Path(args.config))
         access = cfg["access"]
         selected_ip = str(access.get("primary_ip") or "")
-        script_entries = load_script_entries(Path(args.manifest), Path(args.runtime_map))
+        script_entries = load_script_entries(Path(args.manifest), Path(args.runtime_map), [str(item) for item in (args.script_id or []) if item])
         script_ids = [str(item["script_id"]) for item in script_entries]
         capabilities_ok, capability_checks, capability_error = validate_executor_capabilities(access)
         write_yaml(local_dir / "capability-checks.yaml", {"checks": capability_checks, "error": capability_error})

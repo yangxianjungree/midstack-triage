@@ -10,10 +10,17 @@ After the analyse tool returns `completed`:
 
 - Open the generated incident directory and read `agent-reasoning-task.md`.
 - Read `input.yaml`, `structured_record.yaml`, `signal_bundle.yaml`, and `collection_report.yaml`.
+- Inspect `signal_bundle.log_highlights`, `structured_record.details.dns_checks`, `structured_record.details.pod_terminations`, and any `file_tail` log evidence before writing the final conclusion.
 - Treat `analysis.rule-draft.yaml` as a fallback draft only, not the final diagnosis.
-- Update `analysis.yaml` so it reflects Agent-led phase-4 hypotheses and phase-5 conclusion.
+- Update `analysis.yaml` so it reflects Agent-led multi-hypothesis phase-4 reasoning and phase-5 conclusion.
+- Classify material evidence gaps as `expected_gap` or `critical_gap`; unresolved `critical_gap` entries should cap conclusion depth and root-cause confidence.
+- Keep current incident evidence separate from customer clues, historical cases, runbooks, and experience-based hypothesis sources.
+- Use `deepest_supported_level` when useful to make the supported conclusion layer explicit: `phenomenon`, `impact`, `mechanism`, or `root_cause`.
+- Treat DNS lookup errors and shallow bootstrap logs as hypotheses until CoreDNS/DNS probe evidence or MongoDB file-log evidence supports the deeper mechanism.
+- Distinguish DNS probe `blocked` from DNS probe `failed`; only failed checks with DNS-layer error text can support a DNS-failure mechanism.
 - Update `report.md` so it matches the final `analysis.yaml`.
-- Then summarize the final conclusion, confidence, evidence gaps, and output paths.
+- Call `midstack_finalize_analysis` for the incident so `adapter-output.yaml` and `meta.yaml` stop pointing at the draft state.
+- Then summarize the final conclusion, confidence, supported level, evidence gaps, and output paths.
 
 Default fixture smoke:
 

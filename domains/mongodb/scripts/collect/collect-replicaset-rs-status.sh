@@ -412,13 +412,29 @@ def main() -> int:
         artifacts.append({"path": stderr_relpath, "kind": "raw_command_error", "description": "raw rs.status stderr from %s" % pod})
         if proc.returncode != 0:
             failed_items.append({"item": "pod/%s" % pod, "reason": proc.stderr.strip() or "rs.status returned non-zero exit code", "impact": "missing replica set state from this member"})
-            evidence_gaps.append({"gap": "rs.status not collected from pod/%s" % pod, "related_stage": "signal_collection", "why_important": "missing member state may hide role, health or replication issues"})
+            evidence_gaps.append(
+                {
+                    "gap": "rs.status not collected from pod/%s" % pod,
+                    "gap_type": "expected_gap",
+                    "related_stage": "signal_collection",
+                    "why_important": "A failed member often cannot provide its own rs.status; healthy peer fallback should be used when available.",
+                    "recommended_action": "use rs.status from another healthy member in the same replica set",
+                }
+            )
             continue
         try:
             raw = extract_json(proc.stdout)
         except ValueError as exc:
             failed_items.append({"item": "pod/%s" % pod, "reason": str(exc), "impact": "unparsed replica set state from this member"})
-            evidence_gaps.append({"gap": "rs.status output not parsed from pod/%s" % pod, "related_stage": "signal_collection", "why_important": "unparsed member state cannot be used for diagnosis"})
+            evidence_gaps.append(
+                {
+                    "gap": "rs.status output not parsed from pod/%s" % pod,
+                    "gap_type": "expected_gap",
+                    "related_stage": "signal_collection",
+                    "why_important": "A single unparsed member state should not block diagnosis if another healthy peer provides replica set state.",
+                    "recommended_action": "use rs.status from another healthy member in the same replica set",
+                }
+            )
             continue
         raw_json_relpath = os.path.join("raw", "%s-rs-status.json" % base)
         with open(os.path.join(artifact_dir, raw_json_relpath), "w", encoding="utf-8") as fh:
@@ -448,6 +464,16 @@ def main() -> int:
 
     if not statuses:
         warnings.append("all rs.status collection attempts failed")
+        evidence_gaps.append(
+            {
+                "gap": "rs.status not collected from any healthy replica set peer",
+                "gap_type": "critical_gap",
+                "related_stage": "signal_collection",
+                "why_important": "Without any peer rs.status result, replica set internal state cannot be validated.",
+                "recommended_action": "identify a healthy member Pod with mongosh/mongo access and rerun rs.status",
+                "affects": ["mechanism", "root_cause"],
+            }
+        )
 
     payload = {
         "script_id": script_id,

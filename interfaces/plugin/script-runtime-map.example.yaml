@@ -47,6 +47,26 @@ scripts:
     runtime: shell
     readonly: true
 
+  - script_id: mongodb.collect.logs.discover_sink
+    runtime_path: assets/scripts/mongodb/collect-log-sink.sh
+    runtime: shell
+    readonly: true
+
+  - script_id: mongodb.collect.logs.file_tail
+    runtime_path: assets/scripts/mongodb/collect-log-file-tail.sh
+    runtime: shell
+    readonly: true
+
+  - script_id: mongodb.collect.dns.coredns
+    runtime_path: assets/scripts/mongodb/collect-dns-coredns.sh
+    runtime: shell
+    readonly: true
+
+  - script_id: mongodb.collect.pods.describe
+    runtime_path: assets/scripts/mongodb/collect-pods-describe.sh
+    runtime: shell
+    readonly: true
+
   - script_id: mongodb.normalize.logs.highlights
     runtime_path: assets/scripts/mongodb/normalize-logs-highlights.py
     runtime: python

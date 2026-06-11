@@ -41,6 +41,10 @@ superseded_by: none
 - [x] remote run 转 incident 时保留 `remote-executor-request/result`、执行日志和 artifacts，并把执行层结果回写到 `collection_report`
 - [x] `remote-smoke.py` 增加基础 capability checks 和首批错误分类
 - [x] 补齐第 4 段 Agent 推理层的触发点、输入证据包、输出合同和与规则 runner 的共存方式
+- [ ] 将 MongoDB 内部查询目标从单 Pod 调用收敛为“拓扑单元 + 候选健康执行点”模型，优先支持 `mongos`、`configsvr`、各 shard replica set 的 fallback 采集
+- [ ] 明确“故障 Pod 无法提供自身 `rs.status`”属于 `expected_gap` 还是 `critical_gap`，并补齐 gap 分类结构
+- [ ] 为根因级结论增加证据充分性和置信度上限约束，避免在缺失 peer `rs.status` / fatal log 时过深收敛
+- [ ] 评估 analyse 第 3/4 段是否应允许“假设驱动补采”的小循环，而不是严格一次性串行
 
 ## 待验证
 

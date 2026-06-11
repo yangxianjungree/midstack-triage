@@ -66,11 +66,86 @@ def validate_runtime_map_resolution() -> None:
     )
     if len(entries) != 11:
         raise AssertionError("expected 11 runtime-map-backed script entries, got %d" % len(entries))
+    directed_entries = module.load_script_entries(
+        ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml",
+        ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml",
+        [
+            "mongodb.collect.logs.discover_sink",
+            "mongodb.collect.logs.file_tail",
+            "mongodb.collect.dns.coredns",
+        ],
+    )
+    if [item["script_id"] for item in directed_entries] != [
+        "mongodb.collect.logs.discover_sink",
+        "mongodb.collect.logs.file_tail",
+        "mongodb.collect.dns.coredns",
+    ]:
+        raise AssertionError("selected directed recollection script did not resolve correctly: %r" % directed_entries)
     first = entries[0]
     if not str(first.get("runtime_path") or "").startswith("assets/scripts/mongodb/"):
         raise AssertionError("runtime_path must be plugin-relative: %r" % first)
     if not Path(first["source_path"]).exists():
         raise AssertionError("source_path must resolve to an existing file: %r" % first)
+
+
+def validate_directed_recollection_gate() -> None:
+    module = load_local_plugin_module()
+    with tempfile.TemporaryDirectory(prefix="midstack-directed-gate-") as tmp:
+        incident = Path(tmp)
+        (incident / "structured_record.yaml").write_text(
+            yaml.safe_dump(
+                {
+                    "details": {
+                        "raw_logs": [
+                            {
+                                "pod_ref": "mongo-shard0-2",
+                                "log_type": "current",
+                                "line_count": 15,
+                                "byte_size": 1800,
+                            }
+                        ]
+                    }
+                },
+                sort_keys=False,
+                allow_unicode=False,
+            ),
+            encoding="utf-8",
+        )
+        (incident / "signal_bundle.yaml").write_text(
+            yaml.safe_dump(
+                {
+                    "abnormal_signals": [
+                        {
+                            "signal_id": "pod-crashloop",
+                            "object_ref": "pod/mongo-shard0-2",
+                            "detail": "Pod container is restarting",
+                        }
+                    ],
+                    "log_highlights": [
+                        {
+                            "pod_ref": "mongo-shard0-2",
+                            "category": "timeout",
+                            "message": "cannot resolve host mongo on 10.96.0.10:53: i/o timeout",
+                        }
+                    ],
+                },
+                sort_keys=False,
+                allow_unicode=False,
+            ),
+            encoding="utf-8",
+        )
+        (incident / "collection_report.yaml").write_text(
+            yaml.safe_dump({"evidence_gaps": []}, sort_keys=False, allow_unicode=False),
+            encoding="utf-8",
+        )
+        selected = module.directed_recollection_script_ids(incident)
+        expected = [
+            "mongodb.collect.logs.discover_sink",
+            "mongodb.collect.logs.file_tail",
+            "mongodb.collect.dns.coredns",
+        ]
+        if selected != expected:
+            raise AssertionError("directed recollection gate selected %r, expected %r" % (selected, expected))
 
 
 def validate_inventory_profile_and_executor_outputs() -> None:
@@ -565,6 +640,7 @@ def validate_blocked_remote_run_import() -> None:
 def main() -> int:
     validate_multiline_ssh_quoting()
     validate_runtime_map_resolution()
+    validate_directed_recollection_gate()
     validate_inventory_profile_and_executor_outputs()
     validate_inventory_secret_ref_extraction()
     validate_mongos_script_capability_checks()

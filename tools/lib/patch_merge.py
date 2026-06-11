@@ -11,6 +11,12 @@ DETAILS_LIST_MERGE_BY_KEY: Dict[str, str] = {
     "nodes": "name",
     "replica_members": "source_pod_ref",
     "components": "component_id",
+    "log_sinks": "source_pod_ref",
+    "pod_terminations": "pod_container_ref",
+    "pod_describes": "pod_ref",
+    "dns_checks": "check_id",
+    "coredns_pods": "name",
+    "dns_services": "name",
 }
 
 DETAILS_LIST_APPEND: Set[str] = {
@@ -23,6 +29,7 @@ SIGNAL_BUNDLE_LIST_APPEND: Set[str] = {
     "object_signal_links",
     "timeline_summary",
     "processed_log_highlights",
+    "log_highlights",
 }
 
 COLLECTION_REPORT_LIST_APPEND: Set[str] = {

@@ -129,18 +129,46 @@ def main() -> int:
         start_text = start_resource["result"]["contents"][0]["text"]
         if "call the `midstack_start` MCP tool directly" not in start_text:
             raise AssertionError("start resource does not contain direct tool-call guidance")
-        prompts = request(proc, {"jsonrpc": "2.0", "id": 5, "method": "prompts/list", "params": {}})
+        analyse_resource = request(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "resources/read",
+                "params": {"uri": "midstack://commands/analyse"},
+            },
+        )
+        assert_ok(analyse_resource)
+        analyse_text = analyse_resource["result"]["contents"][0]["text"]
+        for expected in ("expected_gap", "critical_gap", "deepest_supported_level"):
+            if expected not in analyse_text:
+                raise AssertionError("analyse resource missing reasoning contract token: %s" % expected)
+        prompts = request(proc, {"jsonrpc": "2.0", "id": 6, "method": "prompts/list", "params": {}})
         assert_ok(prompts)
         prompt_names = {item["name"] for item in prompts["result"]["prompts"]}
         if "midstack_start" not in prompt_names:
             raise AssertionError("missing midstack_start prompt")
         if "midstack_analyse_reasoning" not in prompt_names:
             raise AssertionError("missing midstack_analyse_reasoning prompt")
+        reasoning_prompt = request(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 7,
+                "method": "prompts/get",
+                "params": {"name": "midstack_analyse_reasoning", "arguments": {"incident_dir": ".local/incidents/cursor-mcp-test"}},
+            },
+        )
+        assert_ok(reasoning_prompt)
+        prompt_text = reasoning_prompt["result"]["messages"][0]["content"]["text"]
+        for expected in ("expected_gap/critical_gap", "source-boundary", "conclusion-depth"):
+            if expected not in prompt_text:
+                raise AssertionError("reasoning prompt missing contract token: %s" % expected)
         analyse = request(
             proc,
             {
                 "jsonrpc": "2.0",
-                "id": 6,
+                "id": 8,
                 "method": "tools/call",
                 "params": {
                     "name": "midstack_analyse_fixture",
@@ -158,7 +186,7 @@ def main() -> int:
             proc,
             {
                 "jsonrpc": "2.0",
-                "id": 7,
+                "id": 9,
                 "method": "tools/call",
                 "params": {
                     "name": "midstack_review",
@@ -178,6 +206,10 @@ def main() -> int:
             raise AssertionError("expected rules draft output was not created")
         if not expected_reasoning_task.exists():
             raise AssertionError("expected agent reasoning task was not created")
+        reasoning_task_text = expected_reasoning_task.read_text(encoding="utf-8")
+        for expected in ("expected_gap", "critical_gap", "deepest_supported_level", "Evidence and Source Boundaries", "Conclusion Ceiling"):
+            if expected not in reasoning_task_text:
+                raise AssertionError("reasoning task missing contract token: %s" % expected)
         analysis_data = yaml.safe_load(expected_analysis.read_text(encoding="utf-8")) or {}
         if "review" not in analysis_data:
             raise AssertionError("expected review block in analysis.yaml")

@@ -14,7 +14,8 @@ When the user asks to triage MongoDB or middleware incidents in this repository:
 - Use `midstack_analyse_remote_config` when the user explicitly wants to run against a `.local` remote environment config.
 - Use `midstack_review` after analyse to generate quality feedback.
 - Use `midstack_validate` before reporting that the Cursor integration works.
-- After any successful analyse tool call, read `agent-reasoning-task.md` in the incident directory, treat `analysis.rule-draft.yaml` as fallback only, and update `analysis.yaml` plus `report.md` with Agent-led reasoning.
+- After any successful analyse tool call, read `agent-reasoning-task.md` in the incident directory, treat `analysis.rule-draft.yaml` as fallback only, inspect `signal_bundle.log_highlights`, `structured_record.details.dns_checks`, `structured_record.details.pod_terminations`, and any `file_tail` log evidence, update `analysis.yaml` plus `report.md` with Agent-led multi-hypothesis reasoning, gap classification, source-boundary handling, DNS/file-log evidence validation, and conclusion-depth limits, and then call `midstack_finalize_analysis`.
+- Treat DNS probe `blocked` as an evidence gap and DNS probe `failed` as mechanism evidence only when the failed check contains DNS-layer error text.
 
 Do not inspect `.cursor/mcp.json`, plugin source files, or repository code before calling Midstack MCP tools.
 Do not manually run `tools/plugin/midstack-local.py` unless the MCP tool call is unavailable.

@@ -6,6 +6,8 @@
 
 - 领域元数据
 - 结构化排障记录样例
+- `queue-backlog` 场景的首条 golden path 资产（runbook / skill / command / MVP 脚本）
+- 离线 fixture：`tests/fixtures/pulsar/topic-backlog-sample`
 
 后续如果继续扩展，建议优先覆盖：
 

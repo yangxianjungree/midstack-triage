@@ -22,6 +22,14 @@ required_assets:
     id: mongodb.collect.pods.state
   - type: script
     id: mongodb.collect.replicaset.rs_status
+  - type: script
+    id: mongodb.collect.logs.previous
+  - type: script
+    id: mongodb.collect.logs.discover_sink
+  - type: script
+    id: mongodb.collect.logs.file_tail
+  - type: script
+    id: mongodb.collect.logs.node_file_tail
 safety_constraints:
   - default to read-only commands
   - do not trigger stepdown, reconfig, or restart without explicit confirmation

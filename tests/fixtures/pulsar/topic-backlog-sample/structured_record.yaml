@@ -1,0 +1,26 @@
+summary:
+  cluster_id: pulsar-prod-01
+  namespace: pulsar
+  deployment_architecture: operator + crd
+  topology_summary: 3 brokers, 3 bookies, 3 zookeeper nodes
+  key_object_status: brokers healthy; payment topic backlog increasing
+  current_scope: single tenant topic with elevated consumer lag
+details:
+  cluster_info:
+    cluster_id: pulsar-prod-01
+    namespace: pulsar
+    middleware: pulsar
+  components:
+    - component_type: broker
+      component_id: broker-group
+      statefulset_refs:
+        - pulsar-broker
+  broker_topic_stats:
+    status: fixture
+    topics:
+      - topic: persistent://payment/app/orders
+        backlog: 180000
+        msg_rate_in: 1200
+        msg_rate_out: 300
+generated_at: "2026-06-12T00:00:00+08:00"
+updated_at: "2026-06-12T00:00:00+08:00"

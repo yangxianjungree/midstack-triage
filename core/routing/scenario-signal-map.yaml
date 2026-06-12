@@ -1,0 +1,132 @@
+routing_map_id: midstack.scenario_signal_map.v1
+unresolved_score_gap: 0.15
+confidence_thresholds:
+  high: 0.65
+  medium: 0.35
+routes:
+  - scenario: kubernetes-runtime
+    middleware:
+      - mongodb
+      - pulsar
+    when_any_signal:
+      - pod-unschedulable
+      - pod-node-selector-mismatch
+      - pod-volume-binding-failed
+      - pod-resource-insufficient
+      - pod-image-pull-failed
+      - pod-crashloop
+      - pod-not-ready
+      - statefulset-replicas-not-ready
+      - dns-resolution-failed
+      - flannel-vxlan-down
+      - flannel-route-install-failed
+      - pod-subnet-isolated
+      - kube-dns-backend-on-overlay-partition
+    signal_weight: 1.0
+
+  - scenario: replica-inconsistency
+    middleware:
+      - mongodb
+    when_any_signal:
+      - replica-member-recovering
+      - replica-member-unhealthy
+      - replication-lag-high
+      - stale-read-risk
+    when_structured_record_path_exists:
+      - details.replica_members
+    signal_weight: 1.0
+    structured_record_weight: 0.25
+
+  - scenario: connection-failure
+    middleware:
+      - mongodb
+    when_any_signal:
+      - service-endpoints-not-ready
+      - mongos-pod-not-ready
+      - connection-refused
+      - connection-timeout
+      - authentication-failed
+    signal_weight: 1.0
+
+  - scenario: resource-exhaustion
+    middleware:
+      - mongodb
+      - pulsar
+    when_any_signal:
+      - pod-resource-insufficient
+      - node-disk-pressure
+      - node-memory-pressure
+      - oom-killed
+    when_log_highlight_category:
+      - resource
+      - oom
+    signal_weight: 0.85
+
+  - scenario: latency-spike
+    middleware:
+      - mongodb
+    when_any_signal:
+      - latency-spike
+      - slow-operation
+    when_log_highlight_category:
+      - slowms
+      - latency
+    signal_weight: 1.0
+
+  - scenario: data-hotspot
+    middleware:
+      - mongodb
+    when_any_signal:
+      - shard-imbalance
+      - chunk-imbalance
+      - hotspot-key
+    signal_weight: 1.0
+
+  - scenario: queue-backlog
+    middleware:
+      - pulsar
+    when_any_signal:
+      - topic-backlog-high
+      - consumer-lag-high
+      - broker-unavailable
+    signal_weight: 1.0
+
+clue_tie_break_keywords:
+  replica-inconsistency:
+    - replica
+    - replication
+    - secondary
+    - primary
+    - lag
+    - stale read
+  connection-failure:
+    - connection
+    - timeout
+    - refused
+    - mongos
+    - connect
+  resource-exhaustion:
+    - oom
+    - memory
+    - disk
+    - resource
+    - pressure
+  latency-spike:
+    - latency
+    - slow
+    - spike
+  data-hotspot:
+    - hotspot
+    - shard imbalance
+    - chunk
+  kubernetes-runtime:
+    - crashloop
+    - pending
+    - image pull
+    - pvc
+    - not ready
+  queue-backlog:
+    - backlog
+    - lag
+    - consumer
+    - pulsar

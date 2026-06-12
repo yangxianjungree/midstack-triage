@@ -1,0 +1,27 @@
+id: pulsar-triage-topic-backlog
+title: Triage Pulsar Topic Backlog
+middleware: pulsar
+component: broker
+primary_scenario: queue-backlog
+inputs:
+  - customer clue or affected topic name
+  - namespace or cluster identifier
+  - tenant and subscription if known
+outputs:
+  - backlog scope summary
+  - likely cause category
+  - read-only verification actions
+required_assets:
+  - type: scenario
+    id: queue-backlog
+  - type: runbook
+    id: pulsar-topic-backlog
+  - type: command
+    id: pulsar-check-topic-backlog
+  - type: script
+    id: pulsar.collect.pods.state
+  - type: script
+    id: pulsar.collect.broker.topic_stats
+safety_constraints:
+  - default to read-only commands
+  - do not skip subscriptions, reset cursors, or delete topics without explicit confirmation

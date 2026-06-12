@@ -1,0 +1,21 @@
+middleware: pulsar
+scripts:
+  - script_id: pulsar.collect.pods.state
+    source: collect/collect-pods-state.py
+    phase: collect
+    target: pods
+    action: state
+    runtime: python
+    readonly: true
+    default_packaged: true
+    mvp: true
+
+  - script_id: pulsar.collect.broker.topic_stats
+    source: collect/collect-broker-topic-stats.py
+    phase: collect
+    target: broker
+    action: topic_stats
+    runtime: python
+    readonly: true
+    default_packaged: true
+    mvp: true

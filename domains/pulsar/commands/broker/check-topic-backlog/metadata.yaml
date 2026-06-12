@@ -1,0 +1,16 @@
+id: pulsar-check-topic-backlog
+title: Check Pulsar Topic Backlog
+middleware: pulsar
+component: broker
+scenario: queue-backlog
+risk_level: read-only
+tags:
+  - backlog
+  - consumer-lag
+  - broker
+required_tools:
+  - pulsar-admin
+expected_signal:
+  - topic backlog size and publish/consume rates are visible
+  - subscription lag can be compared across consumers
+  - affected tenant and topic can be identified quickly

@@ -1,0 +1,19 @@
+hypotheses:
+  - hypothesis_id: H1
+    statement: Topic backlog growth is caused by consumer lag or stalled consumption.
+    status: supported
+    validation_result: supported
+  - hypothesis_id: H2
+    statement: Topic backlog growth is caused by broker or bookie write pressure.
+    status: supported
+    validation_result: supported
+conclusion_summary:
+  statement: Initial evidence supports a Pulsar topic backlog issue affecting the reported tenant/topic.
+  confidence: medium
+  impact_scope: affected topic publish/consume path
+  primary_cause_category: topic-backlog
+next_actions:
+  - Review broker topic stats and subscription lag for the affected topic.
+knowledge_candidates:
+  - candidate_type: runbook
+    title: Pulsar Topic Backlog

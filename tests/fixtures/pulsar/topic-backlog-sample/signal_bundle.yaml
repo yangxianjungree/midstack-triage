@@ -1,0 +1,24 @@
+signal_overview:
+  status: abnormal
+  abnormal_signal_count: 2
+abnormal_signals:
+  - signal_id: topic-backlog-high
+    severity: high
+    object_ref: topic/persistent://payment/app/orders
+    detail: Topic backlog increased from 12k to 180k messages in 15 minutes.
+  - signal_id: consumer-lag-high
+    severity: high
+    object_ref: subscription/payment-orders-consumer
+    detail: Consumer lag remains above 120k messages while publish rate is stable.
+object_signal_links:
+  - object_ref: topic/persistent://payment/app/orders
+    signal_refs:
+      - topic-backlog-high
+  - object_ref: subscription/payment-orders-consumer
+    signal_refs:
+      - consumer-lag-high
+timeline_summary:
+  - backlog growth overlaps with customer payment topic alert
+processed_log_highlights: []
+generated_at: "2026-06-12T00:00:00+08:00"
+updated_at: "2026-06-12T00:00:00+08:00"

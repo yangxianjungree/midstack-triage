@@ -1,0 +1,23 @@
+id: queue-backlog
+title: Queue Backlog
+summary: Topic backlog, consumer lag, or publish/consume stall affects middleware availability or SLA.
+tags:
+  - backlog
+  - consumer-lag
+  - throughput
+  - messaging
+symptoms:
+  - topic backlog keeps increasing
+  - consumer lag grows and does not recover
+  - publish latency spikes while brokers appear healthy
+  - broker reports backlog or ledger write timeout on affected topics
+applicable_middleware:
+  - pulsar
+  - mongodb
+diagnostic_goals:
+  - determine whether backlog is caused by consumer stall, broker pressure, bookie storage, or routing issues
+  - identify the affected topic, subscription, tenant, and blast radius
+  - separate middleware backlog issues from Kubernetes runtime failures
+route_hints:
+  - middleware=pulsar component=broker
+  - check broker topic stats, subscription backlog, and bookie health for affected namespaces

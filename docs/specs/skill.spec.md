@@ -1,6 +1,6 @@
 ---
 status: authoritative
-last_updated: 2026-06-10
+last_updated: 2026-06-12
 supersedes: none
 superseded_by: none
 ---
@@ -45,6 +45,20 @@ safety_constraints:
 - skill 可以引用 command、runbook 和 script，但不重复粘贴全部内容
 - skill 应明确输入、输出和停止条件
 - 第 3 段 analyse 脚本通过 `type: script` 引用 `script_id`
+
+## 运行时消费（混合模式 C）
+
+skill 在运行时承担三层职责，但不替代 MVP 全量采集：
+
+| 阶段 | skill 角色 |
+|------|------------|
+| Phase 3 MVP 采集 | 不参与；仍执行中间件 manifest 中的 MVP 脚本全集 |
+| Scenario 推断后 | 按 `primary_scenario` 解析 matched skill |
+| 定向补采 | `required_assets` 中 `type: script` 且 manifest `readonly: true` 的条目构成白名单；gap 触发器从中选取 |
+| Phase 4 Agent | 读取 `skill.md` workflow、inputs、outputs、stop conditions |
+| 知识沉淀 | scenario 已知后，按 skill/runbook/command metadata 生成候选 |
+
+定向补采白名单解析见 `tools/lib/skill_resolver.py`。Scenario 推断见 [scenario-routing.spec.md](scenario-routing.spec.md)。
 
 ## 模型
 

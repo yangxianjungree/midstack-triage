@@ -25,6 +25,18 @@ required_assets:
     id: mongodb.collect.events.yaml
   - type: script
     id: mongodb.collect.statefulsets.yaml
+  - type: script
+    id: mongodb.collect.dns.coredns
+  - type: script
+    id: mongodb.collect.network.overlay
+  - type: script
+    id: mongodb.collect.logs.discover_sink
+  - type: script
+    id: mongodb.collect.logs.file_tail
+  - type: script
+    id: mongodb.collect.logs.node_file_tail
+  - type: script
+    id: mongodb.collect.pods.describe
 safety_constraints:
   - default to read-only commands
   - do not patch Kubernetes objects, delete Pods, or change scheduling/resource configuration without explicit confirmation

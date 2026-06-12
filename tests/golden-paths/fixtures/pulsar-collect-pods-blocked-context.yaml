@@ -1,0 +1,30 @@
+incident_id: pulsar-golden-20260612-120000-test
+middleware: pulsar
+script_id: pulsar.collect.pods.state
+namespace: pulsar
+cluster_id: pulsar-golden-test
+artifact_root: /tmp/midstack-pulsar-golden-artifacts
+
+deployment_architecture: operator
+topology_type: pulsar_cluster
+
+access:
+  primary_ip: 10.0.0.1
+  candidate_ips:
+    - 10.0.0.1
+  username: test-user
+  password: example-password
+  port: 22
+
+targets:
+  namespace: pulsar
+  pod_refs:
+    - pulsar-broker-0
+
+capabilities:
+  kubectl_available: false
+  kubectl_exec_available: false
+  pulsar_admin_available: false
+
+pod_query:
+  mode: by_pod_refs

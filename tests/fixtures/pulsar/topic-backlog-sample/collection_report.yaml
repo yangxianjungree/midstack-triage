@@ -1,0 +1,11 @@
+collection_actions:
+  - action_id: pulsar-collect-broker-topic-stats
+    status: success
+successful_items:
+  - broker_topic_stats
+failed_items: []
+blank_items: []
+evidence_gaps:
+  - live consumer ack progress is not available in this fixture
+generated_at: "2026-06-12T00:00:00+08:00"
+updated_at: "2026-06-12T00:00:00+08:00"

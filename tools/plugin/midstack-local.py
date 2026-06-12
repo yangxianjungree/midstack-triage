@@ -9,7 +9,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Set
 
 import yaml
 
@@ -20,6 +20,16 @@ if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
 from patch_merge import apply_script_output  # noqa: E402
+from scenario_router import infer_scenario  # noqa: E402
+from skill_resolver import (  # noqa: E402
+    extract_script_ids,
+    extract_skill_workflow,
+    matched_asset_refs,
+    missing_required_scripts,
+    recollection_script_pool,
+    resolve_skills,
+    script_collection_statuses,
+)
 
 
 MONGODB_DISCOVERY_HINTS = ("mongo", "mongodb", "mongos", "mongod", "configsvr", "shard", "psmdb", "percona")
@@ -1382,7 +1392,7 @@ def should_run_pod_describe_recollection(structured_record: Dict[str, Any], sign
     return bool(signal_object_pods(signal_bundle, ["pod-crashloop", "pod-not-ready"]))
 
 
-def directed_recollection_script_ids(output_dir: Path) -> List[str]:
+def directed_recollection_script_ids(output_dir: Path, skill_pool: Optional[Set[str]] = None) -> List[str]:
     structured_record = load_yaml(output_dir / "structured_record.yaml")
     signal_bundle = load_yaml(output_dir / "signal_bundle.yaml")
     collection_report = load_yaml(output_dir / "collection_report.yaml")
@@ -1404,13 +1414,92 @@ def directed_recollection_script_ids(output_dir: Path) -> List[str]:
             selected.append(SCRIPT_LOG_NODE_FILE_TAIL)
     if should_run_pod_describe_recollection(structured_record, signal_bundle):
         selected.append(SCRIPT_PODS_DESCRIBE)
-    return selected[:DIRECTED_RECOLLECTION_CAP]
+    selected = selected[:DIRECTED_RECOLLECTION_CAP]
+    if not skill_pool:
+        return selected
+    filtered = [script_id for script_id in selected if script_id in skill_pool]
+    if filtered:
+        return filtered
+    collection_report.setdefault("warnings", []).append(
+        "directed recollection fell back to legacy script selection because matched skill pool did not cover triggered playbooks (gap_type=skill_pool_miss)"
+    )
+    collection_report["updated_at"] = now_iso()
+    write_yaml(output_dir / "collection_report.yaml", collection_report)
+    return selected
 
 
-def run_directed_recollection_if_needed(args: argparse.Namespace, output_dir: Path) -> bool:
+def apply_scenario_routing_if_needed(output_dir: Path, args: argparse.Namespace) -> Dict[str, Any]:
+    input_file = output_dir / "input.yaml"
+    signal_bundle_file = output_dir / "signal_bundle.yaml"
+    if not input_file.exists() or not signal_bundle_file.exists():
+        return load_yaml(input_file) if input_file.exists() else {}
+
+    input_data = load_yaml(input_file)
+    existing_scenario = str(input_data.get("scenario") or "unknown")
+    if existing_scenario not in ("", "unknown", "baseline"):
+        return input_data
+
+    structured_record_file = output_dir / "structured_record.yaml"
+    structured_record = load_yaml(structured_record_file) if structured_record_file.exists() else {}
+    signal_bundle = load_yaml(signal_bundle_file)
+    routing = infer_scenario(
+        signal_bundle,
+        structured_record=structured_record,
+        customer_clue=str(input_data.get("customer_clue") or getattr(args, "customer_clue", "") or ""),
+        middleware=str(input_data.get("middleware") or "mongodb"),
+    )
+    input_data["scenario"] = routing["scenario"]
+    input_data["scenario_inference"] = routing["scenario_inference"]
+    input_data["updated_at"] = now_iso()
+    write_yaml(input_file, input_data)
+    args.scenario = routing["scenario"]
+    return input_data
+
+
+def enrich_skill_runtime_context(output_dir: Path, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    middleware = str(input_data.get("middleware") or "mongodb")
+    scenario = str(input_data.get("scenario") or "unknown")
+    skills = resolve_skills(middleware, scenario)
+    skill_pool = recollection_script_pool(middleware, scenario)
+    required_scripts: List[str] = []
+    for skill in skills:
+        required_scripts.extend(extract_script_ids(skill["metadata"]))
+    required_scripts = sorted(set(required_scripts))
+
+    collection_report_file = output_dir / "collection_report.yaml"
+    collection_report = load_yaml(collection_report_file) if collection_report_file.exists() else {}
+    script_statuses = script_collection_statuses(output_dir, collection_report)
+    missing_or_failed = missing_required_scripts(required_scripts, script_statuses)
+
+    collection_report["skill_evidence_check"] = {
+        "skill_ids": [skill["id"] for skill in skills],
+        "required_scripts": required_scripts,
+        "recollection_script_pool": sorted(skill_pool),
+        "script_statuses": script_statuses,
+        "missing_or_failed": missing_or_failed,
+    }
+    collection_report["updated_at"] = now_iso()
+    write_yaml(collection_report_file, collection_report)
+
+    input_data["matched_skill_ids"] = [skill["id"] for skill in skills]
+    input_data["matched_assets"] = matched_asset_refs(middleware, skills)
+    write_yaml(output_dir / "input.yaml", input_data)
+    return {
+        "skills": skills,
+        "skill_pool": skill_pool,
+        "required_scripts": required_scripts,
+        "missing_or_failed": missing_or_failed,
+    }
+
+
+def run_directed_recollection_if_needed(
+    args: argparse.Namespace,
+    output_dir: Path,
+    skill_pool: Optional[Set[str]] = None,
+) -> bool:
     if not args.remote_config:
         return False
-    script_ids = directed_recollection_script_ids(output_dir)
+    script_ids = directed_recollection_script_ids(output_dir, skill_pool=skill_pool)
     if not script_ids:
         return False
     trace_dir = output_dir / "directed-recollection"
@@ -1553,8 +1642,14 @@ def write_agent_reasoning_task(
     analysis_file: Path,
     rule_draft_file: Path,
     report_file: Path,
+    matched_skills: Optional[List[Dict[str, Any]]] = None,
 ) -> Path:
     task_file = output_dir / AGENT_REASONING_TASK_FILENAME
+    middleware = str(input_data.get("middleware") or "mongodb")
+    scenario = str(input_data.get("scenario") or "unknown")
+    if matched_skills is None:
+        matched_skills = resolve_skills(middleware, scenario)
+    inference = input_data.get("scenario_inference") or {}
     lines = [
         "# Midstack Agent Reasoning Task",
         "",
@@ -1566,11 +1661,36 @@ def write_agent_reasoning_task(
         "## Incident",
         "",
         "- Incident ID: `%s`" % input_data.get("incident_id", output_dir.name),
-        "- Middleware: `%s`" % input_data.get("middleware", "mongodb"),
-        "- Scenario: `%s`" % input_data.get("scenario", "unknown"),
+        "- Middleware: `%s`" % middleware,
+        "- Scenario: `%s`" % scenario,
+        "- Scenario inference confidence: `%s`" % inference.get("confidence", "unknown"),
+        "- Scenario unresolved: `%s`" % inference.get("unresolved", False),
         "- Namespace: `%s`" % input_data.get("namespace", ""),
         "- Cluster: `%s`" % input_data.get("cluster_id", ""),
         "- Customer clue: %s" % input_data.get("customer_clue", ""),
+        "",
+        "## Matched Assets",
+        "",
+    ]
+    if matched_skills:
+        for skill in matched_skills:
+            metadata = skill["metadata"]
+            lines.append(
+                "- Skill `%s` (`%s`): %s"
+                % (skill["id"], skill["skill_dir"].relative_to(ROOT), metadata.get("title", ""))
+            )
+            workflow = extract_skill_workflow(skill["skill_md_path"])
+            if workflow:
+                lines.append("  - Workflow excerpt:")
+                for workflow_line in workflow.splitlines():
+                    lines.append("    - %s" % workflow_line.lstrip("- ").strip())
+    else:
+        lines.append("- No matched skill for scenario `%s`." % scenario)
+    for asset in input_data.get("matched_assets") or matched_asset_refs(middleware, matched_skills):
+        if asset.get("path"):
+            lines.append("- %s `%s` → `%s`" % (asset.get("type"), asset.get("id"), asset.get("path")))
+    lines.extend(
+        [
         "",
         "## Read First",
         "",
@@ -1632,7 +1752,8 @@ def write_agent_reasoning_task(
         "- `analysis.yaml` records multi-hypothesis reasoning, gap severity, source boundaries, and conclusion ceiling where relevant.",
         "- `report.md` matches the final conclusion, confidence, evidence gaps, supported level, and next actions.",
         "",
-    ]
+        ]
+    )
     task_file.write_text("\n".join(lines), encoding="utf-8")
     return task_file
 
@@ -1916,8 +2037,15 @@ def command_analyse(args: argparse.Namespace) -> int:
         return 1
 
     input_data = load_yaml(output_dir / "input.yaml")
+    if (output_dir / "signal_bundle.yaml").exists():
+        input_data = apply_scenario_routing_if_needed(output_dir, args)
+    skill_runtime: Dict[str, Any] = {}
+    if (output_dir / "signal_bundle.yaml").exists():
+        skill_runtime = enrich_skill_runtime_context(output_dir, input_data)
+        input_data = load_yaml(output_dir / "input.yaml")
     incident_id = str(input_data.get("incident_id") or output_dir.name)
     middleware = str(input_data.get("middleware") or "mongodb")
+    skill_pool = skill_runtime.get("skill_pool") or set()
     if remote_run_result:
         run_status = str(remote_run_result.get("status") or "")
         run_error = remote_run_result.get("error") or {}
@@ -1952,7 +2080,10 @@ def command_analyse(args: argparse.Namespace) -> int:
             print("ERROR: %s" % error_message, file=sys.stderr)
             return 1
         try:
-            run_directed_recollection_if_needed(args, output_dir)
+            run_directed_recollection_if_needed(args, output_dir, skill_pool=skill_pool or None)
+            if skill_runtime:
+                enrich_skill_runtime_context(output_dir, input_data)
+                input_data = load_yaml(output_dir / "input.yaml")
         except Exception as exc:
             collection_report = load_yaml(output_dir / "collection_report.yaml")
             collection_report.setdefault("evidence_gaps", []).append(
@@ -1967,10 +2098,27 @@ def command_analyse(args: argparse.Namespace) -> int:
             collection_report["updated_at"] = now_iso()
             write_yaml(output_dir / "collection_report.yaml", collection_report)
     analysis_file = output_dir / "analysis.yaml"
+    analyse_script = ROOT / "tools" / "analyse" / ("%s-analyse.py" % middleware)
+    if not analyse_script.exists():
+        summary = "no analyse runner available for middleware %s" % middleware
+        if incident_mode and incident_dir is not None and previous_incident_status:
+            update_incident_meta(incident_dir, {"status": previous_incident_status, "current_command": "analyse"})
+        output = adapter_output("analyse", incident_id, middleware, "failed", summary, output_dir)
+        output["blocking_items"] = [
+            {
+                "code": "unsupported_middleware_analyse",
+                "message": summary,
+                "required_user_action": "use a supported middleware or add tools/analyse/%s-analyse.py" % middleware,
+            }
+        ]
+        output["next_actions"] = ["use a supported middleware such as mongodb or pulsar"]
+        write_yaml(output_dir / "adapter-output.yaml", output)
+        print("ERROR: %s" % summary, file=sys.stderr)
+        return 1
     proc = subprocess.run(
         [
             sys.executable,
-            str(ROOT / "tools" / "analyse" / "mongodb-analyse.py"),
+            str(analyse_script),
             "--input-dir",
             str(output_dir),
             "--output-file",
@@ -2000,7 +2148,14 @@ def command_analyse(args: argparse.Namespace) -> int:
         rule_draft_file = output_dir / ANALYSIS_RULE_DRAFT_FILENAME
         write_yaml(rule_draft_file, analysis)
         report_file = write_report(output_dir, input_data, analysis)
-        task_file = write_agent_reasoning_task(output_dir, input_data, analysis_file, rule_draft_file, report_file)
+        task_file = write_agent_reasoning_task(
+            output_dir,
+            input_data,
+            analysis_file,
+            rule_draft_file,
+            report_file,
+            matched_skills=skill_runtime.get("skills") if skill_runtime else None,
+        )
         output["record_refs"].append(
             {
                 "name": "analysis_rule_draft",

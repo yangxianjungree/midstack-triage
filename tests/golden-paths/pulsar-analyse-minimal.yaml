@@ -1,0 +1,78 @@
+id: pulsar-analyse-minimal
+title: Pulsar minimal analyse golden path
+description: >
+  Validates queue-backlog routing, cross-asset references, and the first
+  Pulsar collect script contract for the analyse MVP.
+middleware: pulsar
+scenario: queue-backlog
+
+routing:
+  symptoms:
+    - topic backlog keeps increasing
+    - consumer lag grows and does not recover
+  expected:
+    scenario_id: queue-backlog
+    applicable_middleware:
+      - pulsar
+    skill_id: pulsar-triage-topic-backlog
+    runbook_id: pulsar-topic-backlog
+    command_id: pulsar-check-topic-backlog
+
+asset_refs:
+  scenario:
+    type: scenario
+    id: queue-backlog
+    path: scenarios/queue-backlog/scenario.yaml
+  skill:
+    type: skill
+    id: pulsar-triage-topic-backlog
+    path: domains/pulsar/skills/broker/triage-topic-backlog/metadata.yaml
+  runbook:
+    type: runbook
+    id: pulsar-topic-backlog
+    path: domains/pulsar/runbooks/broker/topic-backlog/metadata.yaml
+  command:
+    type: command
+    id: pulsar-check-topic-backlog
+    path: domains/pulsar/commands/broker/check-topic-backlog/metadata.yaml
+
+analyse_mvp_scripts:
+  - pulsar.collect.pods.state
+  - pulsar.collect.broker.topic_stats
+
+contract_steps:
+  - step_id: collect-pods-state-blocked
+    script_id: pulsar.collect.pods.state
+    script_source: domains/pulsar/scripts/collect/collect-pods-state.py
+    context_fixture: tests/golden-paths/fixtures/pulsar-collect-pods-blocked-context.yaml
+    expect:
+      exit_code: 0
+      output:
+        script_id: pulsar.collect.pods.state
+        status: blocked
+        required_fields:
+          - summary
+          - started_at
+          - finished_at
+          - collection_report_patch
+          - evidence_gaps
+  - step_id: collect-broker-topic-stats-blocked
+    script_id: pulsar.collect.broker.topic_stats
+    script_source: domains/pulsar/scripts/collect/collect-broker-topic-stats.py
+    context_fixture: tests/golden-paths/fixtures/pulsar-collect-topic-stats-blocked-context.yaml
+    expect:
+      exit_code: 0
+      output:
+        script_id: pulsar.collect.broker.topic_stats
+        status: blocked
+        required_fields:
+          - summary
+          - started_at
+          - finished_at
+          - collection_report_patch
+          - evidence_gaps
+
+success_criteria:
+  - scenario routes to Pulsar queue-backlog assets
+  - skill required_assets resolve by structured id
+  - collect scripts honor context/output contract when kubectl or pulsar-admin is unavailable

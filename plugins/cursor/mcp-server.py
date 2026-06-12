@@ -143,16 +143,19 @@ TOOLS = [
 
 START_USAGE = """# Midstack Start Usage
 
-When the user runs `/midstack:start ...`, extract fields from the user's natural language and call the `midstack_start` MCP tool directly.
+When the user runs `/midstack:start ...`, extract fields from the user's natural language and call the `midstack_start` MCP tool directly as the first action.
 
-Do not inspect the plugin source tree before calling the tool.
+Do not inspect `.cursor/mcp.json`, the plugin source tree, repository code, or existing `.local/incidents` before calling the tool.
 Do not manually invoke `tools/plugin/midstack-local.py` for `/midstack:start`.
+Do not run raw `ssh`, `sshpass`, `kubectl`, `grep`, or `find` commands for `/midstack:start`; the tool owns remote validation and incident creation.
+Do not print passwords or tokens in the user-facing response; redact them if credentials must be mentioned.
 
 Hard boundary: `/midstack:start` only creates or recovers an incident record. It must not run analysis.
 
 Even if the MCP call times out or appears unavailable:
 
 - Do not call `midstack_analyse_current`, `midstack_analyse_incident`, or `midstack_finalize_analysis`.
+- Do not manually SSH to any environment node.
 - Do not read `.cursor/commands/midstack:analyse.md`.
 - Do not read, create, or edit `analysis.yaml`, `analysis.rule-draft.yaml`, `agent-reasoning-task.md`, `report.md`, `signal_bundle.yaml`, or `collection_report.yaml`.
 - If an incident directory was created, only read `adapter-output.yaml`, `meta.yaml`, `input.yaml`, or `object-inventory.yaml` to report the start status.

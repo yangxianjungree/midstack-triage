@@ -45,8 +45,8 @@ def fail(errors: List[str], message: str) -> None:
     errors.append(message)
 
 
-def load_manifest() -> Dict[str, Dict[str, Any]]:
-    manifest_path = ROOT / "domains/mongodb/scripts/manifest.yaml"
+def load_manifest(middleware: str = "mongodb") -> Dict[str, Dict[str, Any]]:
+    manifest_path = ROOT / "domains" / middleware / "scripts" / "manifest.yaml"
     data = load_yaml(manifest_path)
     by_id: Dict[str, Dict[str, Any]] = {}
     for item in data.get("scripts") or []:
@@ -180,10 +180,13 @@ def run_contract_step(step: Dict[str, Any], errors: List[str]) -> None:
         output_file = tmp_path / "output.yaml"
         artifact_dir = tmp_path / "artifacts"
         artifact_dir.mkdir(parents=True, exist_ok=True)
+        if script_path.suffix == ".py":
+            command = [sys.executable, str(script_path)]
+        else:
+            command = ["bash", str(script_path)]
         proc = subprocess.run(
-            [
-                "bash",
-                str(script_path),
+            command
+            + [
                 "--context-file",
                 str(context_path),
                 "--output-file",
@@ -224,7 +227,7 @@ def run_contract_step(step: Dict[str, Any], errors: List[str]) -> None:
                 fail(errors, "%s output missing contract field: %s" % (step_id, field))
 
 
-def validate_golden_path(path: Path, manifest_by_id: Dict[str, Dict[str, Any]], errors: List[str], live: bool) -> None:
+def validate_golden_path(path: Path, errors: List[str], live: bool) -> None:
     data = load_yaml(path)
     path_id = data.get("id")
     if not isinstance(path_id, str) or not path_id:
@@ -232,13 +235,14 @@ def validate_golden_path(path: Path, manifest_by_id: Dict[str, Dict[str, Any]], 
         return
 
     scenario_id = data.get("scenario")
-    middleware = data.get("middleware")
-    if middleware != "mongodb":
-        fail(errors, "%s only supports mongodb in v1" % path)
+    middleware = str(data.get("middleware") or "mongodb")
+    if middleware not in ("mongodb", "pulsar"):
+        fail(errors, "%s unsupported middleware: %s" % (path, middleware))
 
-    runbooks = load_metadata_index("mongodb", "runbooks")
-    commands = load_metadata_index("mongodb", "commands")
-    skills = load_metadata_index("mongodb", "skills")
+    runbooks = load_metadata_index(middleware, "runbooks")
+    commands = load_metadata_index(middleware, "commands")
+    skills = load_metadata_index(middleware, "skills")
+    manifest_by_id = load_manifest(middleware)
     scenarios = {p.parent.name for p in (ROOT / "scenarios").glob("*/scenario.yaml")}
 
     routing = data.get("routing") or {}
@@ -310,7 +314,8 @@ def validate_golden_path(path: Path, manifest_by_id: Dict[str, Dict[str, Any]], 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate golden path definitions and script contracts.")
-    parser.add_argument("--path", default=str(GOLDEN_ROOT / "mongodb-analyse-minimal.yaml"))
+    parser.add_argument("--path", help="Validate a single golden path file.")
+    parser.add_argument("--all", action="store_true", help="Validate all golden path YAML files.")
     parser.add_argument("--live", action="store_true", help="Reserved for future kubectl-backed checks.")
     return parser.parse_args()
 
@@ -318,12 +323,18 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     errors: List[str] = []
-    manifest_by_id = load_manifest()
-    target = Path(args.path)
-    if not target.exists():
-        fail(errors, "golden path does not exist: %s" % target)
+    if args.all:
+        targets = sorted(GOLDEN_ROOT.glob("*.yaml"))
     else:
-        validate_golden_path(target, manifest_by_id, errors, args.live)
+        target = Path(args.path or str(GOLDEN_ROOT / "mongodb-analyse-minimal.yaml"))
+        targets = [target]
+    if not targets:
+        fail(errors, "no golden path files found")
+    for target in targets:
+        if not target.exists():
+            fail(errors, "golden path does not exist: %s" % target)
+            continue
+        validate_golden_path(target, errors, args.live)
 
     if errors:
         print("Golden path validation failed:", file=sys.stderr)
@@ -331,7 +342,8 @@ def main() -> int:
             print("- %s" % item, file=sys.stderr)
         return 1
 
-    print("Golden path validation passed: %s" % target)
+    for target in targets:
+        print("Golden path validation passed: %s" % target)
     return 0
 
 

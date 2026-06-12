@@ -1,0 +1,32 @@
+id: pulsar-topic-backlog
+title: Pulsar Topic Backlog
+middleware: pulsar
+component: broker
+scenario: queue-backlog
+summary: Diagnose topic backlog growth, consumer lag, and broker-side publish/consume pressure.
+risk_level: read-only
+tags:
+  - backlog
+  - consumer-lag
+  - broker
+  - bookie
+required_tools:
+  - kubectl
+  - pulsar-admin
+  - bash
+applicable_env:
+  - kubernetes
+verification_steps:
+  - identify affected topics, subscriptions, and tenants
+  - confirm whether backlog is increasing on broker and consumer sides
+  - check whether bookie or broker pods show storage or runtime pressure
+rollback_or_safety_notes:
+  - do not skip subscriptions, reset cursors, or offload topics during diagnosis without explicit approval
+workflow_phases:
+  - 3
+  - 4
+related_scripts:
+  - pulsar.collect.pods.state
+  - pulsar.collect.broker.topic_stats
+related_skills:
+  - pulsar-triage-topic-backlog

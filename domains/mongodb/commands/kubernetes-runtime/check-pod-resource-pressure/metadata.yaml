@@ -2,7 +2,7 @@ id: mongodb-check-pod-resource-pressure
 title: Check MongoDB Pod Resource Pressure
 middleware: mongodb
 component: kubernetes-runtime
-scenario: resource-exhaustion
+scenario: kubernetes-runtime
 risk_level: read-only
 tags:
   - resource

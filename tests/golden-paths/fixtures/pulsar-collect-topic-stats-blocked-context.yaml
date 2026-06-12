@@ -1,0 +1,25 @@
+incident_id: pulsar-golden-20260612-120000-test
+middleware: pulsar
+script_id: pulsar.collect.broker.topic_stats
+namespace: pulsar
+cluster_id: pulsar-golden-test
+artifact_root: /tmp/midstack-pulsar-golden-artifacts
+
+deployment_architecture: operator
+topology_type: pulsar_cluster
+
+access:
+  primary_ip: 10.0.0.1
+  candidate_ips:
+    - 10.0.0.1
+  username: test-user
+  password: example-password
+  port: 22
+
+targets:
+  namespace: pulsar
+  topic: persistent://payment/app/orders
+
+capabilities:
+  kubectl_available: false
+  pulsar_admin_available: false

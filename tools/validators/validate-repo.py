@@ -46,8 +46,12 @@ def checks(args: argparse.Namespace) -> List[Dict[str, Any]]:
             "command": [sys.executable, "tools/validators/validate-mongodb-scripts.py"],
         },
         {
+            "check_id": "pulsar-assets",
+            "command": [sys.executable, "tools/validators/validate-pulsar-scripts.py"],
+        },
+        {
             "check_id": "golden-paths",
-            "command": [sys.executable, "tools/validators/validate-golden-paths.py"],
+            "command": [sys.executable, "tools/validators/validate-golden-paths.py", "--all"],
         },
         {
             "check_id": "patch-merge",
@@ -56,6 +60,10 @@ def checks(args: argparse.Namespace) -> List[Dict[str, Any]]:
         {
             "check_id": "runtime-classification",
             "command": [sys.executable, "tools/validators/validate-runtime-classification.py"],
+        },
+        {
+            "check_id": "scenario-routing",
+            "command": [sys.executable, "tools/validators/validate-scenario-routing.py"],
         },
         {
             "check_id": "remote-smoke",

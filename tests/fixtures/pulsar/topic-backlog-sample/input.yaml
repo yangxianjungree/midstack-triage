@@ -1,0 +1,8 @@
+incident_id: fixture-pulsar-topic-backlog
+middleware: pulsar
+scenario: unknown
+namespace: pulsar
+cluster_id: pulsar-prod-01
+customer_clue: Tenant payment topic backlog keeps increasing and consumer lag is not recovering.
+input_source: fixture
+received_at: "2026-06-12T00:00:00+08:00"

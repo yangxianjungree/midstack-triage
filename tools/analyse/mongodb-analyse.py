@@ -41,6 +41,109 @@ def signal_ids(signal_bundle: Dict[str, Any]) -> List[str]:
     return result
 
 
+def replica_members_from_record(structured_record: Dict[str, Any]) -> List[Dict[str, Any]]:
+    details = (structured_record or {}).get("details") or {}
+    return [item for item in (details.get("replica_members") or []) if isinstance(item, dict)]
+
+
+def evidence_from_events(structured_record: Dict[str, Any]) -> List[Dict[str, str]]:
+    evidence: List[Dict[str, str]] = []
+    for event in ((structured_record or {}).get("details") or {}).get("events") or []:
+        if not isinstance(event, dict):
+            continue
+        involved = event.get("involved_object") or {}
+        object_ref = str(involved.get("name") or event.get("name") or "unknown")
+        reason = str(event.get("reason") or "")
+        message = str(event.get("message") or "")
+        evidence.append(
+            {
+                "source": "structured_record.details.events",
+                "detail": "%s on %s: %s" % (reason, object_ref, message),
+            }
+        )
+    return evidence
+
+
+def expand_kubernetes_runtime_ids(ids: Set[str], structured_record: Dict[str, Any], scenario: str) -> Set[str]:
+    expanded = set(ids)
+    if scenario != "kubernetes-runtime":
+        return expanded
+    for event in ((structured_record or {}).get("details") or {}).get("events") or []:
+        if not isinstance(event, dict):
+            continue
+        reason = str(event.get("reason") or "")
+        message = str(event.get("message") or "").lower()
+        if reason == "Evicted" and "ephemeral" in message:
+            expanded.add("pod-not-ready")
+        elif reason == "Unhealthy":
+            expanded.add("pod-not-ready")
+        elif reason == "FailedScheduling":
+            if "node selector" in message or "affinity" in message:
+                expanded.add("pod-node-selector-mismatch")
+            elif "volume" in message or "persistentvolumeclaim" in message or "binding" in message:
+                expanded.add("pod-volume-binding-failed")
+            elif "insufficient" in message:
+                expanded.add("pod-resource-insufficient")
+            else:
+                expanded.add("pod-unschedulable")
+        elif reason in ("ErrImagePull", "ImagePullBackOff"):
+            expanded.add("pod-image-pull-failed")
+        elif reason == "BackOff" and "restart" in message:
+            expanded.add("pod-crashloop")
+    return expanded
+
+
+def rs_status_evidence_items(member_records: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    items: List[Dict[str, str]] = []
+    for record in member_records:
+        pod = str(record.get("source_pod_ref") or "")
+        replica_set_id = str(record.get("replica_set_id") or "")
+        self_member = record.get("self_member") or {}
+        items.append(
+            {
+                "source": "structured_record.replica_members",
+                "detail": "rs.status from pod/%s replica_set=%s reports self_state=%s health=%s"
+                % (pod, replica_set_id, self_member.get("state_str"), self_member.get("health")),
+            }
+        )
+    return items
+
+
+def replica_members_unhealthy(member_records: List[Dict[str, Any]]) -> bool:
+    bad_states = {"DOWN", "REMOVED", "ROLLBACK", "UNKNOWN", "STARTUP2"}
+    for record in member_records:
+        self_member = record.get("self_member") or {}
+        if self_member.get("health") == 0:
+            return True
+        state = str(self_member.get("state_str") or "")
+        if state in bad_states or state.startswith("("):
+            return True
+    return False
+
+
+def gaps_without_closed_rs_status(gaps: List[Dict[str, Any]], member_records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    if not member_records:
+        return gaps
+    kept: List[Dict[str, Any]] = []
+    for gap in gaps:
+        if not isinstance(gap, dict):
+            kept.append(gap)
+            continue
+        text = str(gap.get("gap") or "").lower()
+        if "rs.status" in text and any(token in text for token in ("not collected", "missing", "blocked", "script output")):
+            continue
+        kept.append(gap)
+    return kept
+
+
+def has_ephemeral_eviction_evidence(evidence: List[Dict[str, str]]) -> bool:
+    for item in evidence:
+        detail = str(item.get("detail") or "")
+        if "Evicted" in detail and "ephemeral" in detail.lower():
+            return True
+    return False
+
+
 def evidence_from_signals(signal_bundle: Dict[str, Any]) -> List[Dict[str, str]]:
     evidence: List[Dict[str, str]] = []
     for item in signal_bundle.get("abnormal_signals") or []:
@@ -552,7 +655,12 @@ def network_overlay_conclusion(ids: Set[str], evidence: List[Dict[str, str]], ga
     }
 
 
-def kubernetes_runtime_conclusion(ids: set, evidence: List[Dict[str, str]], gaps: List[Dict[str, Any]]) -> Dict[str, Any]:
+def kubernetes_runtime_conclusion(
+    ids: set,
+    evidence: List[Dict[str, str]],
+    gaps: List[Dict[str, Any]],
+    structured_record: Dict[str, Any] = None,
+) -> Dict[str, Any]:
     rules = [
         (
             "pod-node-selector-mismatch",
@@ -604,18 +712,31 @@ def kubernetes_runtime_conclusion(ids: set, evidence: List[Dict[str, str]], gaps
             "MongoDB member Pod is unavailable because Kubernetes reports it not ready.",
         ),
     ]
+    member_records = replica_members_from_record(structured_record or {})
+    runtime_gaps = gaps_without_closed_rs_status(gaps, member_records)
     for signal_id, category, confidence, conclusion_statement, hypothesis_statement in rules:
         if signal_id not in ids:
             continue
         peer_log_supported = has_peer_connection_log_evidence(evidence)
         dns_probe_supported = "dns-resolution-failed" in ids
         dns_log_seen = has_dns_startup_log_evidence(evidence)
+        if signal_id == "pod-not-ready" and has_ephemeral_eviction_evidence(evidence):
+            hypothesis_statement = (
+                "Shard MongoDB data Pods were evicted because ephemeral local storage exceeded the container limit, "
+                "causing readiness probe failures and forced restarts."
+            )
+            conclusion_statement = (
+                "MongoDB member Pods were evicted after exceeding ephemeral local storage limits; "
+                "Kubernetes recovery is the supported explanation."
+            )
+            category = "kubernetes-runtime"
+            confidence = "high"
         hypotheses = [
             hypothesis_with_actions(
                 "H1",
                 hypothesis_statement,
                 evidence,
-                gaps,
+                runtime_gaps,
                 "supported",
                 [
                     {
@@ -698,20 +819,41 @@ def kubernetes_runtime_conclusion(ids: set, evidence: List[Dict[str, str]], gaps
                     ],
                 )
             )
+        rs_evidence = rs_status_evidence_items(member_records)
+        if member_records:
+            h3_status = "supported" if replica_members_unhealthy(member_records) else "refuted"
+            h3_actions = [
+                {
+                    "action": "Compare rs.status from collected members against Kubernetes Pod and StatefulSet signals.",
+                    "result": "Supported when rs.status shows unhealthy or non-voting replica-set members.",
+                    "risk_level": "read-only",
+                }
+            ]
+            if h3_status == "refuted":
+                h3_actions = [
+                    {
+                        "action": "Compare rs.status from collected members against Kubernetes recovery signals.",
+                        "result": "Refuted when rs.status shows healthy replica-set members after Kubernetes recovery.",
+                        "risk_level": "read-only",
+                    }
+                ]
+        else:
+            h3_status = "insufficient"
+            h3_actions = [
+                {
+                    "action": "Collect rs.status from all schedulable members and compare member states.",
+                    "result": "Evidence is insufficient when rs.status is not available from any healthy member.",
+                    "risk_level": "read-only",
+                }
+            ]
         hypotheses.append(
             hypothesis_with_actions(
                 "H%s" % (len(hypotheses) + 1),
                 "MongoDB internal replica set state caused the unavailable member symptom.",
-                evidence,
-                gaps,
-                "insufficient",
-                [
-                    {
-                        "action": "Collect rs.status from all schedulable members and compare member states.",
-                        "result": "Evidence is insufficient when the affected Pod is not schedulable or not reachable.",
-                        "risk_level": "read-only",
-                    }
-                ],
+                rs_evidence or evidence,
+                runtime_gaps,
+                h3_status,
+                h3_actions,
                 [],
                 ["All Kubernetes Pod and StatefulSet signals are healthy while rs.status shows an internal member state issue"],
             )
@@ -787,7 +929,7 @@ def kubernetes_runtime_conclusion(ids: set, evidence: List[Dict[str, str]], gaps
                 "impact_scope": "MongoDB replica or shard availability; affected workload may have fewer ready members than desired.",
                 "primary_cause_category": category,
                 "evidence": [item["detail"] for item in evidence],
-                "limitations": gaps,
+                "limitations": runtime_gaps,
                 "deepest_supported_level": conclusion_level,
             },
             "next_actions": next_actions,
@@ -795,15 +937,22 @@ def kubernetes_runtime_conclusion(ids: set, evidence: List[Dict[str, str]], gaps
     return {}
 
 
-def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collection_report: Dict[str, Any]) -> Dict[str, Any]:
+def analyse(
+    input_data: Dict[str, Any],
+    signal_bundle: Dict[str, Any],
+    collection_report: Dict[str, Any],
+    structured_record: Dict[str, Any] = None,
+) -> Dict[str, Any]:
+    structured_record = structured_record or {}
     scenario = str(input_data.get("scenario") or "unknown")
-    ids = set(signal_ids(signal_bundle))
+    ids = expand_kubernetes_runtime_ids(set(signal_ids(signal_bundle)), structured_record, scenario)
     evidence = evidence_from_signals(signal_bundle)
+    evidence.extend(evidence_from_events(structured_record))
     gaps = collection_gaps(collection_report)
 
     overlay_result = network_overlay_conclusion(ids, evidence, gaps)
     storage_result = mongodb_storage_corruption_conclusion(ids, evidence, gaps)
-    runtime_result = kubernetes_runtime_conclusion(ids, evidence, gaps)
+    runtime_result = kubernetes_runtime_conclusion(ids, evidence, gaps, structured_record)
     if overlay_result:
         hypotheses = overlay_result["hypotheses"]
         conclusion = overlay_result["conclusion"]
@@ -943,7 +1092,9 @@ def main() -> int:
     input_data = load_yaml(input_dir / "input.yaml")
     signal_bundle = load_yaml(input_dir / "signal_bundle.yaml")
     collection_report = load_yaml(input_dir / "collection_report.yaml")
-    result = analyse(input_data, signal_bundle, collection_report)
+    structured_record_file = input_dir / "structured_record.yaml"
+    structured_record = load_yaml(structured_record_file) if structured_record_file.exists() else {}
+    result = analyse(input_data, signal_bundle, collection_report, structured_record)
 
     if args.output_file:
         write_yaml(Path(args.output_file), result)

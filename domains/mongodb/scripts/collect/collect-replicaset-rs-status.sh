@@ -138,27 +138,84 @@ def blocked_output(
     write_yaml(output_file, payload)
 
 
-def pod_score(pod: Dict[str, Any]) -> int:
-    metadata = pod.get("metadata") or {}
-    status = pod.get("status") or {}
-    name = str(metadata.get("name") or "").lower()
-    labels = metadata.get("labels") or {}
+MONGO_CONTAINER_CANDIDATES = ("mongod", "mongo", "mongodb", "mongos")
+
+
+def pod_name(pod: Dict[str, Any]) -> str:
+    return str(((pod.get("metadata") or {}).get("name") or ""))
+
+
+def pod_is_running(pod: Dict[str, Any]) -> bool:
+    return str(((pod.get("status") or {}).get("phase") or "")) == "Running"
+
+
+def pod_is_ready(pod: Dict[str, Any]) -> bool:
+    for item in ((pod.get("status") or {}).get("conditions") or []):
+        if str(item.get("type") or "") == "Ready" and str(item.get("status") or "") == "True":
+            return True
+    return False
+
+
+def is_mongod_pod(pod: Dict[str, Any]) -> bool:
+    name = pod_name(pod).lower()
+    labels = (pod.get("metadata") or {}).get("labels") or {}
     label_text = " ".join([str(k).lower() + "=" + str(v).lower() for k, v in labels.items()])
-    score = 0
-    if status.get("phase") == "Running":
-        score += 5
-    if "configsvr" in name or "shard" in name:
-        score += 20
     if "mongos" in name or "operator" in name:
-        score -= 50
-    if "component=configsvr" in label_text or "component=shard" in label_text or "component=shardsvr" in label_text:
-        score += 20
-    return score
+        return False
+    if "configsvr" in name or "shard" in name:
+        return True
+    return any(token in label_text for token in ("component=configsvr", "component=shard", "component=shardsvr"))
 
 
-def resolve_target_pods(kubectl: str, namespace: str, target_refs: List[str], artifact_dir: str) -> List[str]:
-    if target_refs:
-        return target_refs
+def container_names_for_pod(pod: Dict[str, Any], mongo_exec: Dict[str, Any]) -> List[str]:
+    spec = pod.get("spec") or {}
+    containers = spec.get("containers") or []
+    names = [
+        str(item.get("name") or "")
+        for item in containers
+        if isinstance(item, dict) and item.get("name")
+    ]
+    if not names:
+        return []
+    ordered: List[str] = []
+    seen = set()
+
+    def add(name: str) -> None:
+        if name and name not in seen:
+            seen.add(name)
+            ordered.append(name)
+
+    add(names[0])
+    for candidate in list(mongo_exec.get("container_name_candidates") or []) + list(MONGO_CONTAINER_CANDIDATES):
+        if candidate in names:
+            add(candidate)
+    for name in names:
+        add(name)
+    return ordered
+
+
+def load_pod(kubectl: str, namespace: str, pod_ref: str, pod_by_name: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    if pod_ref in pod_by_name:
+        return pod_by_name[pod_ref]
+    proc = subprocess.run(
+        [kubectl, "get", "pod", "-n", namespace, pod_ref, "-o", "json"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    if proc.returncode != 0:
+        return {"metadata": {"name": pod_ref}, "spec": {"containers": []}}
+    try:
+        payload = json.loads(proc.stdout or "{}")
+    except ValueError:
+        payload = {"metadata": {"name": pod_ref}, "spec": {"containers": []}}
+    if isinstance(payload, dict):
+        pod_by_name[pod_ref] = payload
+        return payload
+    return {"metadata": {"name": pod_ref}, "spec": {"containers": []}}
+
+
+def load_namespace_pods(kubectl: str, namespace: str, artifact_dir: str) -> List[Dict[str, Any]]:
     proc = subprocess.run(
         [kubectl, "get", "pods", "-n", namespace, "-o", "json"],
         stdout=subprocess.PIPE,
@@ -171,15 +228,79 @@ def resolve_target_pods(kubectl: str, namespace: str, target_refs: List[str], ar
     with open(os.path.join(artifact_dir, raw_relpath), "w", encoding="utf-8") as fh:
         fh.write(proc.stdout)
     payload = json.loads(proc.stdout or "{}")
-    pods = sorted(payload.get("items") or [], key=pod_score, reverse=True)
+    return [item for item in (payload.get("items") or []) if isinstance(item, dict)]
+
+
+def resolve_mongod_pod_refs(context: Dict[str, Any], kubectl: str, namespace: str, artifact_dir: str) -> List[str]:
+    targets = context.get("targets") or {}
+    refs = [str(item) for item in (targets.get("mongod_pod_refs") or targets.get("pod_refs") or []) if item]
+    if refs:
+        return refs
+    pods = load_namespace_pods(kubectl, namespace, artifact_dir)
+    candidates = [pod for pod in pods if is_mongod_pod(pod) and pod_is_running(pod)]
+    candidates.sort(key=lambda pod: (0 if pod_is_ready(pod) else 1, pod_name(pod)))
     result: List[str] = []
-    for pod in pods:
-        if pod_score(pod) < 20:
-            continue
-        name = str((pod.get("metadata") or {}).get("name") or "")
+    for pod in candidates:
+        name = pod_name(pod)
         if name and name not in result:
             result.append(name)
     return result
+
+
+DEFAULT_SHELL_CANDIDATES = ("mongosh", "mongo")
+
+
+def shell_probe_command(shell_candidates: List[str]) -> str:
+    checks = [
+        "(command -v %s >/dev/null 2>&1 && command -v %s)" % (shlex.quote(item), shlex.quote(item))
+        for item in shell_candidates
+        if item
+    ]
+    if not checks:
+        checks = [
+            "(command -v mongosh >/dev/null 2>&1 && command -v mongosh)",
+            "(command -v mongo >/dev/null 2>&1 && command -v mongo)",
+        ]
+    return " || ".join(checks)
+
+
+def resolve_pod_exec(
+    kubectl: str,
+    namespace: str,
+    pod: Dict[str, Any],
+    mongo_exec: Dict[str, Any],
+) -> Tuple[str, str, str]:
+    pod_ref = pod_name(pod)
+    pod_targets = mongo_exec.get("pod_targets") or {}
+    if isinstance(pod_targets, dict):
+        existing = pod_targets.get(pod_ref) or {}
+        if isinstance(existing, dict) and existing.get("shell"):
+            return str(existing.get("container") or ""), str(existing["shell"]), ""
+    shell_candidates = [str(item) for item in (mongo_exec.get("shell_candidates") or list(DEFAULT_SHELL_CANDIDATES)) if item]
+    probe = shell_probe_command(shell_candidates)
+    last_detail = ""
+    container_names = container_names_for_pod(pod, mongo_exec)
+    if not container_names:
+        return "", "", "pod/%s has no declared containers in spec" % pod_ref
+    for container in container_names:
+        cmd = [kubectl, "exec", "-n", namespace, pod_ref, "-c", container, "--", "bash", "-c", probe]
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        if proc.returncode == 0:
+            shell = (proc.stdout or "").strip().splitlines()[-1].strip()
+            if shell:
+                return container, shell, ""
+        last_detail = proc.stderr.strip() or proc.stdout.strip() or last_detail
+    if not last_detail:
+        last_detail = "mongo shell not found in pod/%s" % pod_ref
+    return "", "", last_detail
+
+
+def kubectl_exec_command(kubectl: str, namespace: str, pod_ref: str, container: str, inner_cmd: str) -> List[str]:
+    cmd = [kubectl, "exec", "-n", namespace, pod_ref]
+    if container:
+        cmd.extend(["-c", container])
+    cmd.extend(["--", "bash", "-c", inner_cmd])
+    return cmd
 
 
 def extract_json(stdout: str) -> Dict[str, Any]:
@@ -238,18 +359,8 @@ def status_record(source_pod: str, raw: Dict[str, Any], collected_at: str) -> Di
     }
 
 
-def build_inner_command(shell: str, username: str, password: str, password_env: str, password_file_env: str, auth_database: str, js: str) -> str:
-    shell_candidates = [shell]
-    if shell == "mongosh":
-        shell_candidates.append("mongo")
-    resolve_lines = []
-    for candidate in shell_candidates:
-        resolve_lines.append('command -v %s >/dev/null 2>&1 && MONGO_SHELL=$(command -v %s)' % (shlex.quote(candidate), shlex.quote(candidate)))
-    resolve_shell = (
-        'MONGO_SHELL=""; '
-        + '; '.join(['[ -z "$MONGO_SHELL" ] && ' + line for line in resolve_lines])
-        + '; [ -n "$MONGO_SHELL" ] || { echo "mongo shell not found" >&2; exit 127; }; '
-    )
+def build_inner_command(resolved_shell: str, username: str, password: str, password_env: str, password_file_env: str, auth_database: str, js: str) -> str:
+    resolve_shell = "MONGO_SHELL=%s; " % shlex.quote(resolved_shell)
     if username and password_file_env:
         return (
             "%s MONGO_PASSWORD=$(cat \"$%s\"); "
@@ -343,9 +454,13 @@ def main() -> int:
         )
         return 0
 
-    targets = context.get("targets") or {}
     query = context.get("replicaset_query") or {}
     mongos_query = context.get("mongos_query") or {}
+    mongo_exec = context.get("mongo_exec") or {
+        "container_name_candidates": list(MONGO_CONTAINER_CANDIDATES),
+        "shell_candidates": ["mongosh", "mongo"],
+        "pod_targets": {},
+    }
     shell = str(query.get("shell") or mongos_query.get("shell") or "mongosh")
     username = str(query.get("username") or mongos_query.get("username") or "")
     password = str(query.get("password") or mongos_query.get("password") or "")
@@ -353,15 +468,15 @@ def main() -> int:
     password_file_env = str(query.get("password_file_env") or mongos_query.get("password_file_env") or "")
     secret_ref = query.get("secret_ref") or mongos_query.get("secret_ref") or {}
     auth_database = str(query.get("auth_database") or mongos_query.get("auth_database") or "admin")
-    target_pods = resolve_target_pods(kubectl, str(namespace), [str(item) for item in (targets.get("pod_refs") or [])], artifact_dir)
+    target_pods = resolve_mongod_pod_refs(context, kubectl, str(namespace), artifact_dir)
     if not target_pods:
         blocked_output(
             output_file,
             script_id,
             started_at,
-            "replica set member pods could not be resolved",
-            ["no configsvr or shard mongod pods were detected"],
-            [{"gap": "replica set target pods not resolved", "related_stage": "signal_collection", "why_important": "rs.status must be collected from mongod Pods"}],
+            "no Running mongod pods could be resolved",
+            ["no Running configsvr or shard mongod pods were detected"],
+            [{"gap": "replica set target pods not resolved", "related_stage": "signal_collection", "why_important": "rs.status must be collected from Running mongod Pods"}],
         )
         return 0
 
@@ -397,9 +512,26 @@ def main() -> int:
     evidence_gaps: List[Dict[str, Any]] = []
     warnings: List[str] = []
 
+    pods = load_namespace_pods(kubectl, str(namespace), artifact_dir)
+    pod_by_name = {pod_name(pod): pod for pod in pods if pod_name(pod)}
+
     for pod in target_pods:
-        inner_cmd = build_inner_command(shell, username, password, password_env, password_file_env, auth_database, js)
-        cmd = [kubectl, "exec", "-n", str(namespace), pod, "--", "bash", "-c", inner_cmd]
+        pod_item = load_pod(kubectl, str(namespace), pod, pod_by_name)
+        container, resolved_shell, probe_error = resolve_pod_exec(kubectl, str(namespace), pod_item, mongo_exec)
+        if not resolved_shell:
+            failed_items.append({"item": "pod/%s" % pod, "reason": probe_error, "impact": "missing replica set state from this member"})
+            evidence_gaps.append(
+                {
+                    "gap": "rs.status not collected from pod/%s" % pod,
+                    "gap_type": "expected_gap",
+                    "related_stage": "signal_collection",
+                    "why_important": "A single mongod shell probe failure should not block rs.status from other Running members.",
+                    "recommended_action": "use rs.status from another healthy member in the same replica set",
+                }
+            )
+            continue
+        inner_cmd = build_inner_command(resolved_shell, username, password, password_env, password_file_env, auth_database, js)
+        cmd = kubectl_exec_command(kubectl, str(namespace), pod, container, inner_cmd)
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         base = safe_name(pod)
         stdout_relpath = os.path.join("raw", "%s-rs-status.stdout" % base)

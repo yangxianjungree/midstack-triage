@@ -134,25 +134,82 @@ def blocked_output(
     write_yaml(output_file, payload)
 
 
-def pod_score(pod: Dict[str, Any]) -> int:
-    metadata = pod.get("metadata") or {}
-    status = pod.get("status") or {}
-    name = str(metadata.get("name") or "").lower()
-    labels = metadata.get("labels") or {}
+MONGO_CONTAINER_CANDIDATES = ("mongod", "mongo", "mongodb", "mongos")
+
+
+def pod_name(pod: Dict[str, Any]) -> str:
+    return str(((pod.get("metadata") or {}).get("name") or ""))
+
+
+def pod_is_running(pod: Dict[str, Any]) -> bool:
+    return str(((pod.get("status") or {}).get("phase") or "")) == "Running"
+
+
+def pod_is_ready(pod: Dict[str, Any]) -> bool:
+    for item in ((pod.get("status") or {}).get("conditions") or []):
+        if str(item.get("type") or "") == "Ready" and str(item.get("status") or "") == "True":
+            return True
+    return False
+
+
+def is_mongos_pod(pod: Dict[str, Any]) -> bool:
+    name = pod_name(pod).lower()
+    labels = (pod.get("metadata") or {}).get("labels") or {}
     label_text = " ".join([str(k).lower() + "=" + str(v).lower() for k, v in labels.items()])
-    score = 0
-    if status.get("phase") == "Running":
-        score += 10
-    if "mongos" in name:
-        score += 20
-    if "mongos" in label_text:
-        score += 20
-    return score
+    if "operator" in name:
+        return False
+    return "mongos" in name or "component=mongos" in label_text
 
 
-def resolve_mongos_pod(kubectl: str, namespace: str, target_ref: str, artifact_dir: str) -> str:
-    if target_ref:
-        return target_ref
+def container_names_for_pod(pod: Dict[str, Any], mongo_exec: Dict[str, Any]) -> List[str]:
+    spec = pod.get("spec") or {}
+    containers = spec.get("containers") or []
+    names = [
+        str(item.get("name") or "")
+        for item in containers
+        if isinstance(item, dict) and item.get("name")
+    ]
+    if not names:
+        return []
+    ordered: List[str] = []
+    seen = set()
+
+    def add(name: str) -> None:
+        if name and name not in seen:
+            seen.add(name)
+            ordered.append(name)
+
+    add(names[0])
+    for candidate in list(mongo_exec.get("container_name_candidates") or []) + list(MONGO_CONTAINER_CANDIDATES):
+        if candidate in names:
+            add(candidate)
+    for name in names:
+        add(name)
+    return ordered
+
+
+def load_pod(kubectl: str, namespace: str, pod_ref: str, pod_by_name: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    if pod_ref in pod_by_name:
+        return pod_by_name[pod_ref]
+    proc = subprocess.run(
+        [kubectl, "get", "pod", "-n", namespace, pod_ref, "-o", "json"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    if proc.returncode != 0:
+        return {"metadata": {"name": pod_ref}, "spec": {"containers": []}}
+    try:
+        payload = json.loads(proc.stdout or "{}")
+    except ValueError:
+        payload = {"metadata": {"name": pod_ref}, "spec": {"containers": []}}
+    if isinstance(payload, dict):
+        pod_by_name[pod_ref] = payload
+        return payload
+    return {"metadata": {"name": pod_ref}, "spec": {"containers": []}}
+
+
+def load_namespace_pods(kubectl: str, namespace: str, artifact_dir: str) -> List[Dict[str, Any]]:
     proc = subprocess.run(
         [kubectl, "get", "pods", "-n", namespace, "-o", "json"],
         stdout=subprocess.PIPE,
@@ -160,17 +217,84 @@ def resolve_mongos_pod(kubectl: str, namespace: str, target_ref: str, artifact_d
         universal_newlines=True,
     )
     if proc.returncode != 0:
-        return ""
+        return []
     raw_relpath = os.path.join("raw", "pods-for-mongos-resolution.json")
-    raw_abspath = os.path.join(artifact_dir, raw_relpath)
-    with open(raw_abspath, "w", encoding="utf-8") as fh:
+    with open(os.path.join(artifact_dir, raw_relpath), "w", encoding="utf-8") as fh:
         fh.write(proc.stdout)
     payload = json.loads(proc.stdout or "{}")
-    candidates = sorted(payload.get("items") or [], key=pod_score, reverse=True)
+    return [item for item in (payload.get("items") or []) if isinstance(item, dict)]
+
+
+def resolve_mongos_pod_refs(context: Dict[str, Any], kubectl: str, namespace: str, artifact_dir: str) -> List[str]:
+    targets = context.get("targets") or {}
+    refs = [str(item) for item in (targets.get("mongos_pod_refs") or []) if item]
+    if refs:
+        return refs
+    pods = load_namespace_pods(kubectl, namespace, artifact_dir)
+    candidates = [pod for pod in pods if is_mongos_pod(pod) and pod_is_running(pod)]
+    candidates.sort(key=lambda pod: (0 if pod_is_ready(pod) else 1, pod_name(pod)))
+    result: List[str] = []
     for pod in candidates:
-        if pod_score(pod) >= 20:
-            return str((pod.get("metadata") or {}).get("name") or "")
-    return ""
+        name = pod_name(pod)
+        if name and name not in result:
+            result.append(name)
+    return result
+
+
+DEFAULT_SHELL_CANDIDATES = ("mongosh", "mongo")
+
+
+def shell_probe_command(shell_candidates: List[str]) -> str:
+    checks = [
+        "(command -v %s >/dev/null 2>&1 && command -v %s)" % (shlex.quote(item), shlex.quote(item))
+        for item in shell_candidates
+        if item
+    ]
+    if not checks:
+        checks = [
+            "(command -v mongosh >/dev/null 2>&1 && command -v mongosh)",
+            "(command -v mongo >/dev/null 2>&1 && command -v mongo)",
+        ]
+    return " || ".join(checks)
+
+
+def resolve_pod_exec(
+    kubectl: str,
+    namespace: str,
+    pod: Dict[str, Any],
+    mongo_exec: Dict[str, Any],
+) -> Tuple[str, str, str]:
+    pod_ref = pod_name(pod)
+    pod_targets = mongo_exec.get("pod_targets") or {}
+    if isinstance(pod_targets, dict):
+        existing = pod_targets.get(pod_ref) or {}
+        if isinstance(existing, dict) and existing.get("shell"):
+            return str(existing.get("container") or ""), str(existing["shell"]), ""
+    shell_candidates = [str(item) for item in (mongo_exec.get("shell_candidates") or list(DEFAULT_SHELL_CANDIDATES)) if item]
+    probe = shell_probe_command(shell_candidates)
+    last_detail = ""
+    container_names = container_names_for_pod(pod, mongo_exec)
+    if not container_names:
+        return "", "", "pod/%s has no declared containers in spec" % pod_ref
+    for container in container_names:
+        cmd = [kubectl, "exec", "-n", namespace, pod_ref, "-c", container, "--", "bash", "-c", probe]
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        if proc.returncode == 0:
+            shell = (proc.stdout or "").strip().splitlines()[-1].strip()
+            if shell:
+                return container, shell, ""
+        last_detail = proc.stderr.strip() or proc.stdout.strip() or last_detail
+    if not last_detail:
+        last_detail = "mongo shell not found in pod/%s" % pod_ref
+    return "", "", last_detail
+
+
+def kubectl_exec_command(kubectl: str, namespace: str, pod_ref: str, container: str, inner_cmd: str) -> List[str]:
+    cmd = [kubectl, "exec", "-n", namespace, pod_ref]
+    if container:
+        cmd.extend(["-c", container])
+    cmd.extend(["--", "bash", "-c", inner_cmd])
+    return cmd
 
 
 def parse_shard_map(raw: Dict[str, Any]) -> Dict[str, Any]:
@@ -318,8 +442,12 @@ def main() -> int:
         )
         return 0
 
-    targets = context.get("targets") or {}
     mongos_query = context.get("mongos_query") or {}
+    mongo_exec = context.get("mongo_exec") or {
+        "container_name_candidates": list(MONGO_CONTAINER_CANDIDATES),
+        "shell_candidates": ["mongosh", "mongo"],
+        "pod_targets": {},
+    }
     shell = str(mongos_query.get("shell") or "mongosh")
     database = str(mongos_query.get("database") or "admin")
     username = str(mongos_query.get("username") or "")
@@ -328,19 +456,19 @@ def main() -> int:
     password_file_env = str(mongos_query.get("password_file_env") or "")
     secret_ref = mongos_query.get("secret_ref") or {}
     auth_database = str(mongos_query.get("auth_database") or "admin")
-    target_pod = resolve_mongos_pod(kubectl, str(namespace), str(targets.get("mongos_pod_ref") or ""), artifact_dir)
-    if not target_pod:
+    mongos_pod_refs = resolve_mongos_pod_refs(context, kubectl, str(namespace), artifact_dir)
+    if not mongos_pod_refs:
         blocked_output(
             output_file,
             script_id,
             started_at,
-            "mongos pod could not be resolved",
-            ["targets.mongos_pod_ref is empty and no mongos pod was detected"],
+            "no Running mongos pods could be resolved",
+            ["targets.mongos_pod_refs is empty and no Running mongos pod was detected"],
             [
                 {
-                    "gap": "mongos target pod not resolved",
+                    "gap": "mongos target pods not resolved",
                     "related_stage": "signal_collection",
-                    "why_important": "shard map must be collected from a mongos Pod",
+                    "why_important": "shard map must be collected from Running mongos Pods",
                 }
             ],
         )
@@ -366,160 +494,161 @@ def main() -> int:
                         "why_important": "authenticated mongos command cannot run without a password source",
                     }
                 ],
-                target=target_pod,
+                target=",".join(mongos_pod_refs),
             )
             return 0
 
-    shell_candidates = [shell]
-    if shell == "mongosh":
-        shell_candidates.append("mongo")
-    resolve_lines = []
-    for candidate in shell_candidates:
-        resolve_lines.append('command -v %s >/dev/null 2>&1 && MONGO_SHELL=$(command -v %s)' % (shlex.quote(candidate), shlex.quote(candidate)))
-    resolve_shell = (
-        'MONGO_SHELL=""; '
-        + '; '.join(['[ -z "$MONGO_SHELL" ] && ' + line for line in resolve_lines])
-        + '; [ -n "$MONGO_SHELL" ] || { echo "mongo shell not found" >&2; exit 127; }; '
-    )
+    def shell_prefix(resolved_shell: str) -> str:
+        return "MONGO_SHELL=%s; " % shlex.quote(resolved_shell)
 
-    if username and password_file_env:
-        inner_cmd = (
-            "%s MONGO_PASSWORD=$(cat \"$%s\"); "
-            "\"$MONGO_SHELL\" --quiet --username %s --password \"$MONGO_PASSWORD\" --authenticationDatabase %s --eval %s"
-            % (
-                resolve_shell,
-                password_file_env,
-                shlex.quote(username),
-                shlex.quote(auth_database),
-                shlex.quote(js),
+    def build_inner_command(resolved_shell: str) -> str:
+        resolve_shell = shell_prefix(resolved_shell)
+        if username and password_file_env:
+            return (
+                "%s MONGO_PASSWORD=$(cat \"$%s\"); "
+                "\"$MONGO_SHELL\" --quiet --username %s --password \"$MONGO_PASSWORD\" --authenticationDatabase %s --eval %s"
+                % (resolve_shell, password_file_env, shlex.quote(username), shlex.quote(auth_database), shlex.quote(js))
             )
-        )
-        cmd = [kubectl, "exec", "-n", str(namespace), target_pod, "--", "bash", "-c", inner_cmd]
-    elif username and password_env:
-        inner_cmd = (
-            "%s \"$MONGO_SHELL\" --quiet --username %s --password \"$%s\" --authenticationDatabase %s --eval %s"
-            % (
-                resolve_shell,
-                shlex.quote(username),
-                password_env,
-                shlex.quote(auth_database),
-                shlex.quote(js),
+        if username and password_env:
+            return (
+                "%s \"$MONGO_SHELL\" --quiet --username %s --password \"$%s\" --authenticationDatabase %s --eval %s"
+                % (resolve_shell, shlex.quote(username), password_env, shlex.quote(auth_database), shlex.quote(js))
             )
-        )
-        cmd = [kubectl, "exec", "-n", str(namespace), target_pod, "--", "bash", "-c", inner_cmd]
-    elif username and password:
-        inner_cmd = (
-            "%s \"$MONGO_SHELL\" --quiet --username %s --password %s --authenticationDatabase %s --eval %s"
-            % (
-                resolve_shell,
-                shlex.quote(username),
-                shlex.quote(password),
-                shlex.quote(auth_database),
-                shlex.quote(js),
+        if username and password:
+            return (
+                "%s \"$MONGO_SHELL\" --quiet --username %s --password %s --authenticationDatabase %s --eval %s"
+                % (resolve_shell, shlex.quote(username), shlex.quote(password), shlex.quote(auth_database), shlex.quote(js))
             )
-        )
-        cmd = [kubectl, "exec", "-n", str(namespace), target_pod, "--", "bash", "-c", inner_cmd]
-    else:
-        inner_cmd = '%s "$MONGO_SHELL" --quiet --eval %s' % (resolve_shell, shlex.quote(js))
-        cmd = [kubectl, "exec", "-n", str(namespace), target_pod, "--", "bash", "-c", inner_cmd]
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-
-    stdout_relpath = os.path.join("raw", "mongos-get-shard-map.stdout")
-    stderr_relpath = os.path.join("raw", "mongos-get-shard-map.stderr")
-    with open(os.path.join(artifact_dir, stdout_relpath), "w", encoding="utf-8") as fh:
-        fh.write(proc.stdout)
-    with open(os.path.join(artifact_dir, stderr_relpath), "w", encoding="utf-8") as fh:
-        fh.write(proc.stderr)
-
-    artifacts = [
-        {
-            "path": stdout_relpath,
-            "kind": "raw_command_output",
-            "description": "raw mongos getShardMap stdout",
-        },
-        {
-            "path": stderr_relpath,
-            "kind": "raw_command_error",
-            "description": "raw mongos getShardMap stderr",
-        },
-    ]
-
-    if proc.returncode != 0:
-        blocked_output(
-            output_file,
-            script_id,
-            started_at,
-            "kubectl exec mongos getShardMap failed",
-            [proc.stderr.strip() or "mongos getShardMap command returned non-zero exit code"],
-            [
-                {
-                    "gap": "mongos shard map command failed",
-                    "related_stage": "signal_collection",
-                    "why_important": "shard map is required to understand MongoDB sharded topology",
-                }
-            ],
-            target=target_pod,
-        )
-        return 0
-
-    try:
-        raw_result = extract_json(proc.stdout)
-    except ValueError as exc:
-        blocked_output(
-            output_file,
-            script_id,
-            started_at,
-            "mongos getShardMap output could not be parsed as JSON",
-            [str(exc)],
-            [
-                {
-                    "gap": "mongos shard map output not parsed",
-                    "related_stage": "signal_collection",
-                    "why_important": "unparsed shard map cannot be used for topology correlation",
-                }
-            ],
-            target=target_pod,
-        )
-        return 0
-
-    raw_json_relpath = os.path.join("raw", "mongos-get-shard-map.json")
-    with open(os.path.join(artifact_dir, raw_json_relpath), "w", encoding="utf-8") as fh:
-        json.dump(raw_result, fh, indent=2, sort_keys=False)
-        fh.write("\n")
-    artifacts.append(
-        {
-            "path": raw_json_relpath,
-            "kind": "raw_command_output",
-            "description": "parsed JSON result from mongos getShardMap",
-        }
-    )
-
-    finished_at = now_iso()
-    parsed = parse_shard_map(raw_result)
-    shard_map = {
-        "source_component_ref": "mongos-router",
-        "source_pod_ref": target_pod,
-        "source_method": "mongos getShardMap",
-        "config_server_ref": parsed["config_server_ref"],
-        "shards": parsed["shards"],
-        "raw_ok": parsed["raw_ok"],
-        "collection_status": "success",
-        "collected_at": finished_at,
-    }
-    warnings: List[str] = []
+        return '%s "$MONGO_SHELL" --quiet --eval %s' % (resolve_shell, shlex.quote(js))
+    pods = load_namespace_pods(kubectl, str(namespace), artifact_dir)
+    pod_by_name = {pod_name(pod): pod for pod in pods if pod_name(pod)}
+    artifacts: List[Dict[str, Any]] = []
+    shard_maps: List[Dict[str, Any]] = []
+    failed_items: List[Dict[str, Any]] = []
     evidence_gaps: List[Dict[str, Any]] = []
-    if not parsed["shards"]:
-        warnings.append("getShardMap returned no shard entries")
-        evidence_gaps.append(
+    warnings: List[str] = []
+
+    for target_pod in mongos_pod_refs:
+        pod = load_pod(kubectl, str(namespace), target_pod, pod_by_name)
+        container, resolved_shell, probe_error = resolve_pod_exec(kubectl, str(namespace), pod, mongo_exec)
+        base = target_pod.replace("/", "_")
+        if not resolved_shell:
+            failed_items.append(
+                {"item": "pod/%s" % target_pod, "reason": probe_error, "impact": "missing shard map from this mongos"}
+            )
+            evidence_gaps.append(
+                {
+                    "gap": "mongos shard map not collected from pod/%s" % target_pod,
+                    "gap_type": "expected_gap",
+                    "related_stage": "signal_collection",
+                    "why_important": "A single mongos failure should not block shard map collection from other Running mongos Pods.",
+                    "recommended_action": "collect getShardMap from another Running mongos Pod",
+                }
+            )
+            continue
+        inner_cmd = build_inner_command(resolved_shell)
+        cmd = kubectl_exec_command(kubectl, str(namespace), target_pod, container, inner_cmd)
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        stdout_relpath = os.path.join("raw", "%s-get-shard-map.stdout" % base)
+        stderr_relpath = os.path.join("raw", "%s-get-shard-map.stderr" % base)
+        with open(os.path.join(artifact_dir, stdout_relpath), "w", encoding="utf-8") as fh:
+            fh.write(proc.stdout)
+        with open(os.path.join(artifact_dir, stderr_relpath), "w", encoding="utf-8") as fh:
+            fh.write(proc.stderr)
+        artifacts.extend(
+            [
+                {"path": stdout_relpath, "kind": "raw_command_output", "description": "raw getShardMap stdout from %s" % target_pod},
+                {"path": stderr_relpath, "kind": "raw_command_error", "description": "raw getShardMap stderr from %s" % target_pod},
+            ]
+        )
+        if proc.returncode != 0:
+            failed_items.append(
+                {
+                    "item": "pod/%s" % target_pod,
+                    "reason": proc.stderr.strip() or "getShardMap returned non-zero exit code",
+                    "impact": "missing shard map from this mongos",
+                }
+            )
+            evidence_gaps.append(
+                {
+                    "gap": "mongos shard map command failed on pod/%s" % target_pod,
+                    "gap_type": "expected_gap",
+                    "related_stage": "signal_collection",
+                    "why_important": "Other Running mongos Pods may still provide shard map evidence.",
+                    "recommended_action": "collect getShardMap from another Running mongos Pod",
+                }
+            )
+            continue
+        try:
+            raw_result = extract_json(proc.stdout)
+        except ValueError as exc:
+            failed_items.append({"item": "pod/%s" % target_pod, "reason": str(exc), "impact": "unparsed shard map from this mongos"})
+            evidence_gaps.append(
+                {
+                    "gap": "mongos shard map output not parsed from pod/%s" % target_pod,
+                    "gap_type": "expected_gap",
+                    "related_stage": "signal_collection",
+                    "why_important": "Other Running mongos Pods may still provide parseable shard map output.",
+                    "recommended_action": "collect getShardMap from another Running mongos Pod",
+                }
+            )
+            continue
+        raw_json_relpath = os.path.join("raw", "%s-get-shard-map.json" % base)
+        with open(os.path.join(artifact_dir, raw_json_relpath), "w", encoding="utf-8") as fh:
+            json.dump(raw_result, fh, indent=2, sort_keys=False)
+            fh.write("\n")
+        artifacts.append(
+            {"path": raw_json_relpath, "kind": "raw_command_output", "description": "parsed getShardMap JSON from %s" % target_pod}
+        )
+        parsed = parse_shard_map(raw_result)
+        finished_piece = now_iso()
+        shard_maps.append(
             {
-                "gap": "shard map has no shard entries",
-                "related_stage": "signal_collection",
-                "why_important": "empty shard map may indicate command incompatibility or unexpected topology",
+                "source_component_ref": "mongos-router",
+                "source_pod_ref": target_pod,
+                "source_container": container,
+                "source_shell": resolved_shell,
+                "source_method": "mongos getShardMap",
+                "config_server_ref": parsed["config_server_ref"],
+                "shards": parsed["shards"],
+                "raw_ok": parsed["raw_ok"],
+                "collection_status": "success",
+                "collected_at": finished_piece,
             }
         )
+        if not parsed["shards"]:
+            warnings.append("getShardMap returned no shard entries from pod/%s" % target_pod)
 
-    status = "partial" if evidence_gaps else "success"
-    summary = "collected shard map from %s with %d shard record(s)" % (target_pod, len(parsed["shards"]))
+    finished_at = now_iso()
+    successful_items = [
+        {
+            "item": "shard_map/pod/%s" % item["source_pod_ref"],
+            "source": item["source_pod_ref"],
+            "note": "%d shard record(s)" % len(item.get("shards") or []),
+        }
+        for item in shard_maps
+    ]
+    if not shard_maps:
+        status = "blocked"
+        summary = "no getShardMap result collected from Running mongos pods"
+        evidence_gaps.append(
+            {
+                "gap": "mongos shard map not collected from any Running mongos Pod",
+                "gap_type": "critical_gap",
+                "related_stage": "signal_collection",
+                "why_important": "Without any mongos getShardMap result, sharded topology cannot be validated.",
+                "recommended_action": "identify a Running mongos Pod with mongosh/mongo access and rerun getShardMap",
+                "affects": ["mechanism", "root_cause"],
+            }
+        )
+    elif failed_items:
+        status = "partial"
+        summary = "collected %d shard map(s), %d mongos failed" % (len(shard_maps), len(failed_items))
+    else:
+        status = "success"
+        summary = "collected %d shard map(s) from Running mongos pods" % len(shard_maps)
+
+    shard_map = shard_maps[0] if shard_maps else {}
     payload = {
         "script_id": script_id,
         "status": status,
@@ -530,6 +659,7 @@ def main() -> int:
         "structured_record_patch": {
             "details": {
                 "shard_map": shard_map,
+                "shard_maps": shard_maps,
             }
         },
         "signal_bundle_patch": {},
@@ -538,20 +668,14 @@ def main() -> int:
                 {
                     "action_id": make_action_id(script_id),
                     "name": "collect mongos shard map",
-                    "target": target_pod,
-                    "method": "kubectl exec + mongosh getShardMap",
+                    "target": ",".join(mongos_pod_refs),
+                    "method": "kubectl exec + getShardMap",
                     "status": status,
                     "performed_at": finished_at,
                 }
             ],
-            "successful_items": [
-                {
-                    "item": "shard_map",
-                    "source": target_pod,
-                    "note": "%d shard record(s)" % len(parsed["shards"]),
-                }
-            ],
-            "failed_items": [],
+            "successful_items": successful_items,
+            "failed_items": failed_items,
             "blank_items": [],
             "evidence_gaps": evidence_gaps,
         },

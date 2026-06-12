@@ -333,7 +333,10 @@ def abnormal_signals_from_inventory(inventory: Dict[str, Any], events: Dict[str,
 
 
 def topology_signals(outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    shard_maps = detail(outputs, "mongodb.collect.mongos.get_shard_map", "shard_maps") or []
     shard_map = detail(outputs, "mongodb.collect.mongos.get_shard_map", "shard_map") or {}
+    if not shard_map and shard_maps:
+        shard_map = shard_maps[0]
     replica_members = detail(outputs, "mongodb.collect.replicaset.rs_status", "replica_members") or []
     replica_sets: Dict[str, Dict[str, Any]] = {}
     for item in replica_members:
@@ -362,6 +365,7 @@ def topology_signals(outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
             "config_server_ref": shard_map.get("config_server_ref"),
             "shard_count": len(shard_map.get("shards") or []),
             "shards": shard_map.get("shards") or [],
+            "mongos_collected_count": len(shard_maps) if isinstance(shard_maps, list) else (1 if shard_map else 0),
         },
         "replica_sets": normalized_sets,
     }

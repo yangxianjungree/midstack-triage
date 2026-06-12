@@ -8,6 +8,7 @@ import signal
 import shlex
 import shutil
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -16,6 +17,11 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
+LIB_DIR = ROOT / "tools" / "lib"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
+
+import mongodb_collection_runtime as mcr  # noqa: E402
 DEFAULT_LOCAL_OUTPUT = ROOT / ".local" / "remote-runs"
 DEFAULT_REMOTE_ROOT = "/tmp/midstack-triage"
 DEFAULT_RUNTIME_MAP = ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
@@ -153,6 +159,8 @@ def default_targets(namespace: str) -> Dict[str, Any]:
         "statefulset_refs": [],
         "service_refs": [],
         "pod_refs": [],
+        "mongos_pod_refs": [],
+        "mongod_pod_refs": [],
         "node_refs": [],
         "mongos_pod_ref": "",
     }
@@ -426,6 +434,73 @@ def probe_pod_tool(access: Dict[str, Any], namespace: str, pod: str, candidates:
     return False, code, detail
 
 
+def probe_pod_container_shell(
+    access: Dict[str, Any],
+    namespace: str,
+    pod_item: Dict[str, Any],
+    mongo_exec: Dict[str, Any],
+) -> Tuple[str, str, str]:
+    pod_ref = mcr.pod_name(pod_item)
+    pod_targets = mongo_exec.get("pod_targets") or {}
+    if isinstance(pod_targets, dict):
+        existing = pod_targets.get(pod_ref) or {}
+        if isinstance(existing, dict) and existing.get("shell"):
+            return str(existing.get("container") or ""), str(existing["shell"]), ""
+
+    shell_candidates = [str(item) for item in (mongo_exec.get("shell_candidates") or list(mcr.DEFAULT_SHELL_CANDIDATES)) if item]
+    container_candidates = mcr.container_names_for_pod(
+        pod_item,
+        [str(item) for item in (mongo_exec.get("container_name_candidates") or []) if item],
+    )
+    probe = mcr.shell_probe_command(shell_candidates)
+    last_detail = ""
+    for container in container_candidates:
+        proc = run_ssh(
+            access,
+            "kubectl exec -n %s %s -c %s -- bash -c %s"
+            % (shlex.quote(namespace), shlex.quote(pod_ref), shlex.quote(container), shlex.quote(probe)),
+            timeout=30,
+        )
+        if proc.returncode == 0:
+            shell = (proc.stdout or "").strip().splitlines()[-1].strip()
+            if shell:
+                mcr.merge_pod_exec_target(mongo_exec, pod_ref, container, shell)
+                return container, shell, ""
+        last_detail = proc.stderr.strip() or proc.stdout.strip() or last_detail
+    if not last_detail:
+        last_detail = "mongo shell not found in pod/%s containers %s" % (pod_ref, ", ".join(container_candidates))
+    return "", "", last_detail
+
+
+def record_pod_tool_probe_summary(
+    checks: List[Dict[str, str]],
+    warnings: List[str],
+    capabilities: Dict[str, Any],
+    pod_refs: List[str],
+    mongo_exec: Dict[str, Any],
+    label: str,
+) -> None:
+    available, total, any_ok = mcr.summarize_pod_tool_probe(pod_refs, mongo_exec)
+    if any_ok:
+        capabilities["mongosh_in_pod_available"] = True
+        if available == total:
+            checks.append(
+                capability_result(
+                    "pod_tool.mongosh",
+                    "success",
+                    "resolved mongo shell in %s/%s %s pods" % (available, total, label),
+                )
+            )
+        else:
+            detail = "resolved mongo shell in %s/%s %s pods" % (available, total, label)
+            checks.append(capability_result("pod_tool.mongosh", "partial", detail, "pod_tool_missing"))
+            warnings.append(detail)
+    else:
+        detail = "mongo shell not resolved in any of %s %s pod(s); script will emit structured blocked/partial output" % (total, label)
+        checks.append(capability_result("pod_tool.mongosh", "partial", detail, "pod_tool_missing"))
+        warnings.append(detail)
+
+
 def validate_script_capabilities(
     access: Dict[str, Any],
     namespace: str,
@@ -463,62 +538,44 @@ def validate_script_capabilities(
         checks.append(capability_result("target_pod.discovery", "blocked", pods_error, "target_pod_not_found"))
         return False, context, checks, error, warnings
 
+    mongos_query = context.get("mongos_query") or {}
+    replicaset_query = context.get("replicaset_query") or {}
+    collection = mcr.resolve_mongodb_collection_targets(pods, mongos_query=mongos_query, replicaset_query=replicaset_query)
+    mongo_exec = collection["mongo_exec"]
+    context["mongo_exec"] = mongo_exec
+    pod_by_name = collection["pod_by_name"]
+
     if script_id == SCRIPT_ID_MONGOS_SHARD_MAP:
-        target_pod = resolve_mongos_target_pod(pods, str(targets.get("mongos_pod_ref") or ""))
-        if not target_pod:
-            detail = "mongos pod could not be resolved from current namespace"
+        mongos_pod_refs = list(collection["mongos_pod_refs"])
+        if not mongos_pod_refs:
+            detail = "no Running mongos pods could be resolved from current namespace"
             error = error_payload("target_pod_not_found", detail)
             checks.append(capability_result("target_pod.mongos", "blocked", detail, "target_pod_not_found"))
             return False, context, checks, error, warnings
-        targets["mongos_pod_ref"] = target_pod
-        checks.append(capability_result("target_pod.mongos", "success", "resolved mongos target pod %s" % target_pod))
-        candidates = shell_candidates(str(((context.get("mongos_query") or {}).get("shell")) or "mongosh"))
-        ok, code, detail = probe_pod_tool(access, namespace, target_pod, candidates)
-        if not ok:
-            error = error_payload(code, detail)
-            checks.append(capability_result("pod_tool.mongosh", "blocked", detail, code))
-            return False, context, checks, error, warnings
-        capabilities["mongosh_in_pod_available"] = True
-        checks.append(capability_result("pod_tool.mongosh", "success", detail))
+        targets["mongos_pod_refs"] = mongos_pod_refs
+        targets["mongos_pod_ref"] = collection["mongos_pod_ref"]
+        checks.append(capability_result("target_pod.mongos", "success", "resolved %s Running mongos pod(s)" % len(mongos_pod_refs)))
+        for pod_ref in mongos_pod_refs:
+            pod_item = pod_by_name.get(pod_ref)
+            if pod_item:
+                probe_pod_container_shell(access, namespace, pod_item, mongo_exec)
+        record_pod_tool_probe_summary(checks, warnings, capabilities, mongos_pod_refs, mongo_exec, "mongos")
         return True, context, checks, error, warnings
 
-    target_pods = resolve_replicaset_target_pods(pods, [str(item) for item in (targets.get("pod_refs") or []) if item])
-    if not target_pods:
-        detail = "replica set member pods could not be resolved from current namespace"
+    mongod_pod_refs = list(collection["mongod_pod_refs"])
+    if not mongod_pod_refs:
+        detail = "no Running mongod pods could be resolved from current namespace"
         error = error_payload("target_pod_not_found", detail)
         checks.append(capability_result("target_pod.replicaset", "blocked", detail, "target_pod_not_found"))
         return False, context, checks, error, warnings
-    targets["pod_refs"] = target_pods
-    checks.append(capability_result("target_pod.replicaset", "success", "resolved %s replica set target pods" % len(target_pods)))
-    query = context.get("replicaset_query") or {}
-    mongos_query = context.get("mongos_query") or {}
-    candidates = shell_candidates(str(query.get("shell") or mongos_query.get("shell") or "mongosh"))
-    available = []
-    missing = []
-    for pod in target_pods:
-        ok, code, detail = probe_pod_tool(access, namespace, pod, candidates)
-        if ok:
-            available.append(pod)
-        else:
-            missing.append((pod, code, detail))
-    if not available:
-        code = missing[0][1] if missing else "pod_tool_missing"
-        detail = missing[0][2] if missing else "required pod tool %s was not found in replica set pods" % "/".join(candidates)
-        error = error_payload(code, detail)
-        checks.append(capability_result("pod_tool.mongosh", "blocked", detail, code))
-        return False, context, checks, error, warnings
-    capabilities["mongosh_in_pod_available"] = True
-    if missing:
-        detail = "resolved pod tool %s in %s/%s replica set pods; missing in %s" % (
-            "/".join(candidates),
-            len(available),
-            len(target_pods),
-            ", ".join("pod/%s" % item[0] for item in missing),
-        )
-        checks.append(capability_result("pod_tool.mongosh", "partial", detail, "pod_tool_missing"))
-        warnings.append(detail)
-    else:
-        checks.append(capability_result("pod_tool.mongosh", "success", "resolved pod tool %s in %s replica set pods" % ("/".join(candidates), len(available))))
+    targets["mongod_pod_refs"] = mongod_pod_refs
+    targets["pod_refs"] = mongod_pod_refs
+    checks.append(capability_result("target_pod.replicaset", "success", "resolved %s Running mongod pod(s)" % len(mongod_pod_refs)))
+    for pod_ref in mongod_pod_refs:
+        pod_item = pod_by_name.get(pod_ref)
+        if pod_item:
+            probe_pod_container_shell(access, namespace, pod_item, mongo_exec)
+    record_pod_tool_probe_summary(checks, warnings, capabilities, mongod_pod_refs, mongo_exec, "mongod")
     return True, context, checks, error, warnings
 
 
@@ -704,6 +761,7 @@ def build_context(
     if isinstance(auth_secret_ref, dict) and auth_secret_ref.get("name") and auth_secret_ref.get("key"):
         mongos_query["secret_ref"] = auth_secret_ref
         replicaset_query["secret_ref"] = auth_secret_ref
+    mongo_exec = mcr.default_mongo_exec_config(mongos_query, replicaset_query)
     return {
         "incident_id": incident_id,
         "middleware": "mongodb",
@@ -726,6 +784,7 @@ def build_context(
         "node_query": {"resolve_from_pods": True},
         "mongos_query": mongos_query,
         "replicaset_query": replicaset_query,
+        "mongo_exec": mongo_exec,
         "logs_query": {"tail_lines": 1000},
         "normalize_query": {"per_file_highlight_limit": 50, "total_highlight_limit": 500},
         "inputs": {

@@ -184,9 +184,9 @@ MVP collect (11 scripts, 不变)
 - `mongodb-replay.py --run-analyse` 全 fixture 通过
 - score gate `min-level medium` 不下降
 
-**D3. Cursor MCP smoke**
+**D3. Cursor agent-cli smoke**
 
-- 更新 `test-mcp-server.py` / sandbox 若断言 scenario 字段
+- 更新 `test-agent-cli.py` / sandbox 若断言 scenario 字段
 
 ### Phase E：Pulsar 最小 golden path（可与 B 后期并行）
 
@@ -216,7 +216,7 @@ domains/pulsar/
 **E4. Analyse 骨架**
 
 - `tools/analyse/pulsar-analyse.py`：复用 hypothesis/gap/knowledge_candidates 模式
-- `midstack-local.py` / MCP：`middleware=pulsar` 时分派（第一版可仅 fixture 路径）
+- `midstack-local.py`：`middleware=pulsar` 时分派（第一版可仅 fixture 路径）
 
 **E5. 测试**
 
@@ -311,7 +311,7 @@ Week 3:  Phase E（Pulsar 契约级 golden path，executor 可后续）
 python3 tools/validators/validate-repo.py
 python3 tools/replay/mongodb-replay.py --run-analyse
 python3 tools/replay/mongodb-score.py --run-analyse --min-level medium
-python3 plugins/cursor/test-mcp-server.py
+python3 plugins/cursor/test-agent-cli.py
 ```
 
 ## 待人类评审项

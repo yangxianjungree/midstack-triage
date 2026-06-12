@@ -26,13 +26,13 @@ superseded_by: none
 - `start` 和 `analyse` 的 blocked 场景返回结构化 adapter output
 - `analyse` 读取 `meta.yaml` 并校验 incident 状态
 - `analyse` 执行时更新 `analysing / analysed` 状态
-- MCP 返回 adapter output 摘要，避免只返回路径文本
+- `midstack-local.py` 返回 adapter output 摘要，避免只返回路径文本
 
 验证：
 
 - 本地 `start` / `analyse` smoke
 - adapter output schema 校验
-- Cursor MCP smoke
+- Cursor agent-cli smoke
 
 ## 第二轮：冻结输入和 current incident
 
@@ -61,7 +61,7 @@ superseded_by: none
 验证：
 
 - 本地 `review` smoke
-- Cursor MCP smoke
+- Cursor agent-cli smoke
 - adapter output schema 校验
 
 ## 第三点五轮：`/start` 对象盘点轻量增强

@@ -15,7 +15,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the repository validation suite.")
     parser.add_argument("--skip-replay", action="store_true", help="Skip fixture replay.")
     parser.add_argument("--skip-score", action="store_true", help="Skip replay score gate.")
-    parser.add_argument("--skip-cursor", action="store_true", help="Skip Cursor MCP smoke test.")
+    parser.add_argument("--skip-cursor", action="store_true", help="Skip Cursor agent-cli plugin smoke test.")
     parser.add_argument("--score-min-level", choices=["low", "medium", "high"], default="medium")
     parser.add_argument("--format", choices=["text", "json"], default="text")
     return parser.parse_args()
@@ -93,8 +93,8 @@ def checks(args: argparse.Namespace) -> List[Dict[str, Any]]:
     if not args.skip_cursor:
         plan.append(
             {
-                "check_id": "cursor-mcp-smoke",
-                "command": [sys.executable, "plugins/cursor/test-mcp-server.py"],
+                "check_id": "cursor-agent-cli-smoke",
+                "command": [sys.executable, "plugins/cursor/test-agent-cli.py"],
             }
         )
     return plan

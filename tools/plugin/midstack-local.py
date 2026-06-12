@@ -145,9 +145,16 @@ def write_blocked_output(
     return 0
 
 
+def workspace_root() -> Path:
+    value = os.environ.get("MIDSTACK_TRIAGE_WORKSPACE", "").strip()
+    if value:
+        return Path(value).expanduser().resolve()
+    return ROOT
+
+
 def path_from_arg(value: str) -> Path:
     path = Path(value)
-    return path if path.is_absolute() else ROOT / path
+    return path if path.is_absolute() else workspace_root() / path
 
 
 def current_incident_marker(output_root: Path) -> Path:
@@ -790,7 +797,12 @@ def copy_if_exists(source_dir: Path, output_dir: Path, filename: str) -> None:
 
 def resolve_path(value: str) -> Path:
     path = Path(value)
-    return path if path.is_absolute() else ROOT / path
+    if path.is_absolute():
+        return path
+    workspace_path = workspace_root() / path
+    if workspace_path.exists():
+        return workspace_path
+    return ROOT / path
 
 
 def first_context(remote_run_dir: Path) -> Dict[str, Any]:
@@ -1956,7 +1968,7 @@ def command_analyse(args: argparse.Namespace) -> int:
                 ],
                 ["provide an existing incident directory"],
             )
-        output_dir = resolve_path(args.output_dir) if args.output_dir else incident_dir
+        output_dir = path_from_arg(args.output_dir) if args.output_dir else incident_dir
         meta = load_incident_meta(incident_dir)
         status = str(meta.get("status") or "")
         previous_incident_status = status
@@ -2009,7 +2021,7 @@ def command_analyse(args: argparse.Namespace) -> int:
         if not args.output_dir:
             print("ERROR: --output-dir is required unless --incident-dir is used", file=sys.stderr)
             return 1
-        output_dir = resolve_path(args.output_dir)
+        output_dir = path_from_arg(args.output_dir)
     try:
         if incident_mode and incident_dir is not None:
             update_incident_meta(incident_dir, {"status": "analysing", "current_command": "analyse"})

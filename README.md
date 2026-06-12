@@ -196,19 +196,19 @@ python3 tools/replay/mongodb-score.py --run-analyse --min-level medium
 python3 tools/replay/mongodb-score-summary.py --score-root .local/scores/mongodb
 ```
 
-验证 Cursor MCP 集成：
+验证 Cursor Agent CLI 插件集成：
 
 ```bash
-python3 plugins/cursor/test-mcp-server.py
+python3 plugins/cursor/test-agent-cli.py
 python3 plugins/cursor/test-sandbox.py
 python3 tools/validators/validate-repo.py
 ```
 
-安装到一个目标 Cursor 项目：
+安装到一个目标 Cursor 工作区：
 
 ```bash
-python3 plugins/cursor/install.py --target-dir /home/stephen/AI/<target-project>
-python3 plugins/cursor/install.py --target-dir /home/stephen/AI/<target-project> --check
+python3 plugins/cursor/plugin-install.py --upgrade --workspace-init /home/stephen/AI/<target-project>
+python3 plugins/cursor/plugin-install.py --check-workspace /home/stephen/AI/<target-project>
 ```
 
 ## 文档导航

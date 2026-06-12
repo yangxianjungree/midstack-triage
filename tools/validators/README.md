@@ -16,7 +16,7 @@ python3 tools/validators/validate-repo.py
 - MongoDB fixture replay
 - MongoDB replay score gate，默认要求所有评分维度至少达到 `medium`
 - Kubernetes runtime 通用分类检查，防止故障分类点对点实现
-- Cursor MCP smoke test
+- Cursor agent-cli plugin smoke test (`plugins/cursor/test-agent-cli.py`)
 
 可跳过 replay 或 score：
 

@@ -479,7 +479,7 @@ tests/scores/mongodb/
 当前状态：
 
 - 已补充 `tools/validators/validate-repo.py` 作为本地最小回归入口
-- 已补充 `plugins/cursor/test-mcp-server.py`，在 `/home/stephen/AI/` 下创建临时 Cursor 项目并自动化验证 MCP analyse/review
+- 已补充 `plugins/cursor/test-agent-cli.py`，在临时工作区自动化验证 agent-cli analyse/review
 - 已补充 `plugins/cursor/test-sandbox.py`，在 `/home/stephen/AI/midstack-cursor-sandbox` 安装并保留一个可被 Cursor 打开的测试项目
 - 已补充 Kubernetes runtime 通用分类检查，要求 normalizer 发出的 K8s runtime signal 必须登记在 middleware-agnostic taxonomy
 - 已补充 MongoDB Kubernetes scheduling 故障 fixture，用于回归验证未知场景下的通用运行时故障归因

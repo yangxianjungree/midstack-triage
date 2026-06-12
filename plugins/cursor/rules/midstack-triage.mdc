@@ -1,23 +1,19 @@
 ---
-description: Use Midstack Triage Cursor MCP tools for MongoDB middleware incident analysis.
+description: Use Midstack Triage via Agent CLI shell (midstack-local.py) for MongoDB incident analysis.
 globs: ["**/*"]
 alwaysApply: true
 ---
 
-When the user asks to triage MongoDB or middleware incidents in this repository:
+When the user asks to triage MongoDB or middleware incidents in this workspace:
 
-- Use the `midstack-triage` MCP tools instead of manually invoking shell commands.
-- Use `midstack_start` to create a local incident record when the user provides incident context.
-- For `/midstack:start`, the first action must be a `midstack_start` MCP tool call after extracting middleware, IPs, username/password, optional port, and customer clue from the user's natural-language message.
-- Use `midstack_analyse_fixture` for offline replay fixtures.
-- Use `midstack_analyse_remote_run` for completed `.local/remote-runs/...` directories.
-- Use `midstack_analyse_remote_config` when the user explicitly wants to run against a `.local` remote environment config.
-- Use `midstack_review` after analyse to generate quality feedback.
-- Use `midstack_validate` before reporting that the Cursor integration works.
-- After any successful analyse tool call, read `agent-reasoning-task.md` in the incident directory, treat `analysis.rule-draft.yaml` as fallback only, inspect `signal_bundle.log_highlights`, `structured_record.details.dns_checks`, `structured_record.details.pod_terminations`, and any `file_tail` log evidence, update `analysis.yaml` plus `report.md` with Agent-led multi-hypothesis reasoning, gap classification, source-boundary handling, DNS/file-log evidence validation, and conclusion-depth limits, and then call `midstack_finalize_analysis`.
+- Use **shell** to run `tools/plugin/midstack-local.py` from `engine_root` in `.cursor/midstack-triage.workspace.json`.
+- Export `MIDSTACK_TRIAGE_WORKSPACE` to the absolute workspace path before every Midstack command.
+- For `/midstack:start`, run `midstack-local.py start` after extracting middleware, IPs, username/password, optional port, and customer clue.
+- For `/midstack:analyse`, run `midstack-local.py analyse` (or `--input-dir` / `--remote-run-dir` / `--remote-config` when appropriate).
+- For `/midstack:review`, run `midstack-local.py review`.
+- After analyse succeeds, read `agent-reasoning-task.md`, update `analysis.yaml` and `report.md`, then run `midstack-local.py finalize-analysis`.
 - Treat DNS probe `blocked` as an evidence gap and DNS probe `failed` as mechanism evidence only when the failed check contains DNS-layer error text.
 
-For `/midstack:start`, do not inspect `.cursor/mcp.json`, plugin source files, repository code, or existing `.local/incidents` before the `midstack_start` MCP tool call.
-For `/midstack:start`, do not run raw `ssh`, `sshpass`, `kubectl`, `grep`, or `find` commands. The start tool owns remote validation and incident creation.
-For `/midstack:start`, if the MCP tool is unavailable, stop and report that the Midstack MCP tool is unavailable; do not continue with manual SSH or analysis.
+For `/midstack:start`, do not run raw `ssh`, `sshpass`, `kubectl`, `grep`, or `find`. The `start` subcommand owns remote validation.
+
 Do not expose passwords or tokens in chat output; show credentials only as redacted values when needed.

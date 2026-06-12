@@ -15,7 +15,7 @@ superseded_by: none
 
 Midstack Triage 建议作为“中间件智能排障能力底座”继续投入建设。它不是再做一个监控系统，也不是把故障日志直接交给大模型猜结论；它是把专家排障路径拆成知识资产、只读采集、结构化证据、规则诊断和 Agent 协作，让一线工程师能按老手路径快速排查、交接和复盘。
 
-当前 MongoDB 已经跑通 MVP 主链路，Pulsar 仅作为领域样例完成结构骨架（非第一版正式支持），完整排障资产链路仍在补齐。现阶段 MongoDB 知识资产、11 个只读脚本（含 collect + normalize）、规则诊断、fixture 回放、评分和 Cursor MCP 集成都已验证；但它还不是完整生产级自治排障系统，正式 Remote Executor、CI 门禁、历史经验检索和 Pulsar 完整链路仍需要下一阶段投入。
+当前 MongoDB 已经跑通 MVP 主链路，Pulsar 仅作为领域样例完成结构骨架（非第一版正式支持），完整排障资产链路仍在补齐。现阶段 MongoDB 知识资产、11 个只读脚本（含 collect + normalize）、规则诊断、fixture 回放、评分和 Cursor agent-cli 插件集成都已验证；但它还不是完整生产级自治排障系统，正式 Remote Executor、CI 门禁、历史经验检索和 Pulsar 完整链路仍需要下一阶段投入。
 
 ---
 
@@ -127,7 +127,7 @@ flowchart LR
 
 | 平台          | 角色                                | 当前状态                |
 | ----------- | --------------------------------- | ------------------- |
-| Cursor      | 首个验证平台，使用 MCP + slash commands 接入 | 已适配并有自动化 smoke test |
+| Cursor      | 首个验证平台，使用 agent-cli + slash commands 接入 | 已适配并有自动化 smoke test |
 | Claude Code | 插件标准和命令形态的设计基线                    | 接口兼容，后续适配           |
 | Codex       | 未来可选运行环境                          | 接口兼容，待实现            |
 
@@ -293,14 +293,14 @@ flowchart LR
 sequenceDiagram
     participant U as 用户 / 值班工程师
     participant A as Cursor Agent
-    participant P as Cursor MCP / Plugin Prototype
+    participant P as Cursor Plugin (midstack-local.py)
     participant R as Remote Smoke / Remote Executor 原型
     participant K as 目标 K8s 环境
     participant M as MongoDB Pod
     participant N as 规则 Analyse Runner
 
     U->>A: 输入故障线索并触发 /midstack 命令
-    A->>P: 调用 MCP tools
+    A->>P: shell 调用 midstack-local.py
     P->>R: 调度只读采集任务
     R->>K: SSH + kubectl 检查环境
     R->>M: kubectl exec 执行采集脚本
@@ -444,7 +444,7 @@ flowchart LR
 
 目标是让系统在规模扩大后仍然可控：既能利用大模型提升诊断体验，又不会因为 token 和模型调用成本过高而难以落地。
 
-工程验收侧可以保留 `midstack_validate` 作为自检入口，用于验证资产校验、fixture replay、score gate 和 Cursor MCP smoke 是否通过；它不属于用户排障主路径。
+工程验收侧可以保留 `midstack_validate` 作为自检入口，用于验证资产校验、fixture replay、score gate 和 Cursor agent-cli 插件 smoke 是否通过；它不属于用户排障主路径。
 
 三类环境场景的共同目标一致：把专家经验、标准命令、证据结构和历史案例沉淀为可复用能力。差异在于执行权限和输入来源：
 

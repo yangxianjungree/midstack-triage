@@ -25,7 +25,7 @@ superseded_by: none
 - `/midstack:analyse`
 - `/midstack:review`
 
-此外保留 1 个工程自检命令 `/midstack:validate`，仅用于资产校验、replay、score gate 和 Cursor MCP smoke 自检，不属于用户排障主路径。
+此外保留 1 个工程自检命令 `/midstack:validate`，仅用于资产校验、replay、score gate 和 Cursor agent-cli 插件 smoke 自检，不属于用户排障主路径。
 
 内部仍然映射到项目的 5 段排障主流程，但对用户不暴露过多内部细节。
 

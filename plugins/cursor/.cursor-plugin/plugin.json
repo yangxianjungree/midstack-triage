@@ -1,0 +1,11 @@
+{
+  "name": "midstack-triage",
+  "version": "0.2.0",
+  "description": "MongoDB middleware incident triage for Cursor Agent CLI (shell via midstack-local.py). Local install only — not for Cursor Marketplace.",
+  "author": {
+    "name": "Midstack Triage"
+  },
+  "keywords": ["mongodb", "triage", "middleware", "agent-cli"],
+  "commands": "./commands/",
+  "rules": "./rules/"
+}

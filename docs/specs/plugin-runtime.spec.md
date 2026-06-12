@@ -26,7 +26,7 @@ superseded_by: none
 - `/<plugin_name>:analyse`
 - `/<plugin_name>:review`
 
-此外保留 1 个工程自检命令 `/<plugin_name>:validate`，仅用于资产校验、replay、score gate 和 MCP smoke 自检，不属于用户排障主路径。
+此外保留 1 个工程自检命令 `/<plugin_name>:validate`，仅用于资产校验、replay、score gate 和 agent-cli 插件 smoke 自检，不属于用户排障主路径。
 
 说明：
 

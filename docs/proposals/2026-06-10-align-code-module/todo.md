@@ -11,7 +11,7 @@ superseded_by: none
 
 ## 待确认
 
-- [x] `blocked` 对 MCP 是否应表现为成功 tool call，并通过 adapter output 暴露 `status: blocked`
+- [x] `blocked` 通过 adapter output 暴露 `status: blocked`
 - [x] `customer_clue` 是否按 L1 改为可选输入，缺失时不阻塞 `/midstack:start`
 - [x] `analyse` 是否绝不静默重写 `/start` 阶段冻结的 `input.yaml`
 - [x] `review` 是否立即迁移到 `analysis.yaml.review`，停止生成 `review.yaml`
@@ -25,7 +25,7 @@ superseded_by: none
 - [x] 将 `customer_clue` 从必填改为可选，并调整 start blocked 条件
 - [x] 补齐 `meta.yaml` 的 `created / blocked / ready / analysing / analysed / reviewed` 状态迁移
 - [x] 将 `start` / `analyse` 的阻塞场景统一为结构化 adapter output
-- [x] MCP tool call 返回内容优先展示 adapter output 摘要，而不是只返回本地路径
+- [x] CLI 输出优先展示 adapter output 摘要，而不是只返回本地路径
 - [x] `analyse` 读取 `meta.yaml` 并校验 incident 状态，状态不满足时返回 `blocked`
 - [x] `analyse` 不再静默覆盖 `/start` 生成的 `input.yaml`
 - [x] `review` 写入 `analysis.yaml.review`，并调整 `record_refs`
@@ -49,7 +49,7 @@ superseded_by: none
 ## 待验证
 
 - [x] 本地插件命令 smoke：`start`、`analyse`、`review`
-- [x] Cursor MCP smoke
+- [x] Cursor agent-cli smoke
 - [x] MongoDB fixture replay
 - [x] MongoDB score comparison
 - [x] 仓库 validator

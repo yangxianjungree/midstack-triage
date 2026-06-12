@@ -42,7 +42,7 @@ superseded_by: none
 ## 当前真实代码链路
 
 1. Cursor 命令入口位于 `plugins/cursor/commands/` 和 `plugins/cursor/rules/`
-2. MCP server 位于 `plugins/cursor/mcp-server.py`
+2. Cursor 集成通过 `tools/plugin/midstack-local.py` + agent-cli plugin
 3. 本地命令原型位于 `tools/plugin/midstack-local.py`
 4. 真实远程只读采集当前通过 `tools/remote-executor/mongodb-executor.py` 调度，`tools/remote-smoke/mongodb-smoke.py` 仅保留兼容 smoke 包装入口
 5. MongoDB 第 3 段脚本源位于 `domains/mongodb/scripts/`
@@ -64,7 +64,7 @@ superseded_by: none
 - `incident_id` 已按 L1 调整为 `<middleware>-<YYYYMMDD>-<HHMMSS>-<rand4>`
 - `/midstack:start` 的 `customer_clue` 已改为高价值可选输入，缺失时不再构成 `blocked`
 - `start` / `analyse` 的阻塞场景已统一为结构化 adapter output，并以成功命令调用返回
-- MCP tool call 已优先返回 adapter output 摘要，而不是只返回本地路径文本
+- CLI 输出已优先返回 adapter output 摘要，而不是只返回本地路径文本
 - `analyse` 已读取 `meta.yaml` 校验 incident 状态，只有 `ready` 或 `analysed` 可进入分析
 - 无 current incident、incident 不存在、状态不满足或缺 `remote-config.yaml` 时，`analyse` 已返回结构化 `blocked`
 - `/start` 创建的 incident 已作为当前目标记录，包括 `blocked` incident
@@ -103,10 +103,10 @@ superseded_by: none
 ## 影响范围
 
 - `tools/plugin/midstack-local.py`
-- `plugins/cursor/mcp-server.py`
+- `tools/plugin/midstack-local.py`
 - `plugins/cursor/commands/`
 - `plugins/cursor/rules/`
-- `plugins/cursor/test-mcp-server.py`
+- `plugins/cursor/test-agent-cli.py`
 - `plugins/cursor/test-sandbox.py`
 - `tools/remote-executor/mongodb-executor.py`
 - `tools/remote-smoke/mongodb-smoke.py`

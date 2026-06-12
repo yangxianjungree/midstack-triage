@@ -65,7 +65,7 @@ superseded_by: none
 
 ## 待验证
 
-- [x] Cursor MCP smoke 覆盖更新后的 reasoning contract
+- [x] Cursor agent-cli smoke 覆盖更新后的 reasoning contract
 - [x] 本地 `review` smoke 能反映过程偏差
 - [x] MongoDB collect script validator 覆盖新 playbook
 - [x] fixture / replay 不因新增运行时软字段而回归失败

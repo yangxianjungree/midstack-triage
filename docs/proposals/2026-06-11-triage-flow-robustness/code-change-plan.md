@@ -26,7 +26,7 @@ superseded_by: none
   - 生成 `analysis.rule-draft.yaml`
   - 生成 `agent-reasoning-task.md`
   - 写 `analysis.yaml.review`
-- `plugins/cursor/mcp-server.py`
+- `tools/plugin/midstack-local.py`
   - 暴露 `midstack_analyse_reasoning`
   - 将 `agent-reasoning-task.md` 交给 Agent
 - `domains/mongodb/scripts/collect/`
@@ -62,13 +62,13 @@ superseded_by: none
 优先文件：
 
 - `tools/plugin/midstack-local.py`
-- `plugins/cursor/mcp-server.py`
+- `tools/plugin/midstack-local.py`
 - `plugins/cursor/commands/midstack:analyse.md`
 - `plugins/cursor/rules/midstack-triage.mdc`
 
 验证：
 
-- Cursor MCP smoke
+- Cursor agent-cli smoke
 - 生成的 `agent-reasoning-task.md` 包含新约束
 - sandbox / fixture 中 `analysis.yaml` 结构仍可被现有 review 和 finalize 消费
 
@@ -186,13 +186,13 @@ superseded_by: none
 
 - `tools/plugin/midstack-local.py`
 - `tools/remote-executor/`
-- `plugins/cursor/mcp-server.py`
+- `tools/plugin/midstack-local.py`
 - incident artifact merge 相关逻辑
 
 验证：
 
 - 本地 `analyse` smoke
-- Cursor MCP smoke
+- Cursor agent-cli smoke
 - freeze / replay 回归
 - 至少一个定向补采成功案例
 - 至少一个“证据不足但正确止步”的案例

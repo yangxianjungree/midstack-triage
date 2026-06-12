@@ -37,7 +37,7 @@ python3 tests/unit/test_skill_resolver.py
 python3 tools/replay/mongodb-replay.py --run-analyse
 
 # Sandbox install + smoke (requires live cluster)
-python3 plugins/cursor/install.py --target-dir /path/to/sandbox --approve
+python3 plugins/cursor/plugin-install.py --upgrade --workspace-init /path/to/sandbox
 python3 plugins/cursor/test-sandbox.py /path/to/sandbox
 
 # Inspect rs.status outcome for an incident

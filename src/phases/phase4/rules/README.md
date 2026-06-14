@@ -13,6 +13,5 @@
 
 规则：
 
-- 这里放的是正式运行时代码，不再把 analyser 主实现留在 `tools/analyse/`。
-- `tools/analyse/*.py` 只保留兼容 CLI 壳，方便 replay、校验和人工单跑。
+- 这里放的是正式运行时代码；replay、校验和人工单跑直接调用这里的 CLI 入口。
 - 多 middleware 共用的逻辑，优先继续下沉到 `src/shared/`，不要在这里复制。

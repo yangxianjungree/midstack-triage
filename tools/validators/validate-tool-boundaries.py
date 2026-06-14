@@ -8,7 +8,6 @@ from typing import Dict, List
 
 ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_TOOL_DIRS = {
-    "analyse",
     "generators",
     "importers",
     "lib",
@@ -34,36 +33,6 @@ THIN_WRAPPER_SPECS = {
             "json",
             "tempfile",
             "shutil",
-            "def parse_args",
-        ],
-    },
-    "tools/analyse/mongodb-analyse.py": {
-        "max_lines": 25,
-        "required": [
-            'SRC_DIR = Path(__file__).resolve().parents[2] / "src"',
-            "from phases.phase4.rules.mongodb import *",
-            "raise SystemExit(main())",
-        ],
-        "forbidden": [
-            "argparse",
-            "subprocess",
-            "yaml",
-            "json",
-            "def parse_args",
-        ],
-    },
-    "tools/analyse/pulsar-analyse.py": {
-        "max_lines": 25,
-        "required": [
-            'SRC_DIR = Path(__file__).resolve().parents[2] / "src"',
-            "from phases.phase4.rules.pulsar import *",
-            "raise SystemExit(main())",
-        ],
-        "forbidden": [
-            "argparse",
-            "subprocess",
-            "yaml",
-            "json",
             "def parse_args",
         ],
     },
@@ -152,6 +121,20 @@ THIN_WRAPPER_SPECS = {
             "yaml",
             "json",
             "def parse_args",
+        ],
+    },
+    "tools/validators/validate-mongodb-scripts.py": {
+        "max_lines": 20,
+        "required": [
+            "from mongodb_assets.cli import main",
+            "raise SystemExit(main())",
+        ],
+        "forbidden": [
+            "argparse",
+            "yaml",
+            "json",
+            "def parse_args",
+            "REQUIRED_MANIFEST_FIELDS",
         ],
     },
 }

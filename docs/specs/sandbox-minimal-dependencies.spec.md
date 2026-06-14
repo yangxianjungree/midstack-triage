@@ -79,7 +79,7 @@ flowchart LR
     LocalPy["tools/plugin/midstack-local.py"]
     Domains["domains/mongodb/*"]
     Tools["tools/remote-executor/*"]
-    Analyse["tools/analyse/*"]
+    Rules["src/phases/phase4/rules/*"]
   end
 
   Cursor["Cursor Agent + LLM"] --> Cmds
@@ -88,7 +88,7 @@ flowchart LR
   LocalPy -->|"MIDSTACK_TRIAGE_WORKSPACE"| Local
   LocalPy --> Domains
   LocalPy --> Tools
-  LocalPy --> Analyse
+  LocalPy --> Rules
 ```
 
 **关键代码行为**
@@ -188,7 +188,7 @@ midstack-triage/
   tools/
     plugin/midstack-local.py
     remote-executor/mongodb-executor.py
-    analyse/mongodb-analyse.py
+    src/phases/phase4/rules/mongodb.py
     lib/skill_resolver.py
     validators/validate-repo.py
   domains/mongodb/

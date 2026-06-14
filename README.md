@@ -262,6 +262,6 @@ python3 plugins/cursor/plugin-install.py --check-workspace /home/stephen/AI/<tar
   - [资产校验工具](tools/validators/README.md)
   - [远程 smoke 工具](tools/remote-smoke/README.md)
   - [Replay 工具](tools/replay/README.md)
-  - [Analyse 工具](tools/analyse/README.md)
+  - [Phase 4 规则分析器](src/phases/phase4/rules/README.md)
   - [Golden path 测试](tests/golden-paths/README.md)
   - [测试闭环目录](tests/README.md)

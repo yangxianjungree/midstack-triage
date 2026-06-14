@@ -61,7 +61,7 @@ def ensure_analysis(incident_dir: Path) -> None:
     proc = run_command(
         [
             sys.executable,
-            str(ROOT / "tools" / "analyse" / "mongodb-analyse.py"),
+            str(ROOT / "src" / "phases" / "phase4" / "rules" / "mongodb.py"),
             "--input-dir",
             str(incident_dir),
             "--output-file",

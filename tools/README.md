@@ -15,8 +15,6 @@
 
 - `plugin/`
   本地 CLI 适配层；`midstack-local.py` 是薄启动壳，正式调度在 `src/commands/plugin_cli.py`。
-- `analyse/`
-  MongoDB / Pulsar 规则 analyse runner 的兼容 CLI 壳；正式实现已迁入 `src/phases/phase4/rules/`。
 - `remote-executor/`
   真实远程采集执行器的兼容 CLI 壳；正式实现已迁入 `src/execution/remote/executor.py`。
 - `remote-smoke/`
@@ -39,7 +37,6 @@
 | 子目录 | 类型 | 是否要求薄壳 | 是否应迁入 `src/` |
 | --- | --- | --- | --- |
 | `plugin/` | runtime 入口适配 | 是 | 已迁，主实现已在 `src/commands/` |
-| `analyse/` | runtime 兼容入口 | 是 | 已迁，主实现已在 `src/phases/phase4/rules/` |
 | `remote-executor/` | runtime 兼容入口 | 是 | 已迁，主实现已在 `src/execution/remote/` |
 | `remote-smoke/` | smoke 包装入口 | 是 | 不迁；它是工程 smoke 壳，执行本体已在 `src/` |
 | `lib/` | 历史兼容导入层 | 是 | 已迁，主实现已在 `src/shared/` / `src/execution/` |
@@ -62,4 +59,4 @@
 自动约束：
 
 - `tools/validators/validate-tool-boundaries.py`
-  会校验 `tools/plugin/`、`tools/analyse/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tools/lib/` 中的包装脚本仍保持薄壳，并校验 `src/` 不反向依赖 `tools/`。
+  会校验 `tools/plugin/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tools/lib/` 中的包装脚本仍保持薄壳，并校验 `src/` 不反向依赖 `tools/`。

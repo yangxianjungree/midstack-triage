@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 
 import importlib.util
-import sys
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
-ANALYSE_PATH = ROOT / "tools" / "analyse" / "mongodb-analyse.py"
+
+ROOT = Path(__file__).resolve().parents[4]
+RULES_PATH = ROOT / "src" / "phases" / "phase4" / "rules" / "mongodb.py"
 
 
-def load_analyse_module():
-    spec = importlib.util.spec_from_file_location("mongodb_analyse", ANALYSE_PATH)
+def load_rules_module():
+    spec = importlib.util.spec_from_file_location("phase4_rules_mongodb", RULES_PATH)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(module)
@@ -24,10 +24,10 @@ def replica_internal_hypothesis(hypotheses):
     raise AssertionError("missing replica internal hypothesis")
 
 
-class MongoDBAnalyseTest(unittest.TestCase):
+class MongoDBRulesTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.mod = load_analyse_module()
+        cls.mod = load_rules_module()
 
     def test_h3_refuted_when_rs_status_healthy_after_eviction(self) -> None:
         input_data = {"scenario": "kubernetes-runtime"}

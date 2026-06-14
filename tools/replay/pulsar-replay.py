@@ -56,7 +56,7 @@ def replay_case(case_dir: Path, run_analyse: bool, output_root: Path) -> Dict[st
         proc = run_command(
             [
                 sys.executable,
-                str(ROOT / "tools" / "analyse" / "pulsar-analyse.py"),
+                str(ROOT / "src" / "phases" / "phase4" / "rules" / "pulsar.py"),
                 "--input-dir",
                 str(case_dir),
                 "--output-file",

@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+from pathlib import Path
+from typing import Sequence
+
+
+TOOLS_DIR = Path(__file__).resolve().parents[2]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+
+from support.common import ROOT  # noqa: E402
+
+from .contracts import (  # noqa: E402
+    load_scenarios,
+    load_taxonomies,
+    validate_adapter_output,
+    validate_context_example,
+    validate_manifest,
+    validate_output_example,
+    validate_remote_request,
+    validate_remote_result,
+    validate_runtime_map,
+)
+from .domain_assets import validate_domain_assets, validate_fixtures  # noqa: E402
+
+
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Validate MongoDB script manifest and plugin runtime map.")
+    parser.add_argument("--manifest", default="domains/mongodb/scripts/manifest.yaml")
+    parser.add_argument("--runtime-map", default="interfaces/plugin/script-runtime-map.example.yaml")
+    parser.add_argument("--context-example", default="domains/mongodb/scripts/context.example.yaml")
+    parser.add_argument("--output-example", default="domains/mongodb/scripts/output.example.yaml")
+    parser.add_argument("--remote-request", default="interfaces/plugin/remote-executor-request.example.yaml")
+    parser.add_argument("--remote-result", default="interfaces/plugin/remote-executor-result.example.yaml")
+    parser.add_argument("--adapter-output", default="interfaces/plugin/adapter-output.example.yaml")
+    return parser.parse_args(argv)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = parse_args(argv)
+    errors: list[str] = []
+    taxonomies = load_taxonomies(ROOT / "core/taxonomies", errors)
+    scenarios = load_scenarios(ROOT / "scenarios", "mongodb", errors)
+    manifest_by_id = validate_manifest(ROOT / args.manifest, errors)
+    runtime_by_id = validate_runtime_map(ROOT / args.runtime_map, manifest_by_id, errors)
+    validate_context_example(ROOT / args.context_example, manifest_by_id, errors)
+    validate_output_example(ROOT / args.output_example, manifest_by_id, taxonomies, errors)
+    validate_remote_request(ROOT / args.remote_request, manifest_by_id, runtime_by_id, errors)
+    validate_remote_result(ROOT / args.remote_result, manifest_by_id, taxonomies, errors)
+    validate_domain_assets(taxonomies, scenarios, manifest_by_id, errors)
+    validate_fixtures(errors)
+    validate_adapter_output(ROOT / args.adapter_output, taxonomies, errors)
+    if errors:
+        for error in errors:
+            print("ERROR: %s" % error, file=sys.stderr)
+        return 1
+    print("ok: validated %d MongoDB script(s)" % len(manifest_by_id))
+    return 0

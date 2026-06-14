@@ -40,7 +40,6 @@ RUNTIME_MARKER_FILES = [
     "runtime/tools/plugin/midstack-local.py",
     "runtime/bin/selfcheck.py",
     "runtime/tools/remote-executor/mongodb-executor.py",
-    "runtime/tools/analyse/mongodb-analyse.py",
     "runtime/tools/support/common.py",
     "runtime/src/commands/plugin_cli.py",
     "runtime/src/execution/__init__.py",
@@ -62,7 +61,6 @@ RUNTIME_MARKER_FILES = [
 ]
 RUNTIME_COPY_DIRS = [
     ("tools/plugin", "runtime/tools/plugin"),
-    ("tools/analyse", "runtime/tools/analyse"),
     ("tools/support", "runtime/tools/support"),
     ("tools/validators", "runtime/tools/validators"),
     ("tools/remote-executor", "runtime/tools/remote-executor"),

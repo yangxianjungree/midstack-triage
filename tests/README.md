@@ -21,7 +21,7 @@
 - `plugins/cursor/`：Cursor 插件安装与命令投影测试
 - `shared/`：`src/shared/*` 共享运行时测试
 - `tools/plugin/`：本地 CLI 入口与工作区路径行为测试
-- `tools/analyse/`：analyse CLI 兼容壳及其背后的 `src/phases/phase4/rules/*` 测试
+- `phases/phase4/rules/`：第 4 段规则分析器测试
 - `replay/`：回放流程说明和后续工具入口
 - `scores/`：评分样例和后续评分结果
 

@@ -33,6 +33,8 @@ python3 tools/validators/validate-repo.py --skip-cursor
 python3 tools/validators/validate-mongodb-scripts.py
 ```
 
+其中 CLI 壳保持在 `validate-mongodb-scripts.py`，正式实现位于 `tools/validators/mongodb_assets/`。
+
 校验 golden path 与首个 collect 脚本合同：
 
 ```bash
@@ -82,6 +84,7 @@ python3 tools/validators/validate-tool-boundaries.py
 - `tests/fixtures/mongodb/*` 是否包含最小 replay fixture 文件集
 - `adapter-output.example.yaml` 是否满足插件命令输出最小合同
 - Kubernetes runtime signal 是否全部登记在通用 taxonomy，且 normalizer 不能发出未登记的点对点 signal
-- `tools/plugin/`、`tools/analyse/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tools/lib/` 是否仍保持薄壳边界
+- `tools/plugin/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tools/lib/` 是否仍保持薄壳边界
+- `tools/validators/validate-mongodb-scripts.py` 是否仍保持薄 CLI 边界
 - `tools/*` 顶级子目录是否保留 README
 - `src/` 是否错误反向导入 `tools/`

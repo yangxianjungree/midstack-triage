@@ -15,5 +15,5 @@
 
 - 第 4 段负责生成和更新推理结论，不承载第 3 段远程采集或第 5 段最终报告落盘。
 - 顶层 `phase4/` 只保留清晰门面和阶段级说明；复杂实现继续收在 `multitrack/`。
-- 规则 analyse runner 也属于第 4 段正式运行时，统一收在 `rules/`，不再把主实现留在 `tools/analyse/`。
+- 规则 analyse runner 也属于第 4 段正式运行时，统一收在 `rules/`，replay、校验、人工单跑直接调用这里的入口。
 - 第 4 段代码统一收敛在 `src/phases/phase4/` 下，不再保留平行旧目录。

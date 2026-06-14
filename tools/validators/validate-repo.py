@@ -2,13 +2,15 @@
 
 import argparse
 import json
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
 
-ROOT = Path(__file__).resolve().parents[2]
+from support.common import ROOT, run_command  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -22,13 +24,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def run_check(check_id: str, command: List[str]) -> Dict[str, Any]:
-    proc = subprocess.run(
-        command,
-        cwd=str(ROOT),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
+    proc = run_command(command)
     return {
         "check_id": check_id,
         "command": command,

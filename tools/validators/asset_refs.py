@@ -1,20 +1,15 @@
 #!/usr/bin/env python3
 
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
-import yaml
 
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
 
-ROOT = Path(__file__).resolve().parents[2]
-
-
-def load_yaml(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a YAML object" % path)
-    return data
+from support.common import ROOT, load_yaml  # noqa: E402
 
 
 def load_metadata_index(domain: str, asset_kind: str) -> Dict[str, Path]:

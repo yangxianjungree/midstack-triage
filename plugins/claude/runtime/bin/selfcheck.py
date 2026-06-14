@@ -61,6 +61,7 @@ def main() -> int:
         (RUNTIME_ROOT / "tools" / "plugin" / "midstack-local.py", "plugin runtime"),
         (RUNTIME_ROOT / "tools" / "remote-executor" / "mongodb-executor.py", "remote executor"),
         (RUNTIME_ROOT / "tools" / "analyse" / "mongodb-analyse.py", "mongodb analyser"),
+        (RUNTIME_ROOT / "tools" / "support" / "common.py", "tools support module"),
         (RUNTIME_ROOT / "src" / "commands" / "plugin_cli.py", "plugin CLI adapter"),
         (RUNTIME_ROOT / "src" / "execution" / "__init__.py", "execution package"),
         (RUNTIME_ROOT / "src" / "execution" / "remote" / "__init__.py", "remote execution package"),

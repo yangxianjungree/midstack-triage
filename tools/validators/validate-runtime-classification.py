@@ -5,10 +5,12 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
-import yaml
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
 
+from support.common import ROOT, load_yaml  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[2]
 TAXONOMY = ROOT / "core" / "taxonomies" / "kubernetes-runtime-signal-types.yaml"
 NORMALIZER = ROOT / "domains" / "mongodb" / "scripts" / "normalize" / "normalize-signals-bundle.py"
 REQUIRED_CATEGORIES = {
@@ -20,14 +22,6 @@ REQUIRED_CATEGORIES = {
     "readiness",
     "workload-controller",
 }
-
-
-def load_yaml(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a YAML object" % path)
-    return data
 
 
 def emitted_signal_ids(path: Path) -> Set[str]:

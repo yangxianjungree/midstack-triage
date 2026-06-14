@@ -5,19 +5,20 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
-import yaml
-
 VALIDATORS_DIR = Path(__file__).resolve().parent
 if str(VALIDATORS_DIR) not in sys.path:
     sys.path.insert(0, str(VALIDATORS_DIR))
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
 
 from asset_refs import (  # noqa: E402
     load_metadata_index,
     load_scenario_ids,
     validate_required_asset_ref,
 )
+from support.common import ROOT, load_yaml  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[2]
 MIDDLEWARE = "pulsar"
 SCRIPT_ID_RE = re.compile(r"^pulsar\.(collect|normalize)\.[a-z0-9_]+\.[a-z0-9_]+$")
 REQUIRED_MANIFEST_FIELDS = {
@@ -34,14 +35,6 @@ REQUIRED_MANIFEST_FIELDS = {
 REQUIRED_RUNBOOK_FIELDS = {"id", "title", "middleware", "component", "scenario"}
 REQUIRED_COMMAND_FIELDS = {"id", "title", "middleware", "component", "scenario"}
 REQUIRED_SKILL_FIELDS = {"id", "title", "middleware", "component", "primary_scenario"}
-
-
-def load_yaml(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a YAML object" % path)
-    return data
 
 
 def fail(errors: List[str], message: str) -> None:

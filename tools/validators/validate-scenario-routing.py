@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 
-import subprocess
 import sys
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+
+from support.common import ROOT, run_command  # noqa: E402
+
 TEST_FILES = [
     ROOT / "tests" / "shared" / "test_scenario_router.py",
     ROOT / "tests" / "shared" / "test_skill_resolver.py",
@@ -18,10 +22,7 @@ def main() -> int:
         if not test_file.exists():
             print("missing unit test: %s" % test_file, file=sys.stderr)
             return 1
-        proc = subprocess.run(
-            [sys.executable, str(test_file)],
-            cwd=str(ROOT),
-        )
+        proc = run_command([sys.executable, str(test_file)])
         if proc.returncode != 0:
             print("unit test validation failed: %s" % test_file, file=sys.stderr)
             return proc.returncode

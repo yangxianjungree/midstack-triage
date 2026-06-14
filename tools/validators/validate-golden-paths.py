@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 
 import argparse
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-import yaml
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
 
+from support.common import ROOT, load_yaml, run_command  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -31,14 +32,6 @@ REQUIRED_OUTPUT_FIELDS = {
     "warnings",
     "evidence_gaps",
 }
-
-
-def load_yaml(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a YAML object" % path)
-    return data
 
 
 def fail(errors: List[str], message: str) -> None:
@@ -184,7 +177,7 @@ def run_contract_step(step: Dict[str, Any], errors: List[str]) -> None:
             command = [sys.executable, str(script_path)]
         else:
             command = ["bash", str(script_path)]
-        proc = subprocess.run(
+        proc = run_command(
             command
             + [
                 "--context-file",
@@ -193,11 +186,7 @@ def run_contract_step(step: Dict[str, Any], errors: List[str]) -> None:
                 str(output_file),
                 "--artifact-dir",
                 str(artifact_dir),
-            ],
-            cwd=str(ROOT),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
+            ]
         )
         expected_exit = int(expect.get("exit_code", 0))
         if proc.returncode != expected_exit:

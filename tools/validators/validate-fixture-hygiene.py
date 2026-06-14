@@ -6,7 +6,12 @@ from pathlib import Path
 from typing import List
 
 
-ROOT = Path(__file__).resolve().parents[2]
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+
+from support.common import ROOT  # noqa: E402
+
 FIXTURE_ROOT = ROOT / "tests" / "fixtures"
 GENERATED_FILENAMES = {
     "adapter-output.yaml",

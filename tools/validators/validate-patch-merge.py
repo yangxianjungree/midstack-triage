@@ -5,10 +5,12 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
-import yaml
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
 
+from support.common import ROOT, load_yaml  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -17,14 +19,6 @@ from shared.patch_merge import apply_script_output  # noqa: E402
 
 
 FIXTURE_ROOT = ROOT / "tests" / "golden-paths" / "fixtures" / "patch-merge"
-
-
-def load_yaml(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a YAML object" % path)
-    return data
 
 
 def fail(errors: List[str], message: str) -> None:

@@ -62,8 +62,6 @@ def main() -> int:
         (RUNTIME_ROOT / "tools" / "remote-executor" / "mongodb-executor.py", "remote executor"),
         (RUNTIME_ROOT / "tools" / "analyse" / "mongodb-analyse.py", "mongodb analyser"),
         (RUNTIME_ROOT / "src" / "commands" / "plugin_cli.py", "plugin CLI adapter"),
-        (RUNTIME_ROOT / "src" / "midstack_runtime" / "__init__.py", "shared runtime package"),
-        (RUNTIME_ROOT / "src" / "midstack_runtime" / "workspace.py", "workspace helper package"),
         (RUNTIME_ROOT / "src" / "shared" / "__init__.py", "shared runtime package"),
         (RUNTIME_ROOT / "src" / "shared" / "patch_merge.py", "patch merge library"),
         (RUNTIME_ROOT / "src" / "shared" / "scenario_router.py", "scenario routing library"),

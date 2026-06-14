@@ -11,7 +11,7 @@ if str(SRC_DIR) not in sys.path:
 
 FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "mongodb"
 
-from phases import phase3_collection
+from phases.phase3 import collection as phase3_collection
 
 
 def write_yaml(path: Path, payload) -> None:

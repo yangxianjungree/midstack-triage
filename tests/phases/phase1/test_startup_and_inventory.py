@@ -7,7 +7,8 @@ SRC_DIR = ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from phases import phase1_startup, phase2_inventory
+from phases.phase1 import startup as phase1_startup
+from phases.phase2 import inventory as phase2_inventory
 
 
 def test_validate_remote_environment_stops_on_first_failure(monkeypatch):

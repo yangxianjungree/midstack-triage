@@ -129,7 +129,7 @@
 - 需要被多个入口复用、或者需要被插件 bundle 一起打包的正式实现，优先放 `src/`
 - `src/` 只放运行时实现，不放测试、回放、校验、生成、导入或讨论类工程内容
 - `tools/` 负责命令入口和工程脚本，不再长期承载膨胀的核心实现
-- `src/midstack_runtime/`、`tools/lib/` 当前都只保留兼容 shim，不再新增正式逻辑
+- `tools/lib/` 当前只保留兼容 shim，不再新增正式逻辑
 - `scenarios/` 只定义场景，不存产品专属 runbook
 - `domains/<product>/` 只存具体中间件资产
 - runbook 只存一份，物理上按组件组织，逻辑上按场景检索

@@ -22,7 +22,7 @@
 - 只要某段实现会被多个命令或多个 phase 复用，就不要继续留在 `tools/`。
 - `shared/` 不承载某个单独 phase 的主流程编排；主流程编排放回 `commands/` 或 `phases/`。
 
-兼容层说明：
+约束：
 
-- `src/midstack_runtime/` 只是历史入口的 shim
-- 新代码不要再往 `midstack_runtime/` 增加实现
+- 共享运行时代码统一收敛在 `src/shared/`
+- 不再保留单独的 `src/midstack_runtime/` 兼容目录

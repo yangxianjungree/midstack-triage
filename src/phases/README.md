@@ -19,17 +19,11 @@
 - `phase5/review.py`
   分析结果复核、打分、改进建议生成。
 
-兼容入口仍保留在：
-
-- `phase1_startup.py`
-- `phase2_inventory.py`
-- `phase3_collection.py`
-- `phase4_reasoning.py`
-
 规则：
 
 - phase 目录放“阶段实现”，不是 proposal 文档。
 - 新 phase 默认采用 `phaseN/<topic>.py` 结构，不再新增新的 `phaseN_xxx.py` 扁平文件。
+- 旧的 `phaseN_xxx.py` 平行 shim 已移除；新代码和新测试都直接使用正式 phase 目录。
 - 每个 phase 目录在复杂度开始上升后，应补 `README.md` 说明职责边界和允许放置的实现类型。
 - 某个 phase 只暴露清晰的入口函数，供 `src/commands/` 编排调用。
 - phase 之间共享的通用能力沉到 `src/shared/`。

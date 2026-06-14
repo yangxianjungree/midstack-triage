@@ -27,8 +27,6 @@
   跨命令、跨 phase 复用的正式运行时能力。
 - `phases/phase4/`
   第 4 段推理的正式目录；`multitrack/` 放多轨推理底层实现。
-- `midstack_runtime/`
-  旧兼容层，只做对 `shared/` 的薄转发，不再承载正式实现。
 
 ## 放置规则
 
@@ -38,23 +36,17 @@
 - 只服务测试、校验、回放、生成、迁移的工程逻辑，应继续放在 `tests/` 或 `tools/`，不要迁入 `src/`。
 - 当前已迁入 `src/` 的正式边界包括：
   - `commands/start.py|analyse.py|review.py|finalize.py`
+  - `commands/plugin_cli.py`
   - `phases/phase1/startup.py`
   - `phases/phase2/inventory.py`
   - `phases/phase3/collection.py`
   - `phases/phase4/reasoning.py`
+  - `phases/phase5/finalize.py|review.py`
   - `shared/workspace.py|analysis_runtime.py`
   - `shared/patch_merge.py|scenario_router.py|skill_resolver.py|mongodb_collection_runtime.py`
-
-兼容层仍然保留在：
-
-- `phases/phase1_startup.py`
-- `phases/phase2_inventory.py`
-- `phases/phase3_collection.py`
-- `phases/phase4_reasoning.py`
-- `midstack_runtime/`
 
 约束：
 
 - 新的共享运行时代码只写 `src/shared/`
-- `src/midstack_runtime/` 只允许 shim，不再新增真实逻辑
 - 新的 Phase 4 运行时代码只写 `src/phases/phase4/` 与其子目录，不再保留平行旧目录
+- `src/` 下不再保留仅为仓库内部迁移服务的平行 shim 目录或扁平 phase 别名文件

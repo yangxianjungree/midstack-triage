@@ -15,12 +15,14 @@
 
 - `plugin/`
   本地 CLI 适配层；`midstack-local.py` 是薄启动壳，正式调度在 `src/commands/plugin_cli.py`。
+- `analyse/`
+  MongoDB / Pulsar 规则 analyse runner 的兼容 CLI 壳；正式实现已迁入 `src/phases/phase4/rules/`。
 - `remote-executor/`
   真实远程采集执行器的兼容 CLI 壳；正式实现已迁入 `src/execution/remote/executor.py`。
 - `remote-smoke/`
-  兼容保留的 smoke CLI 包装层。
-- `analyse/`
-  MongoDB / Pulsar 规则 analyse runner 的兼容 CLI 壳；正式实现已迁入 `src/phases/phase4/rules/`。
+  兼容保留的 smoke CLI 包装层；实际执行本体仍走 `src/execution/remote/`。
+- `lib/`
+  历史兼容导入层，只转发到 `src/shared/*` 或 `src/execution/*`，不再新增正式实现。
 - `validators/`
   仓库结构、资产合同和工程回归校验器。
 - `replay/`
@@ -29,8 +31,20 @@
   runbook / command / skill 骨架生成器。
 - `importers/`
   外部 Markdown 资产导入器。
-- `lib/`
-  历史兼容导入层，只转发到 `src/shared/*`，不再新增正式实现。
+
+## 目录分类
+
+| 子目录 | 类型 | 是否要求薄壳 | 是否应迁入 `src/` |
+| --- | --- | --- | --- |
+| `plugin/` | runtime 入口适配 | 是 | 已迁，主实现已在 `src/commands/` |
+| `analyse/` | runtime 兼容入口 | 是 | 已迁，主实现已在 `src/phases/phase4/rules/` |
+| `remote-executor/` | runtime 兼容入口 | 是 | 已迁，主实现已在 `src/execution/remote/` |
+| `remote-smoke/` | smoke 包装入口 | 是 | 不迁；它是工程 smoke 壳，执行本体已在 `src/` |
+| `lib/` | 历史兼容导入层 | 是 | 已迁，主实现已在 `src/shared/` / `src/execution/` |
+| `validators/` | 工程校验 | 否 | 不迁 |
+| `replay/` | 工程回放/评分 | 否 | 不迁 |
+| `generators/` | 工程生成器 | 否 | 不迁 |
+| `importers/` | 工程导入器 | 否 | 不迁 |
 
 ## 放置规则
 
@@ -41,3 +55,8 @@
 - 生成输出默认写到 `.local/` 或临时目录，不要回写仓库 fixture。
 - 新增 `tools/*` 子目录时，应同时补一个 README 说明用途和边界。
 - 如果某段代码表达的是 execution plane 能力，优先落在 `src/execution/`，再由 `tools/` 提供 CLI 壳。
+
+自动约束：
+
+- `tools/validators/validate-tool-boundaries.py`
+  会校验 `tools/plugin/`、`tools/analyse/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tools/lib/` 中的包装脚本仍保持薄壳，并校验 `src/` 不反向依赖 `tools/`。

@@ -66,6 +66,10 @@ def checks(args: argparse.Namespace) -> List[Dict[str, Any]]:
             "command": [sys.executable, "tools/validators/validate-runtime-classification.py"],
         },
         {
+            "check_id": "tool-boundaries",
+            "command": [sys.executable, "tools/validators/validate-tool-boundaries.py"],
+        },
+        {
             "check_id": "scenario-routing",
             "command": [sys.executable, "tools/validators/validate-scenario-routing.py"],
         },

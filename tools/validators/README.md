@@ -45,6 +45,12 @@ python3 tools/validators/validate-golden-paths.py
 python3 tools/validators/validate-fixture-hygiene.py
 ```
 
+校验 `tools/` 与 `src/` 的结构边界没有回退：
+
+```bash
+python3 tools/validators/validate-tool-boundaries.py
+```
+
 当前校验范围：
 
 - `core/taxonomies/` 中风险等级、状态、场景类型、能力类型和标签规范文件是否结构有效
@@ -76,3 +82,6 @@ python3 tools/validators/validate-fixture-hygiene.py
 - `tests/fixtures/mongodb/*` 是否包含最小 replay fixture 文件集
 - `adapter-output.example.yaml` 是否满足插件命令输出最小合同
 - Kubernetes runtime signal 是否全部登记在通用 taxonomy，且 normalizer 不能发出未登记的点对点 signal
+- `tools/plugin/`、`tools/analyse/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tools/lib/` 是否仍保持薄壳边界
+- `tools/*` 顶级子目录是否保留 README
+- `src/` 是否错误反向导入 `tools/`

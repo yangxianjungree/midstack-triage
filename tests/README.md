@@ -16,9 +16,13 @@
 - `phases/phase3/`：第 3 段采集与信号治理测试
 - `phases/phase4/multitrack/`：第 4 段多轨推理的专属模块测试
 - `phases/phase5/`：第 5 段 finalize / review 测试
+- `plugins/claude/`：Claude 插件安装与检查逻辑测试
+- `plugins/cursor/`：Cursor 插件安装与命令投影测试
+- `shared/`：`src/shared/*` 共享运行时测试
+- `tools/plugin/`：本地 CLI 入口与工作区路径行为测试
+- `tools/analyse/`：rules analyse runner 测试
 - `replay/`：回放流程说明和后续工具入口
 - `scores/`：评分样例和后续评分结果
-- `unit/`：仓库级单元测试，覆盖 plugin / analyse runner / shared helpers 等跨阶段稳定模块
 
 原则：
 
@@ -27,3 +31,4 @@
 - fixture 保存结构化摘要和期望结论
 - 真实环境 smoke 结果继续保存在 `.local/`
 - 运行时生成物不要回写 `tests/fixtures/`
+- 新测试优先放到与实现 ownership 对齐的目录，不再新增新的 `tests/unit/`

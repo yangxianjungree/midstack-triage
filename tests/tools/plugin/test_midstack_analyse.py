@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "mongodb" / "kubernetes-crashloop-sample"
 
 

@@ -5,7 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 MIDSTACK_LOCAL_PATH = ROOT / "tools" / "plugin" / "midstack-local.py"
 
 

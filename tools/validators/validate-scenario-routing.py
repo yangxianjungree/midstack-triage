@@ -7,9 +7,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_FILES = [
-    ROOT / "tests" / "unit" / "test_scenario_router.py",
-    ROOT / "tests" / "unit" / "test_skill_resolver.py",
-    ROOT / "tests" / "unit" / "test_midstack_analyse.py",
+    ROOT / "tests" / "shared" / "test_scenario_router.py",
+    ROOT / "tests" / "shared" / "test_skill_resolver.py",
+    ROOT / "tests" / "tools" / "plugin" / "test_midstack_analyse.py",
 ]
 
 

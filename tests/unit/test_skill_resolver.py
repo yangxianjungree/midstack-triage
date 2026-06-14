@@ -8,11 +8,11 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-LIB_DIR = ROOT / "tools" / "lib"
-if str(LIB_DIR) not in sys.path:
-    sys.path.insert(0, str(LIB_DIR))
+SRC_DIR = ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
-from skill_resolver import (  # noqa: E402
+from shared.skill_resolver import (  # noqa: E402
     missing_required_scripts,
     script_collection_statuses,
 )

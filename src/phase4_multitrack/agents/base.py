@@ -1,11 +1,10 @@
-"""Shared agent protocol for Phase 4 reasoning."""
+"""Compatibility module for legacy Phase 4 base agent imports."""
 
-from typing import Dict, Protocol
+from __future__ import annotations
+
+import sys
+
+from phases.phase4.multitrack.agents import base as _impl
 
 
-class ReasoningAgent(Protocol):
-    """Protocol implemented by all Phase 4 reasoning agents."""
-
-    def reason(self, observations: Dict) -> Dict:
-        """Return a reasoning result for the current observations."""
-        ...
+sys.modules[__name__] = _impl

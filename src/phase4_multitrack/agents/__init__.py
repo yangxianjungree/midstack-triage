@@ -1,13 +1,10 @@
-"""Agent implementations for Phase 4."""
+"""Compatibility package for legacy Phase 4 agent imports."""
 
-from .base import ReasoningAgent
-from .claude import ClaudeAgent
-from .factory import AgentFactory
-from .mock import MockAgent
+from __future__ import annotations
 
-__all__ = [
-    "ReasoningAgent",
-    "MockAgent",
-    "ClaudeAgent",
-    "AgentFactory",
-]
+import sys
+
+from phases.phase4.multitrack import agents as _impl
+
+
+sys.modules[__name__] = _impl

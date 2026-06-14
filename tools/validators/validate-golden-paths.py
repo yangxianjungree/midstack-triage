@@ -11,11 +11,11 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
-LIB_DIR = ROOT / "tools" / "lib"
-if str(LIB_DIR) not in sys.path:
-    sys.path.insert(0, str(LIB_DIR))
+SRC_DIR = ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
-from patch_merge import apply_script_output  # noqa: E402
+from shared.patch_merge import apply_script_output  # noqa: E402
 
 GOLDEN_ROOT = ROOT / "tests" / "golden-paths"
 REQUIRED_OUTPUT_FIELDS = {

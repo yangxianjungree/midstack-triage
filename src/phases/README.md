@@ -1,0 +1,34 @@
+# Phase Runtime Modules
+
+`src/phases/` 按排障主流程沉淀阶段实现，而不是按脚本来源散放。
+
+当前正式边界：
+
+- `phase1/startup.py`
+  受理前置环境确认、远程可达性校验。
+- `phase2/inventory.py`
+  环境对象盘点、拓扑与 namespace 发现。
+- `phase3/collection.py`
+  远程采集、回放输入构建、场景路由、定向补采。
+- `phase4/reasoning.py`
+  第 4 段推理运行时门面。
+- `phase4/multitrack/`
+  第 4 段多轨推理底层实现。
+- `phase5/finalize.py`
+  分析收口、guardrail、最终报告落盘。
+- `phase5/review.py`
+  分析结果复核、打分、改进建议生成。
+
+兼容入口仍保留在：
+
+- `phase1_startup.py`
+- `phase2_inventory.py`
+- `phase3_collection.py`
+- `phase4_reasoning.py`
+
+规则：
+
+- phase 目录放“阶段实现”，不是 proposal 文档。
+- 新 phase 默认采用 `phaseN/<topic>.py` 结构，不再新增新的 `phaseN_xxx.py` 扁平文件。
+- 某个 phase 只暴露清晰的入口函数，供 `src/commands/` 编排调用。
+- phase 之间共享的通用能力沉到 `src/shared/`。

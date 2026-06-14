@@ -1,10 +1,10 @@
-"""Backward-compatible agent exports for Phase 4."""
+"""Compatibility module for legacy Phase 4 agent interface imports."""
 
-from .agents import AgentFactory, ClaudeAgent, MockAgent, ReasoningAgent
+from __future__ import annotations
 
-__all__ = [
-    "ReasoningAgent",
-    "MockAgent",
-    "ClaudeAgent",
-    "AgentFactory",
-]
+import sys
+
+from phases.phase4.multitrack import agent_interface as _impl
+
+
+sys.modules[__name__] = _impl

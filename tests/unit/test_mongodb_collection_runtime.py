@@ -5,11 +5,11 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-LIB_DIR = ROOT / "tools" / "lib"
-if str(LIB_DIR) not in sys.path:
-    sys.path.insert(0, str(LIB_DIR))
+SRC_DIR = ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
-from mongodb_collection_runtime import (  # noqa: E402
+from shared.mongodb_collection_runtime import (  # noqa: E402
     container_names_for_pod,
     resolve_mongodb_collection_targets,
     resolve_running_mongod_pods,

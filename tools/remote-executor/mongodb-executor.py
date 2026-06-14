@@ -17,11 +17,11 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
-LIB_DIR = ROOT / "tools" / "lib"
-if str(LIB_DIR) not in sys.path:
-    sys.path.insert(0, str(LIB_DIR))
+SRC_DIR = ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
-import mongodb_collection_runtime as mcr  # noqa: E402
+from shared import mongodb_collection_runtime as mcr  # noqa: E402
 DEFAULT_LOCAL_OUTPUT = ROOT / ".local" / "remote-runs"
 DEFAULT_REMOTE_ROOT = "/tmp/midstack-triage"
 DEFAULT_RUNTIME_MAP = ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml"

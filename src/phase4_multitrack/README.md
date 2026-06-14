@@ -1,17 +1,23 @@
 # Phase 4: 多轨推理引擎
 
-第 4 段运行时实现放在 `src/phase4_multitrack/`。这个目录只承载可执行模块，不放提案、评审记录、demo 输出或一次性讨论文档。
+这里是旧导入路径的兼容目录。第 4 段运行时正式实现已经迁到 `src/phases/phase4/multitrack/`。
+
+这个目录只保留兼容入口，避免历史 import 立即断裂；新的实现和后续演进都应放在正式目录，不再继续往这里新增代码。
 
 ## 目录职责
 
-- `reasoning_board.py` - 共享黑板与过程态落盘
-- `hypothesis_track.py` - 单轨观察、推理、验证闭环
-- `lead_orchestrator.py` - 多轨编排与终止判断
-- `agents/` - 协议、mock、Claude 实现和工厂
-- `agent_interface.py` - 兼容导出层，避免旧 import 断裂
-- `l1_mapper.py` - 从第 3 段输入映射初始假设
-- `cli_integration.py` - 给 `tools/plugin/midstack-local.py analyse` 调用的集成入口
-- `data_structures.py` - 过程态数据结构
+这里只允许保留兼容 shim：
+
+- `__init__.py`
+- `cli_integration.py`
+- `agent_interface.py`
+- 其他与历史 import 对应的薄转发模块
+
+禁止事项：
+
+- 不要在这里新增 Phase 4 真实实现
+- 不要把新 agent、推理逻辑、数据结构继续放回这个目录
+- 不要让这个目录重新长成第二套正式实现
 
 配套内容分层如下：
 
@@ -62,4 +68,4 @@ pytest tests/phase4_multitrack/e2e -v
 
 - 示例和测试不要把输出写回仓库根目录或真实 fixture 目录。
 - 设计文档只留在 `docs/proposals/...`，不要再在仓库根目录放额外 `SPEC.md`。
-- Phase 4 的实际入口以 `tools/plugin/midstack-local.py analyse` 为准；示例脚本只是演示，不是运行时合同。
+- Phase 4 的命令入口由 `src/commands/analyse.py` 编排；`tools/plugin/midstack-local.py` 只负责 CLI 适配。

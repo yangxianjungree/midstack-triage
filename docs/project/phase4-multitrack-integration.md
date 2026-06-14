@@ -24,7 +24,7 @@ superseded_by: none
 
 ## 模块边界
 
-- 运行时代码：`src/phase4_multitrack/`
+- 运行时代码：`src/phases/phase4/multitrack/`
 - 设计提案和 review：`docs/proposals/2026-06-12-phase4-reasoning-model/`
 - 示例脚本：`examples/phase4/`
 - 测试：`tests/phase4_multitrack/`

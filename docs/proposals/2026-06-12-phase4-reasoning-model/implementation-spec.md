@@ -1,6 +1,6 @@
 # Spec: Phase 4 多轨推理引擎
 
-> 注：本文件是实现阶段留下的工作 spec，保存在提案目录内作为历史上下文。当前代码结构、测试入口和集成位置以 `src/phase4_multitrack/README.md`、`docs/project/phase4-multitrack-integration.md` 和实际目录为准。
+> 注：本文件是实现阶段留下的工作 spec，保存在提案目录内作为历史上下文。当前代码结构、测试入口和集成位置以 `src/phases/phase4/multitrack/README.md`、`docs/project/phase4-multitrack-integration.md` 和实际目录为准。
 
 ## Objective
 
@@ -53,7 +53,7 @@ pytest tests/
 pytest tests/test_reasoning_board.py -v
 
 # Type check
-mypy src/phase4_multitrack/
+mypy src/phases/phase4/multitrack/
 
 # Format
 black src/ tests/
@@ -132,7 +132,7 @@ midstack-triage/
 ```
 
 **Key Directories**:
-- `src/phase4_multitrack/` - 核心实现，独立模块
+- `src/phases/phase4/multitrack/` - 核心实现，独立模块
 - `tests/phase4_multitrack/unit/` - 单元测试（测ReasoningBoard API等）
 - `tests/phase4_multitrack/integration/` - 集成测试（测三相位流程）
 - `tests/phase4_multitrack/e2e/` - E2E测试（完整incident）

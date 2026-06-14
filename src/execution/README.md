@@ -7,7 +7,7 @@
 当前边界：
 
 - `remote/`
-  SSH/SSHPass 远端接入、capability check、脚本投放与回收。
+  SSH/SSHPass 远端接入、capability check、上下文构建、脚本投放与回收。
 
 规则：
 

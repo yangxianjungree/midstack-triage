@@ -6,11 +6,18 @@
 
 - `access.py`
   SSH/SSHPass transport、基础环境校验、scp 收发。
+- `runtime_support.py`
+  远端执行 runtime 的时间戳、YAML/JSON IO、runtime-map 解析等底层支持。
+- `context.py`
+  context profile、目标集、namespace 选择、inventory 采集与执行上下文构建。
+- `contracts.py`
+  remote workspace、request/result、run summary 等合同对象构建。
 - `executor.py`
-  MongoDB 远程脚本执行器；负责编排 capability check、脚本投放、远端执行、结果回收。
+  MongoDB 远程脚本执行器门面；负责编排 capability check、脚本投放、远端执行、结果回收，并兼容旧的导入面。
 
 规则：
 
 - 这里是 execution plane，不是 phase 流程目录。
 - `phase1`、`phase2`、`phase3` 可以调用这里，但不要把 transport 逻辑重新散落回 phase 目录。
 - `tools/remote-executor/` 和 `tools/remote-smoke/` 只保留 CLI 壳。
+- `executor.py` 可以作为兼容门面对外暴露符号，但新实现优先写入对应子模块。

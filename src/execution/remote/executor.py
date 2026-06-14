@@ -6,22 +6,43 @@ import posixpath
 import shlex
 import shutil
 import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-import yaml
-
-
-ROOT = Path(__file__).resolve().parents[4]
-
 from execution.remote.access import run_ssh, scp_from, scp_to
+from execution.remote.context import (
+    build_context,
+    choose_namespace,
+    collect_inventory,
+    context_profile_from_inventory,
+    default_context_profile,
+    default_targets,
+)
+from execution.remote.contracts import (
+    aggregate_run_status,
+    build_executor_request,
+    build_executor_result,
+    build_remote_workspace,
+    build_run_result,
+    build_script_result_summary,
+    text_tail,
+)
+from execution.remote.runtime_support import (
+    DEFAULT_LOCAL_OUTPUT,
+    DEFAULT_MANIFEST,
+    DEFAULT_PLUGIN_NAME,
+    DEFAULT_REMOTE_ROOT,
+    DEFAULT_RUNTIME_MAP,
+    load_config,
+    load_script_entries,
+    now_id,
+    now_iso,
+    remote_path,
+    try_load_yaml,
+    write_json,
+    write_yaml,
+)
 from shared import mongodb_collection_runtime as mcr
-DEFAULT_LOCAL_OUTPUT = ROOT / ".local" / "remote-runs"
-DEFAULT_REMOTE_ROOT = "/tmp/midstack-triage"
-DEFAULT_RUNTIME_MAP = ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
-DEFAULT_MANIFEST = ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml"
-DEFAULT_PLUGIN_NAME = "midstack-triage"
 BLOCKED_ERROR_CODES = {
     "missing_sshpass",
     "ssh_auth_failed",
@@ -52,132 +73,6 @@ SCRIPT_OUTPUT_REQUIRED_FIELDS = (
     "evidence_gaps",
 )
 SCRIPT_OUTPUT_ALLOWED_STATUSES = {"success", "partial", "blocked"}
-
-
-def now_id() -> str:
-    return datetime.now(timezone.utc).astimezone().strftime("%Y%m%d-%H%M%S")
-
-
-def now_iso() -> str:
-    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
-
-
-def load_config(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        return yaml.safe_load(fh) or {}
-
-
-def write_yaml(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
-        yaml.safe_dump(payload, fh, sort_keys=False, allow_unicode=False)
-
-
-def try_load_yaml(path: Path) -> Dict[str, Any]:
-    try:
-        data = load_config(path)
-    except Exception:
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def load_script_entries(manifest_path: Path, runtime_map_path: Path, selected_script_ids: List[str] = None) -> List[Dict[str, Any]]:
-    manifest = load_config(manifest_path)
-    runtime_map = load_config(runtime_map_path)
-    manifest_root = manifest_path.parent
-    source_by_id = {}
-    selected = set(selected_script_ids or [])
-    for item in manifest.get("scripts") or []:
-        if isinstance(item, dict) and item.get("default_packaged") is True:
-            source_by_id[str(item.get("script_id") or "")] = item
-
-    entries = []
-    for item in runtime_map.get("scripts") or []:
-        if not isinstance(item, dict):
-            continue
-        script_id = str(item.get("script_id") or "")
-        manifest_item = source_by_id.get(script_id)
-        if not manifest_item:
-            raise RuntimeError("runtime map script is missing from default_packaged manifest: %s" % script_id)
-        if selected:
-            if script_id not in selected:
-                continue
-        elif manifest_item.get("mvp") is not True:
-            continue
-        source = str(manifest_item.get("source") or "")
-        entry = {
-            "script_id": script_id,
-            "source_path": manifest_root / source,
-            "runtime_path": str(item.get("runtime_path") or ""),
-            "runtime": str(item.get("runtime") or manifest_item.get("runtime") or ""),
-            "readonly": bool(item.get("readonly")),
-        }
-        if not entry["source_path"].exists():
-            raise RuntimeError("script source does not exist for %s: %s" % (script_id, entry["source_path"]))
-        entries.append(entry)
-    if not entries:
-        if selected:
-            raise RuntimeError("selected script ids are not runtime-map-backed default_packaged scripts: %s" % sorted(selected))
-        raise RuntimeError("runtime map contains no MVP scripts: %s" % runtime_map_path)
-    return entries
-
-
-def remote_path(remote_root: str, runtime_path: str) -> str:
-    return "%s/%s" % (remote_root.rstrip("/"), runtime_path.lstrip("/"))
-
-
-def default_targets(namespace: str) -> Dict[str, Any]:
-    return {
-        "namespace": namespace,
-        "statefulset_refs": [],
-        "service_refs": [],
-        "pod_refs": [],
-        "mongos_pod_refs": [],
-        "mongod_pod_refs": [],
-        "node_refs": [],
-        "mongos_pod_ref": "",
-    }
-
-
-def default_context_profile(namespace: str) -> Dict[str, Any]:
-    return {
-        "deployment_architecture": "unknown",
-        "topology_type": "sharded_cluster",
-        "targets": default_targets(namespace),
-        "auth_secret_ref": {},
-    }
-
-
-def context_profile_from_inventory(inventory_path: str, namespace: str) -> Dict[str, Any]:
-    profile = default_context_profile(namespace)
-    if not inventory_path:
-        return profile
-    path = Path(inventory_path)
-    if not path.exists():
-        return profile
-    inventory = load_config(path)
-    candidates = inventory.get("deployment_architecture_candidates") or []
-    if candidates:
-        profile["deployment_architecture"] = str(candidates[0])
-    topology = inventory.get("topology_hints") or {}
-    if topology.get("candidate_topology_type"):
-        profile["topology_type"] = str(topology["candidate_topology_type"])
-    targets = inventory.get("targets")
-    if isinstance(targets, dict):
-        merged_targets = default_targets(namespace)
-        merged_targets.update(targets)
-        merged_targets["namespace"] = namespace or str(merged_targets.get("namespace") or "")
-        profile["targets"] = merged_targets
-    auth_hints = inventory.get("auth_hints") or {}
-    selected_secret_ref = auth_hints.get("selected_secret_ref") or {}
-    if isinstance(selected_secret_ref, dict) and selected_secret_ref.get("name") and selected_secret_ref.get("key"):
-        profile["auth_secret_ref"] = {
-            "namespace": str(selected_secret_ref.get("namespace") or namespace),
-            "name": str(selected_secret_ref.get("name") or ""),
-            "key": str(selected_secret_ref.get("key") or ""),
-        }
-    return profile
-
 
 def error_payload(code: str = "", message: str = "") -> Dict[str, str]:
     return {"code": code, "message": message}
@@ -588,247 +483,6 @@ def validate_executor_capabilities(access: Dict[str, Any]) -> Tuple[bool, List[D
     checks.append(capability_result("kubectl_exec", "success", "kubectl exec capability is available"))
     return True, checks, {"code": "", "message": ""}
 
-
-def write_json(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2, sort_keys=False)
-        fh.write("\n")
-
-
-def choose_namespace(access: Dict[str, Any], preferred: List[str]) -> str:
-    ns_list = " ".join(shlex.quote(item) for item in preferred)
-    proc = run_ssh(
-        access,
-        "for ns in %s; do kubectl get namespace \"$ns\" -o name >/dev/null 2>&1 && echo \"$ns\" && exit 0; done; echo default" % ns_list,
-    )
-    if proc.returncode != 0:
-        return "default"
-    return (proc.stdout.strip() or "default").splitlines()[-1]
-
-
-def collect_inventory(access: Dict[str, Any], local_dir: Path) -> subprocess.CompletedProcess:
-    remote = r"""
-set -o pipefail
-echo "## kubectl client"
-kubectl version --client=true --short 2>/dev/null || kubectl version --client=true
-echo "## nodes"
-kubectl get nodes -o wide
-echo "## namespaces"
-kubectl get namespaces
-echo "## statefulsets"
-kubectl get statefulsets -A
-echo "## services"
-kubectl get services -A | head -n 200
-echo "## pods"
-kubectl get pods -A -o wide | head -n 200
-"""
-    proc = run_ssh(access, remote, timeout=90)
-    (local_dir / "inventory.stdout.txt").write_text(proc.stdout, encoding="utf-8")
-    (local_dir / "inventory.stderr.txt").write_text(proc.stderr, encoding="utf-8")
-    return proc
-
-
-def build_context(
-    incident_id: str,
-    script_id: str,
-    namespace: str,
-    local_artifact_root: Path,
-    remote_root: str,
-    script_ids: List[str],
-    context_profile: Dict[str, Any],
-    access: Dict[str, Any] = None,
-) -> Dict[str, Any]:
-    run_root = "%s/runs/%s" % (remote_root, incident_id)
-    auth_secret_ref = context_profile.get("auth_secret_ref") or {}
-    mongos_query = {
-        "shell": "mongosh",
-        "database": "admin",
-        "command": "getShardMap",
-        "username": "root",
-        "password_file_env": "MONGODB_ROOT_PASSWORD_FILE",
-        "auth_database": "admin",
-    }
-    replicaset_query = {
-        "shell": "mongosh",
-        "username": "root",
-        "password_file_env": "MONGODB_ROOT_PASSWORD_FILE",
-        "auth_database": "admin",
-    }
-    if isinstance(auth_secret_ref, dict) and auth_secret_ref.get("name") and auth_secret_ref.get("key"):
-        mongos_query["secret_ref"] = auth_secret_ref
-        replicaset_query["secret_ref"] = auth_secret_ref
-    mongo_exec = mcr.default_mongo_exec_config(mongos_query, replicaset_query)
-    return {
-        "incident_id": incident_id,
-        "middleware": "mongodb",
-        "script_id": script_id,
-        "namespace": namespace,
-        "cluster_id": "remote-smoke",
-        "artifact_root": str(local_artifact_root),
-        "deployment_architecture": context_profile.get("deployment_architecture") or "unknown",
-        "topology_type": context_profile.get("topology_type") or "unknown",
-        "access": dict(access or {}),
-        "targets": context_profile.get("targets") or default_targets(namespace),
-        "capabilities": {
-            "kubectl_available": True,
-            "kubectl_exec_available": True,
-            "mongosh_in_pod_available": False,
-        },
-        "pod_query": {"mode": "by_namespace_scan"},
-        "statefulset_query": {"include_yaml": True},
-        "service_query": {"include_nodeport": True, "include_yaml": True},
-        "node_query": {"resolve_from_pods": True},
-        "mongos_query": mongos_query,
-        "replicaset_query": replicaset_query,
-        "mongo_exec": mongo_exec,
-        "logs_query": {"tail_lines": 1000},
-        "normalize_query": {"per_file_highlight_limit": 50, "total_highlight_limit": 500},
-        "inputs": {
-            "log_artifact_dirs": {
-                "current": "%s/mongodb.collect.logs.current/artifacts" % run_root,
-                "previous": "%s/mongodb.collect.logs.previous/artifacts" % run_root,
-            },
-            "script_output_files": {
-                upstream: "%s/%s/output.yaml" % (run_root, upstream)
-                for upstream in script_ids
-                if upstream != "mongodb.normalize.signals.bundle"
-            },
-        },
-    }
-
-
-def text_tail(value: str, limit: int = 4000) -> str:
-    return value[-limit:] if len(value) > limit else value
-
-
-def build_remote_workspace(remote_root: str, incident_id: str, script_id: str, runtime_path: str) -> Dict[str, str]:
-    run_root = "%s/runs/%s/%s" % (remote_root.rstrip("/"), incident_id, script_id)
-    script_path = remote_path(remote_root, runtime_path)
-    return {
-        "plugin_root": remote_root.rstrip("/"),
-        "script_root": "%s/assets/scripts" % remote_root.rstrip("/"),
-        "run_root": run_root,
-        "script_path": script_path,
-        "context_file": "%s/context.yaml" % run_root,
-        "output_file": "%s/output.yaml" % run_root,
-        "artifact_dir": "%s/artifacts" % run_root,
-    }
-
-
-def build_executor_request(
-    access: Dict[str, Any],
-    incident_id: str,
-    entry: Dict[str, Any],
-    remote_workspace: Dict[str, str],
-    plugin_name: str,
-) -> Dict[str, Any]:
-    script_id = str(entry["script_id"])
-    return {
-        "executor_id": "remote-executor-%s-%s" % (incident_id, script_id),
-        "incident_id": incident_id,
-        "script_id": script_id,
-        "middleware": "mongodb",
-        "plugin_name": plugin_name,
-        "access": access,
-        "script": {
-            "runtime_path": entry["runtime_path"],
-            "runtime": entry["runtime"],
-            "readonly": entry["readonly"],
-            "arguments": {
-                "context_file": "context.yaml",
-                "output_file": "output.yaml",
-                "artifact_dir": "artifacts",
-            },
-        },
-        "remote_workspace": remote_workspace,
-        "required_capabilities": build_required_capabilities(script_id),
-        "execution": {
-            "timeout_seconds": 120,
-            "retrieve_output_file": True,
-            "retrieve_artifact_dir": True,
-        },
-    }
-
-
-def build_executor_result(
-    request: Dict[str, Any],
-    status: str,
-    started_at: str,
-    capability_checks: List[Dict[str, str]],
-    process: Dict[str, Any],
-    retrieved_files: Dict[str, str],
-    error: Dict[str, str],
-    warnings: List[str],
-) -> Dict[str, Any]:
-    return {
-        "executor_id": request["executor_id"],
-        "incident_id": request["incident_id"],
-        "script_id": request["script_id"],
-        "plugin_name": request["plugin_name"],
-        "status": status,
-        "selected_ip": str((request.get("access") or {}).get("primary_ip") or ""),
-        "started_at": started_at,
-        "finished_at": now_iso(),
-        "capability_checks": capability_checks,
-        "remote_paths": request["remote_workspace"],
-        "retrieved_files": retrieved_files,
-        "process": process,
-        "error": error,
-        "warnings": warnings,
-    }
-
-
-def build_script_result_summary(result: Dict[str, Any], output: Dict[str, Any]) -> Dict[str, str]:
-    error = result.get("error") or {}
-    summary = {
-        "script_id": str(result.get("script_id") or ""),
-        "status": str(result.get("status") or ""),
-        "error_code": str(error.get("code") or ""),
-        "error_message": str(error.get("message") or ""),
-    }
-    if output:
-        summary["output_status"] = str(output.get("status") or "")
-        summary["output_summary"] = str(output.get("summary") or "")
-    return summary
-
-
-def build_run_result(
-    incident_id: str,
-    plugin_name: str,
-    selected_ip: str,
-    namespace: str,
-    started_at: str,
-    capability_checks: List[Dict[str, str]],
-    script_results: List[Dict[str, str]],
-    error: Dict[str, str],
-    warnings: List[str],
-    status: str,
-) -> Dict[str, Any]:
-    return {
-        "incident_id": incident_id,
-        "plugin_name": plugin_name,
-        "status": status,
-        "selected_ip": selected_ip,
-        "namespace": namespace,
-        "started_at": started_at,
-        "finished_at": now_iso(),
-        "capability_checks": capability_checks,
-        "script_results": script_results,
-        "error": error,
-        "warnings": warnings,
-    }
-
-
-def aggregate_run_status(script_results: List[Dict[str, str]]) -> str:
-    if not script_results:
-        return "failed"
-    statuses = [str(item.get("status") or "") for item in script_results]
-    if statuses and all(item == "success" for item in statuses):
-        return "success"
-    return "partial"
-
-
 def print_run_pointer(incident_id: str, namespace: str, local_dir: Path) -> None:
     print("incident_id=%s" % incident_id)
     print("selected_namespace=%s" % namespace)
@@ -901,7 +555,7 @@ def run_script(
     remote_artifacts = remote_workspace["artifact_dir"]
     local_script_dir = local_dir / script_id
     local_script_dir.mkdir(parents=True, exist_ok=True)
-    request = build_executor_request(access, incident_id, entry, remote_workspace, plugin_name)
+    request = build_executor_request(access, incident_id, entry, remote_workspace, plugin_name, build_required_capabilities(script_id))
     write_yaml(local_script_dir / "remote-executor-request.yaml", request)
     started_at = now_iso()
     process = {"exit_code": -1, "stdout_tail": "", "stderr_tail": ""}

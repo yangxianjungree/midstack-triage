@@ -6,6 +6,8 @@
 
 - `access.py`
   SSH/SSHPass transport、基础环境校验、scp 收发。
+- `capabilities.py`
+  远端 capability check、错误分类、Pod 目标解析与 pod 内工具探测。
 - `runtime_support.py`
   远端执行 runtime 的时间戳、YAML/JSON IO、runtime-map 解析等底层支持。
 - `context.py`
@@ -13,7 +15,7 @@
 - `contracts.py`
   remote workspace、request/result、run summary 等合同对象构建。
 - `executor.py`
-  MongoDB 远程脚本执行器门面；负责编排 capability check、脚本投放、远端执行、结果回收，并兼容旧的导入面。
+  MongoDB 远程脚本执行器门面；负责编排脚本投放、远端执行、结果回收，并兼容旧的导入面。
 
 规则：
 
@@ -21,3 +23,4 @@
 - `phase1`、`phase2`、`phase3` 可以调用这里，但不要把 transport 逻辑重新散落回 phase 目录。
 - `tools/remote-executor/` 和 `tools/remote-smoke/` 只保留 CLI 壳。
 - `executor.py` 可以作为兼容门面对外暴露符号，但新实现优先写入对应子模块。
+- 需要 monkeypatch transport 的验证器，继续从 `executor.py` 打补丁；门面负责把当前模块的 `run_ssh`/`scp_*` 注入到底层实现。

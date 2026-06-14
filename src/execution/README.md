@@ -8,6 +8,7 @@
 
 - `remote/`
   SSH/SSHPass 远端接入、capability check、上下文构建、脚本投放与回收。
+  其中 `access.py` 管 transport，`capabilities.py` 管远端能力与目标探测，`executor.py` 管执行编排门面。
 
 规则：
 

@@ -12,7 +12,7 @@
 目录：
 
 - `fixtures/`：可离线回放的 incident 样例
-- `phase4_multitrack/`：第 4 段多轨推理的专属模块测试
+- `phases/phase4/multitrack/`：第 4 段多轨推理的专属模块测试
 - `replay/`：回放流程说明和后续工具入口
 - `scores/`：评分样例和后续评分结果
 - `unit/`：仓库级单元测试，覆盖 plugin / start / analyse / shared helpers 等稳定模块

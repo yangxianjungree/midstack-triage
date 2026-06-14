@@ -27,7 +27,7 @@ superseded_by: none
 - 运行时代码：`src/phases/phase4/multitrack/`
 - 设计提案和 review：`docs/proposals/2026-06-12-phase4-reasoning-model/`
 - 示例脚本：`examples/phase4/`
-- 测试：`tests/phase4_multitrack/`
+- 测试：`tests/phases/phase4/multitrack/`
 
 不要把以下内容再放回仓库根目录：
 
@@ -58,8 +58,8 @@ superseded_by: none
 模块级测试：
 
 ```bash
-pytest tests/phase4_multitrack/unit -v
-pytest tests/phase4_multitrack/e2e -v
+pytest tests/phases/phase4/multitrack/unit -v
+pytest tests/phases/phase4/multitrack/e2e -v
 ```
 
 示例脚本：

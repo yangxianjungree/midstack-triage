@@ -113,4 +113,4 @@ if __name__ == "__main__":
     print("=" * 60)
     print("1. 查看 ./.local/examples/phase4/demo_mongodb_timeout/reasoning-board.yaml - 完整推理过程")
     print("2. 查看 ./.local/examples/phase4/demo_mongodb_timeout/final_report.json - 最终结论")
-    print("3. 运行测试: python3 -m pytest tests/phase4_multitrack/ -v")
+    print("3. 运行测试: python3 -m pytest tests/phases/phase4/multitrack/ -v")

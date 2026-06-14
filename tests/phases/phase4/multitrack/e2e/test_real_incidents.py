@@ -7,7 +7,7 @@ from phases.phase4.multitrack import LeadOrchestrator, L1TemplateMapper
 
 
 # 真实incident路径
-FIXTURES_DIR = Path(__file__).parent.parent.parent.parent / "tests/fixtures/mongodb"
+FIXTURES_DIR = Path(__file__).resolve().parents[4] / "fixtures" / "mongodb"
 
 INCIDENTS = [
     "kubernetes-readiness-failure-sample",

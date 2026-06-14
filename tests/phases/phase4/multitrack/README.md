@@ -1,6 +1,6 @@
 # Phase 4 Tests
 
-`tests/phase4_multitrack/` 只放第 4 段多轨推理模块的验证代码。
+`tests/phases/phase4/multitrack/` 只放第 4 段多轨推理模块的验证代码。
 
 目录约束：
 

@@ -31,7 +31,7 @@
 - 设计提案：`docs/proposals/2026-06-12-phase4-reasoning-model/`
 - 集成说明：`docs/project/phase4-multitrack-integration.md`
 - 示例：`examples/phase4/`
-- 测试：`tests/phase4_multitrack/`
+- 测试：`tests/phases/phase4/multitrack/`
 
 ## 核心组件
 
@@ -67,8 +67,8 @@ print(result["total_rounds"])
 ## 测试入口
 
 ```bash
-pytest tests/phase4_multitrack/unit -v
-pytest tests/phase4_multitrack/e2e -v
+pytest tests/phases/phase4/multitrack/unit -v
+pytest tests/phases/phase4/multitrack/e2e -v
 ```
 
 ## 工程约束

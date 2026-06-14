@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from execution.remote.access import run_ssh
+from execution.remote import mongodb_collection_runtime as mcr
 from execution.remote.runtime_support import write_json, load_config
-from shared import mongodb_collection_runtime as mcr
 
 
 def default_targets(namespace: str) -> Dict[str, Any]:

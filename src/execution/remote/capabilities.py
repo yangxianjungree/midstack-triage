@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple
 
 from execution.remote.context import default_targets
+from execution.remote import mongodb_collection_runtime as mcr
 from execution.remote.runtime_support import load_config
-from shared import mongodb_collection_runtime as mcr
 
 RunSshFn = Callable[[Dict[str, Any], str, int], subprocess.CompletedProcess]
 LoadConfigFn = Callable[[Path], Dict[str, Any]]

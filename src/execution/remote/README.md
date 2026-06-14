@@ -8,6 +8,8 @@
   SSH/SSHPass transport、基础环境校验、scp 收发。
 - `capabilities.py`
   远端 capability check、错误分类、Pod 目标解析与 pod 内工具探测。
+- `mongodb_collection_runtime.py`
+  MongoDB Pod/容器目标解析、mongo shell 选择、pod 内执行目标摘要。
 - `runtime_support.py`
   远端执行 runtime 的时间戳、YAML/JSON IO、runtime-map 解析等底层支持。
 - `context.py`

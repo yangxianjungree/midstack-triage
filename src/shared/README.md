@@ -15,12 +15,13 @@
 - `skill_resolver.py`
   scenario 到 skill / asset 的解析。
 - `mongodb_collection_runtime.py`
-  MongoDB 远程采集目标和容器解析。
+  指向 `src/execution/remote/mongodb_collection_runtime.py` 的兼容导出层；不要在这里继续演进实现。
 
 规则：
 
 - 只要某段实现会被多个命令或多个 phase 复用，就不要继续留在 `tools/`。
 - `shared/` 不承载某个单独 phase 的主流程编排；主流程编排放回 `commands/` 或 `phases/`。
+- execution plane 专属实现优先归属 `src/execution/`；只有跨平面复用时才进入 `shared/`。
 
 约束：
 

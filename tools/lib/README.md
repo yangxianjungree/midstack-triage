@@ -4,7 +4,7 @@
 
 这里当前只保留薄转发模块：
 
-- `mongodb_collection_runtime.py` -> `src/shared/mongodb_collection_runtime.py`
+- `mongodb_collection_runtime.py` -> `src/execution/remote/mongodb_collection_runtime.py`
 - `patch_merge.py` -> `src/shared/patch_merge.py`
 - `scenario_router.py` -> `src/shared/scenario_router.py`
 - `skill_resolver.py` -> `src/shared/skill_resolver.py`

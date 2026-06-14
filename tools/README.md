@@ -35,6 +35,8 @@
 ## 放置规则
 
 - 只要代码已经不是“单脚本专用 helper”，就优先迁到 `src/`。
+- 如果代码需要进入 Claude/Cursor 等 agent 插件安装后的 runtime，就应该放到 `src/` 对应模块，而不是继续堆在 `tools/`。
 - `tools/` 下脚本可以 `import src/*`，但不要反过来让 `src/` 依赖 `tools/`。
+- 测试、校验、回放、生成、迁移等工程逻辑继续放在 `tools/` 或 `tests/`，不要因为“顺手复用”把它们塞进 `src/`。
 - 生成输出默认写到 `.local/` 或临时目录，不要回写仓库 fixture。
 - 新增 `tools/*` 子目录时，应同时补一个 README 说明用途和边界。

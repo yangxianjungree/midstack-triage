@@ -24,7 +24,7 @@
 正式实现约束：
 
 - 新代码优先写入 `src/phases/phase4/multitrack/`
-- `src/phase4_multitrack/` 只保留兼容导入层，不再新增逻辑
+- 不再保留 `src/phases/phase4/` 之外的平行 Phase 4 实现目录
 
 配套内容分层如下：
 

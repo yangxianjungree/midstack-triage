@@ -40,6 +40,11 @@ plugins/
   validators, plus `domains/`, `core/`, and `scenarios/` for knowledge/runtime
   assets.
 
+`src/` is the authoritative home for runtime implementation that agents may
+need after installation. If code is expected to be bundled into a plugin
+runtime payload or executed through an adapter as part of live triage, it
+belongs under `src/` rather than `tools/`, `tests/`, or documentation trees.
+
 ## Claude Directory Contract
 
 `plugins/claude/` is intentionally split by responsibility:
@@ -60,6 +65,10 @@ plugins/
 Do not place unrelated agent files, ad hoc experiments, or workspace-specific
 projections into `plugins/claude/`. If a file does not belong to the manifest,
 command surface, bundled runtime, or installer flow, it is in the wrong place.
+
+Do not move test-only helpers, repository validators, replay scripts, or other
+engineering-only code into `src/` just because Claude bundles `src/`. `src/`
+must stay limited to runtime implementation modules.
 
 ## Source Vs Projection
 

@@ -108,14 +108,14 @@
 - 第 4 段以 Agent 为主，负责多假设推理、验证动作生成和阶段性结论整理
 - 排障结果以结构化记录方式沉淀，便于后续继续分析和知识回灌
 
-第 4 段多轨推理模块当前实现位于 `src/phases/phase4/multitrack/`，并通过 `src/phases/phase4/reasoning.py` 暴露阶段入口；旧的 `src/phase4_multitrack/` 仅保留兼容导入层。集成说明见 [docs/project/phase4-multitrack-integration.md](docs/project/phase4-multitrack-integration.md)，设计过程文档保留在 `docs/proposals/2026-06-12-phase4-reasoning-model/`。
+第 4 段多轨推理模块当前实现位于 `src/phases/phase4/multitrack/`，并通过 `src/phases/phase4/reasoning.py` 暴露阶段入口。集成说明见 [docs/project/phase4-multitrack-integration.md](docs/project/phase4-multitrack-integration.md)，设计过程文档保留在 `docs/proposals/2026-06-12-phase4-reasoning-model/`。
 
 ## 仓库结构
 
 当前仓库按“共性层 + 领域层 + 场景层”组织：
 
 - `docs/`：架构原则、资产规范、接口约定
-- `src/`：可复用运行时代码；当前按 `commands/`、`phases/`、`shared/` 划分正式实现
+- `src/`：插件 runtime 会打包的正式实现；当前按 `commands/`、`phases/`、`shared/` 划分
 - `core/`：模板、通用分类、共享诊断能力
 - `scenarios/`：跨中间件的标准场景定义
 - `domains/`：按具体中间件划分的专属资产
@@ -127,8 +127,9 @@
 结构原则如下：
 
 - 需要被多个入口复用、或者需要被插件 bundle 一起打包的正式实现，优先放 `src/`
+- `src/` 只放运行时实现，不放测试、回放、校验、生成、导入或讨论类工程内容
 - `tools/` 负责命令入口和工程脚本，不再长期承载膨胀的核心实现
-- `src/midstack_runtime/`、`src/phase4_multitrack/`、`tools/lib/` 当前都只保留兼容 shim，不再新增正式逻辑
+- `src/midstack_runtime/`、`tools/lib/` 当前都只保留兼容 shim，不再新增正式逻辑
 - `scenarios/` 只定义场景，不存产品专属 runbook
 - `domains/<product>/` 只存具体中间件资产
 - runbook 只存一份，物理上按组件组织，逻辑上按场景检索

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "midstack",
+  "version": "0.2.4",
+  "description": "MongoDB middleware incident triage with Midstack local runtime and multi-track reasoning.",
+  "author": {
+    "name": "Midstack Triage"
+  },
+  "commands": "./commands"
+}

@@ -108,6 +108,8 @@
 - 第 4 段以 Agent 为主，负责多假设推理、验证动作生成和阶段性结论整理
 - 排障结果以结构化记录方式沉淀，便于后续继续分析和知识回灌
 
+第 4 段多轨推理模块的代码位于 `src/phase4_multitrack/`，集成说明见 [docs/project/phase4-multitrack-integration.md](docs/project/phase4-multitrack-integration.md)，设计过程文档保留在 `docs/proposals/2026-06-12-phase4-reasoning-model/`。
+
 ## 仓库结构
 
 当前仓库按“共性层 + 领域层 + 场景层”组织：

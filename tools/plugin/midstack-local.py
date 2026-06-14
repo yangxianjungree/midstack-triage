@@ -16,8 +16,11 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 LIB_DIR = ROOT / "tools" / "lib"
+SRC_DIR = ROOT / "src"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 from patch_merge import apply_script_output  # noqa: E402
 from scenario_router import infer_scenario  # noqa: E402
@@ -774,10 +777,13 @@ def command_start(args: argparse.Namespace) -> int:
         )
     output = adapter_output("start", incident_id, args.middleware, status, "local incident %s is %s" % (incident_id, status), output_dir)
     if status == "ready":
-        output["next_actions"] = ["run analyse with --incident-dir %s" % output_dir]
         if object_inventory.get("namespace_source") == "auto_discovered":
             output["summary"] = "%s; namespace auto-discovered as %s" % (output["summary"], object_inventory.get("selected_namespace"))
-            output["user_message"] = output["summary"]
+        output["next_actions"] = [
+            "run /midstack:analyse",
+            "or run /midstack:analyse %s" % incident_id,
+        ]
+        output["user_message"] = "%s; next run /midstack:analyse" % output["summary"]
     else:
         output["blocking_items"] = blocking_items
         output["warnings"].append("incident is blocked until required input and remote validation pass")
@@ -2109,6 +2115,15 @@ def command_analyse(args: argparse.Namespace) -> int:
             )
             collection_report["updated_at"] = now_iso()
             write_yaml(output_dir / "collection_report.yaml", collection_report)
+
+    # Phase 4: Multi-track reasoning
+    try:
+        from phase4_multitrack.cli_integration import run_phase4_analysis
+        phase4_result = run_phase4_analysis(output_dir)
+        print("Phase 4 reasoning completed: %d rounds" % phase4_result["total_rounds"], file=sys.stderr)
+    except Exception as exc:
+        print("Phase 4 warning: %s (falling back to legacy analyse)" % exc, file=sys.stderr)
+
     analysis_file = output_dir / "analysis.yaml"
     analyse_script = ROOT / "tools" / "analyse" / ("%s-analyse.py" % middleware)
     if not analyse_script.exists():

@@ -95,7 +95,7 @@ python3 tools/plugin/midstack-local.py review \
 
 当前限制：
 
-- 本地插件原型当前通过 `tools/remote-executor/mongodb-executor.py` 调度真实只读采集
+- 本地插件原型当前通过 `src/execution/remote/executor.py` 调度真实只读采集
 - 可消费已完成的 remote smoke 结果目录
 - 可通过兼容保留的 remote smoke 入口调度同一执行器
 - 当前 remote executor 已按 `script-runtime-map` 查找脚本，并为每个脚本执行生成 `remote-executor-request.yaml` / `remote-executor-result.yaml`

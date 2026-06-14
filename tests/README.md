@@ -12,7 +12,8 @@
 目录：
 
 - `fixtures/`：可离线回放的 incident 样例
-- `phases/phase1/`：第 1/2 段启动与盘点测试
+- `execution/remote/`：execution plane 远端接入与 transport 测试
+- `phases/phase2/`：第 2 段环境盘点测试
 - `phases/phase3/`：第 3 段采集与信号治理测试
 - `phases/phase4/multitrack/`：第 4 段多轨推理的专属模块测试
 - `phases/phase5/`：第 5 段 finalize / review 测试

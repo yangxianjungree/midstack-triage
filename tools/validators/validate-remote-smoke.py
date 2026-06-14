@@ -22,11 +22,11 @@ from phases.phase3.collection import directed_recollection_script_ids  # noqa: E
 
 
 def load_remote_smoke_module() -> Any:
-    return importlib.reload(importlib.import_module("phases.phase3.remote_executor"))
+    return importlib.reload(importlib.import_module("execution.remote.executor"))
 
 
 def validate_multiline_ssh_quoting() -> None:
-    module = load_remote_smoke_module()
+    module = importlib.reload(importlib.import_module("execution.remote.access"))
     captured: Dict[str, Any] = {}
 
     def fake_ssh_base(access: Dict[str, Any]) -> Any:

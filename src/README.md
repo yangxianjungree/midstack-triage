@@ -17,18 +17,31 @@
 - 测试代码、校验脚本、回放工具、导入/生成工具、讨论文档都不要放进 `src/`。
 - `src/` 中的模块默认要满足“可被插件 bundle 打包消费”，不要夹杂只服务仓库工程治理的一次性内容。
 
+## 运行拓扑
+
+`src/` 同时表达两个维度：
+
+- control plane
+  `commands/`、`phases/`、`shared/` 中的排障编排、推理、报告与状态管理。
+- execution plane
+  `execution/` 中的远端接入、脚本投放、远程执行、结果回收。
+
+phase 目录描述“排障流程”，execution 目录描述“运行拓扑中的远端执行能力”。两者都属于正式 runtime，但不要混放。
+
 ## 当前模块方向
 
 - `commands/`
-  slash 命令的正式实现入口。
+  control plane 的 slash 命令正式入口。
 - `phases/`
-  按排障 5 段主流程拆分的阶段实现；每个 phase 优先落成独立目录。
+  control plane 的排障 5 段流程实现；每个 phase 优先落成独立目录。
+- `execution/`
+  execution plane 的远端接入与执行实现。
 - `shared/`
   跨命令、跨 phase 复用的正式运行时能力。
 - `phases/phase4/`
   第 4 段推理的正式目录；`multitrack/` 放多轨推理底层实现。
-- `phases/phase3/remote_executor.py`
-  第 3 段远程执行器正式实现。
+- `execution/remote/`
+  控制端连接 jump host / 故障环境的远端执行能力。
 - `phases/phase4/rule_drafts/`
   第 4 段规则保底分析器正式实现。
 
@@ -44,10 +57,10 @@
   - `phases/phase1/startup.py`
   - `phases/phase2/inventory.py`
   - `phases/phase3/collection.py`
-  - `phases/phase3/remote_executor.py`
   - `phases/phase4/reasoning.py`
   - `phases/phase4/rule_drafts/*.py`
   - `phases/phase5/finalize.py|review.py`
+  - `execution/remote/access.py|executor.py`
   - `shared/workspace.py|analysis_runtime.py`
   - `shared/patch_merge.py|scenario_router.py|skill_resolver.py|mongodb_collection_runtime.py`
 

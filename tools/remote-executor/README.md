@@ -4,7 +4,7 @@
 
 当前：
 
-- `mongodb-executor.py` 是 `src/phases/phase3/remote_executor.py` 的薄壳入口
+- `mongodb-executor.py` 是 `src/execution/remote/executor.py` 的薄壳入口
 - 负责 capability checks、脚本投放、远程运行、结果回收
 - 通过 `script-runtime-map` 解析插件运行时脚本路径
 - 为每个脚本执行生成 `remote-executor-request.yaml` 和 `remote-executor-result.yaml`
@@ -19,4 +19,4 @@
 兼容关系：
 
 - `tools/remote-smoke/mongodb-smoke.py` 继续保留为 smoke CLI 包装入口
-- 本地插件 analyse 仍可调用本目录下的脚本，但正式实现已迁入 `src/phases/phase3/remote_executor.py`
+- 本地插件 analyse 仍可调用本目录下的脚本，但正式实现已迁入 `src/execution/remote/executor.py`

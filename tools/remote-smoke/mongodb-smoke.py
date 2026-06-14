@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def main() -> int:
-    module_path = ROOT / "tools" / "remote-executor" / "mongodb-executor.py"
+    module_path = ROOT / "src" / "execution" / "remote" / "executor.py"
     globals_dict = runpy.run_path(str(module_path), run_name="__main__")
     return int(globals_dict.get("__return_code__", 0))
 

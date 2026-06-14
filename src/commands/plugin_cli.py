@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import argparse
+
+from execution.remote.access import validate_remote_environment
 from commands import analyse as analyse_command
 from commands import finalize as finalize_command
 from commands import review as review_command
 from commands import start as start_command
-from phases.phase1.startup import validate_remote_environment
 from phases.phase2.inventory import discover_mongodb_inventory
 from phases.phase3.collection import (
     apply_scenario_routing_if_needed,

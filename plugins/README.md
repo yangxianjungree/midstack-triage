@@ -45,6 +45,15 @@ need after installation. If code is expected to be bundled into a plugin
 runtime payload or executed through an adapter as part of live triage, it
 belongs under `src/` rather than `tools/`, `tests/`, or documentation trees.
 
+Within `src/`, distinguish the two runtime planes:
+
+- control plane: `src/commands/`, `src/phases/`, `src/shared/`
+- execution plane: `src/execution/`
+
+The plugin bundles both planes. The control plane runs in the local agent
+runtime; the execution plane reaches out to jump hosts or fault domains and
+stages the packaged scripts there.
+
 ## Claude Directory Contract
 
 `plugins/claude/` is intentionally split by responsibility:

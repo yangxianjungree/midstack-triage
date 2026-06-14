@@ -16,7 +16,7 @@
 - `plugin/`
   本地 CLI 适配层；`midstack-local.py` 是薄启动壳，正式调度在 `src/commands/plugin_cli.py`。
 - `remote-executor/`
-  真实远程采集执行器的兼容 CLI 壳；正式实现已迁入 `src/phases/phase3/remote_executor.py`。
+  真实远程采集执行器的兼容 CLI 壳；正式实现已迁入 `src/execution/remote/executor.py`。
 - `remote-smoke/`
   兼容保留的 smoke CLI 包装层。
 - `analyse/`
@@ -40,3 +40,4 @@
 - 测试、校验、回放、生成、迁移等工程逻辑继续放在 `tools/` 或 `tests/`，不要因为“顺手复用”把它们塞进 `src/`。
 - 生成输出默认写到 `.local/` 或临时目录，不要回写仓库 fixture。
 - 新增 `tools/*` 子目录时，应同时补一个 README 说明用途和边界。
+- 如果某段代码表达的是 execution plane 能力，优先落在 `src/execution/`，再由 `tools/` 提供 CLI 壳。

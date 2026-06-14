@@ -2,13 +2,10 @@
 
 import argparse
 import json
-import os
 import posixpath
-import signal
 import shlex
 import shutil
 import subprocess
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -18,34 +15,13 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[4]
 
+from execution.remote.access import run_ssh, scp_from, scp_to
 from shared import mongodb_collection_runtime as mcr
 DEFAULT_LOCAL_OUTPUT = ROOT / ".local" / "remote-runs"
 DEFAULT_REMOTE_ROOT = "/tmp/midstack-triage"
 DEFAULT_RUNTIME_MAP = ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
 DEFAULT_MANIFEST = ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml"
 DEFAULT_PLUGIN_NAME = "midstack-triage"
-REMOTE_COMMAND_TIMEOUT_EXIT = 124
-
-
-SSH_OPTIONS = [
-    "-o",
-    "StrictHostKeyChecking=no",
-    "-o",
-    "UserKnownHostsFile=/dev/null",
-    "-o",
-    "ConnectTimeout=8",
-    "-o",
-    "ServerAliveInterval=5",
-    "-o",
-    "ServerAliveCountMax=2",
-    "-o",
-    "PreferredAuthentications=password,keyboard-interactive",
-    "-o",
-    "PubkeyAuthentication=no",
-    "-o",
-    "NumberOfPasswordPrompts=1",
-]
-
 BLOCKED_ERROR_CODES = {
     "missing_sshpass",
     "ssh_auth_failed",
@@ -611,82 +587,6 @@ def validate_executor_capabilities(access: Dict[str, Any]) -> Tuple[bool, List[D
         return False, checks, {"code": "kubectl_exec_unavailable", "message": exec_proc.stdout.strip() or "kubectl exec is not permitted"}
     checks.append(capability_result("kubectl_exec", "success", "kubectl exec capability is available"))
     return True, checks, {"code": "", "message": ""}
-
-
-def ssh_base(access: Dict[str, Any]) -> Tuple[List[str], Dict[str, str]]:
-    env = os.environ.copy()
-    env["SSHPASS"] = str(access["password"])
-    target = "%s@%s" % (access["username"], access["primary_ip"])
-    base = [
-        "sshpass",
-        "-e",
-        "ssh",
-        *SSH_OPTIONS,
-        "-p",
-        str(access.get("port", 22)),
-        target,
-    ]
-    return base, env
-
-
-def scp_base(access: Dict[str, Any]) -> Tuple[List[str], Dict[str, str], str]:
-    env = os.environ.copy()
-    env["SSHPASS"] = str(access["password"])
-    target_prefix = "%s@%s:" % (access["username"], access["primary_ip"])
-    base = [
-        "sshpass",
-        "-e",
-        "scp",
-        "-O",
-        *SSH_OPTIONS,
-        "-P",
-        str(access.get("port", 22)),
-    ]
-    return base, env, target_prefix
-
-
-def run_process(command: List[str], env: Dict[str, str], timeout: int) -> subprocess.CompletedProcess:
-    proc = subprocess.Popen(
-        command,
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-        start_new_session=True,
-    )
-    try:
-        stdout, stderr = proc.communicate(timeout=timeout)
-        return subprocess.CompletedProcess(command, proc.returncode, stdout, stderr)
-    except subprocess.TimeoutExpired:
-        try:
-            os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        stdout, stderr = proc.communicate()
-        message = "command timed out after %ss: %s" % (timeout, " ".join(command[:4]))
-        return subprocess.CompletedProcess(command, REMOTE_COMMAND_TIMEOUT_EXIT, stdout or "", ((stderr or "") + "\n" + message).strip())
-
-
-def run_ssh(access: Dict[str, Any], remote_script: str, timeout: int = 60) -> subprocess.CompletedProcess:
-    base, env = ssh_base(access)
-    return run_process(base + ["bash -lc %s" % shlex.quote(remote_script)], env, timeout)
-
-
-def scp_to(access: Dict[str, Any], local_path: Path, remote_path: str) -> None:
-    base, env, target_prefix = scp_base(access)
-    proc = run_process(base + [str(local_path), target_prefix + remote_path], env, 60)
-    if proc.returncode != 0:
-        raise RuntimeError("scp_to failed for %s: %s" % (local_path, proc.stderr.strip()))
-
-
-def scp_from(access: Dict[str, Any], remote_path: str, local_path: Path, recursive: bool = False) -> None:
-    base, env, target_prefix = scp_base(access)
-    cmd = base[:]
-    if recursive:
-        cmd.append("-r")
-    proc = run_process(cmd + [target_prefix + remote_path, str(local_path)], env, 60)
-    if proc.returncode != 0:
-        raise RuntimeError("scp_from failed for %s: %s" % (remote_path, proc.stderr.strip()))
 
 
 def write_json(path: Path, payload: Dict[str, Any]) -> None:

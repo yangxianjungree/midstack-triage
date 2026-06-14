@@ -98,6 +98,16 @@ The workspace state file remains only for project-local output settings such as
 `.local/incidents`, the sandbox-local marketplace root, and installed version
 bookkeeping.
 
+The bundled runtime itself is dual-plane:
+
+- control plane
+  slash command handling, incident orchestration, phase flow, reasoning, and reporting
+- execution plane
+  SSH/SSHPass remote access, capability checks, script staging, remote execution, and artifact retrieval
+
+For Claude, both planes are bundled into `${CLAUDE_PLUGIN_ROOT}/runtime/src/...`.
+Only the remote target environment sits outside the plugin payload.
+
 ## Dependency Boundary
 
 The installed Claude plugin is self-contained in one specific sense: the

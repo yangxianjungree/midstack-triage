@@ -8,7 +8,7 @@ SRC_DIR = Path(__file__).resolve().parents[2] / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from phases.phase3.remote_executor import *  # noqa: F401,F403
+from execution.remote.executor import *  # noqa: F401,F403
 
 
 if __name__ == "__main__":

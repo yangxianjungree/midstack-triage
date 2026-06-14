@@ -2,7 +2,7 @@
 
 本目录存放用于真实远程环境验证脚本资产的只读 smoke test 工具。
 
-当前 `mongodb-smoke.py` 作为兼容保留的 smoke 入口，实际执行本体位于 `src/phases/phase3/remote_executor.py`，`tools/remote-executor/mongodb-executor.py` 只保留薄壳。
+当前 `mongodb-smoke.py` 作为兼容保留的 smoke 入口，实际执行本体位于 `src/execution/remote/executor.py`，`tools/remote-executor/mongodb-executor.py` 只保留薄壳。
 
 ## MongoDB
 

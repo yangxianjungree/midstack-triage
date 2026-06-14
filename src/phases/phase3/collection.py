@@ -350,7 +350,7 @@ def run_remote_smoke(args, output_dir: Path, script_ids: List[str] = None) -> Pa
     output_dir.mkdir(parents=True, exist_ok=True)
     command = [
         sys.executable,
-        str(Path(__file__).resolve().parents[3] / "tools" / "remote-executor" / "mongodb-executor.py"),
+        str(Path(__file__).resolve().parents[2] / "execution" / "remote" / "executor.py"),
         "--config",
         str(resolve_path(args.remote_config)),
         "--output-dir",
@@ -742,4 +742,3 @@ def run_directed_recollection_if_needed(args, output_dir: Path, skill_pool: Opti
     remote_run_dir = run_remote_smoke(args, trace_dir, script_ids)
     merge_remote_run_outputs(remote_run_dir, output_dir)
     return True
-

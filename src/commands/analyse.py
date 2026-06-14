@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from typing import Any, Dict
 
-from phases.phase4.rule_drafts import generate_rule_draft, supported_middlewares
+from phases.phase4.rules import generate_rule_analysis, supported_middlewares
 from shared.workspace import (
     adapter_output,
     add_record_ref_if_exists,
@@ -256,7 +256,7 @@ def run(
     except Exception as exc:
         print("Phase 4 warning: %s (falling back to legacy analyse)" % exc, file=sys.stderr)
     try:
-        analysis = generate_rule_draft(middleware, output_dir)
+        analysis = generate_rule_analysis(middleware, output_dir)
         write_yaml(analysis_file, analysis)
     except Exception as exc:
         if incident_mode and incident_dir is not None and previous_incident_status:

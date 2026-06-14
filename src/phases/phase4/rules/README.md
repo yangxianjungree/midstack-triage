@@ -1,6 +1,6 @@
-# Phase 4 Rule Drafts
+# Phase 4 Rules
 
-`src/phases/phase4/rule_drafts/` 放第 4 段规则保底分析器。
+`src/phases/phase4/rules/` 放第 4 段规则保底分析器。
 
 当前边界：
 

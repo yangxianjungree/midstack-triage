@@ -20,7 +20,7 @@
 - `remote-smoke/`
   兼容保留的 smoke CLI 包装层。
 - `analyse/`
-  MongoDB / Pulsar 规则 analyse runner 的兼容 CLI 壳；正式实现已迁入 `src/phases/phase4/rule_drafts/`。
+  MongoDB / Pulsar 规则 analyse runner 的兼容 CLI 壳；正式实现已迁入 `src/phases/phase4/rules/`。
 - `validators/`
   仓库结构、资产合同和工程回归校验器。
 - `replay/`

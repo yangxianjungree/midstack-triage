@@ -1,7 +1,11 @@
 import importlib.util
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
+
+import yaml
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -209,11 +213,74 @@ def test_check_install_reports_installed_plugin_selfcheck_errors(tmp_path, monke
         raise AssertionError("unexpected command: %r" % (cmd,))
 
     monkeypatch.setattr(module, "run", fake_run)
+    monkeypatch.setattr(module, "run_installed_runtime_smoke", lambda wrapper, target: [])
 
     errors = module.check_install(workspace)
 
     assert "installed plugin selfcheck failed" in errors
     assert "installed plugin selfcheck: missing required local command: sshpass" in errors
+
+
+def test_check_install_reports_installed_runtime_smoke_errors(tmp_path, monkeypatch):
+    module = load_claude_plugin_install()
+    workspace = (tmp_path / "sandbox").resolve()
+    plugin_id = "%s@%s" % (module.PLUGIN_NAME, module.MARKETPLACE_NAME)
+    install_path = (tmp_path / "install").resolve()
+    commands_dir = install_path / "commands"
+    runtime_bin = install_path / "runtime" / "bin"
+    commands_dir.mkdir(parents=True)
+    runtime_bin.mkdir(parents=True)
+
+    for name in module.EXPECTED_COMMANDS:
+        (commands_dir / ("%s.md" % name)).write_text(
+            'Use ${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py\\n',
+            encoding="utf-8",
+        )
+    for marker in module.RUNTIME_MARKER_FILES:
+        path = install_path / marker
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("ok\n", encoding="utf-8")
+    (runtime_bin / "selfcheck.py").write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+
+    workspace_state = workspace / ".claude" / module.WORKSPACE_STATE
+    workspace_state.parent.mkdir(parents=True, exist_ok=True)
+    workspace_state.write_text(
+        json.dumps(
+            {
+                "plugin_version": module.plugin_version(),
+                "marketplace_dir": str(module.workspace_marketplace_dir(workspace)),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(module, "installed_plugin_record", lambda pid, target: {"installPath": str(install_path)} if pid == plugin_id else {})
+
+    class Proc:
+        def __init__(self, returncode: int, stdout: str = "", stderr: str = ""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def fake_run(cmd, cwd):
+        if cmd[:3] == ["claude", "plugin", "validate"]:
+            return Proc(0, "ok")
+        if cmd[:3] == ["claude", "plugin", "list"]:
+            return Proc(0, plugin_id)
+        if cmd[:3] == ["claude", "plugin", "details"]:
+            return Proc(0, "Skills (4)  analyse, review, start, validate")
+        if cmd[:4] == ["claude", "plugin", "marketplace", "list"]:
+            return Proc(0, str(module.workspace_marketplace_dir(workspace)))
+        if cmd[0] == sys.executable and cmd[1] == str(runtime_bin / "selfcheck.py"):
+            return Proc(0, json.dumps({"dependency_boundary": {"source_repo_required": False}, "errors": []}))
+        raise AssertionError("unexpected command: %r" % (cmd,))
+
+    monkeypatch.setattr(module, "run", fake_run)
+    monkeypatch.setattr(module, "run_installed_runtime_smoke", lambda wrapper, target: ["installed plugin analyse smoke failed: traceback"])
+
+    errors = module.check_install(workspace)
+
+    assert "installed plugin analyse smoke failed: traceback" in errors
 
 
 def test_uninstall_legacy_plugins_uses_local_scope(tmp_path, monkeypatch):
@@ -291,3 +358,108 @@ def test_write_workspace_state_uses_bundled_runtime_mode(tmp_path):
     assert "engine_root" not in state
     assert "plugin_source" not in state
     assert state["marketplace_dir"] == str(module.workspace_marketplace_dir(workspace))
+
+
+def test_staged_runtime_analyse_smoke_handles_blocked_remote_collection(tmp_path):
+    module = load_claude_plugin_install()
+    workspace = (tmp_path / "sandbox").resolve()
+    workspace.mkdir(parents=True, exist_ok=True)
+    plugin_dir = module.marketplace_plugin_dir(workspace)
+    incident_dir = workspace / ".local" / "incidents" / "mongodb-ready-incident"
+    remote_runs_dir = workspace / ".local" / "remote-runs"
+    fake_bin = workspace / ".tmp-bin"
+    fake_sshpass = fake_bin / "sshpass"
+
+    module.copy_plugin_source(plugin_dir)
+    module.stage_runtime_bundle(plugin_dir)
+    module.validate_runtime_bundle(plugin_dir)
+
+    incident_dir.mkdir(parents=True, exist_ok=True)
+    remote_runs_dir.mkdir(parents=True, exist_ok=True)
+    fake_bin.mkdir(parents=True, exist_ok=True)
+
+    fake_sshpass.write_text(
+        "#!/bin/sh\n"
+        "echo 'ssh: connect to host 192.0.2.10 port 22: Connection refused' >&2\n"
+        "exit 255\n",
+        encoding="utf-8",
+    )
+    fake_sshpass.chmod(0o755)
+
+    (incident_dir / "input.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "incident_id": "mongodb-ready-incident",
+                "middleware": "mongodb",
+                "namespace": "psmdb-test",
+                "cluster_id": "",
+                "customer_clue": "MongoDB pod is not ready.",
+                "scenario": "unknown",
+            },
+            sort_keys=False,
+            allow_unicode=False,
+        ),
+        encoding="utf-8",
+    )
+    (incident_dir / "meta.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "incident_id": "mongodb-ready-incident",
+                "middleware": "mongodb",
+                "status": "ready",
+                "current_command": "start",
+            },
+            sort_keys=False,
+            allow_unicode=False,
+        ),
+        encoding="utf-8",
+    )
+    (incident_dir / "remote-config.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "name": "mongodb-ready-incident-remote",
+                "purpose": "incident remote Kubernetes environment",
+                "access": {
+                    "candidate_ips": ["192.0.2.10"],
+                    "primary_ip": "192.0.2.10",
+                    "username": "root",
+                    "password": "secret",
+                    "port": 22,
+                },
+            },
+            sort_keys=False,
+            allow_unicode=False,
+        ),
+        encoding="utf-8",
+    )
+
+    env = dict(os.environ)
+    env["MIDSTACK_TRIAGE_WORKSPACE"] = str(workspace)
+    env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(plugin_dir / "runtime" / "bin" / "midstack-local.py"),
+            "analyse",
+            "--incident-dir",
+            str(incident_dir),
+        ],
+        cwd=str(workspace),
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
+    assert proc.returncode == 0
+    assert "Traceback" not in proc.stdout
+    assert "Traceback" not in proc.stderr
+
+    adapter = yaml.safe_load((incident_dir / "adapter-output.yaml").read_text(encoding="utf-8"))
+    assert adapter["status"] == "blocked"
+    assert adapter["blocking_items"][0]["code"] == "ssh_unreachable"
+    assert "rerun /midstack:analyse" in adapter["next_actions"][0]
+
+    remote_run = yaml.safe_load((incident_dir / "remote-executor-run.yaml").read_text(encoding="utf-8"))
+    assert remote_run["status"] == "blocked"
+    assert remote_run["error"]["code"] == "ssh_unreachable"

@@ -4,9 +4,11 @@
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
@@ -358,6 +360,114 @@ def installed_plugin_record(plugin_id: str, workspace: Path) -> Dict[str, Any]:
     return {}
 
 
+def run_installed_runtime_smoke(wrapper_path: Path, workspace: Path) -> List[str]:
+    errors: List[str] = []
+    if not wrapper_path.exists():
+        return ["installed plugin runtime wrapper is missing: %s" % wrapper_path]
+
+    claude_dir = workspace / ".claude"
+    claude_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="midstack-runtime-smoke-", dir=str(claude_dir)) as tmp:
+        smoke_root = Path(tmp)
+        incident_dir = smoke_root / ".local" / "incidents" / "mongodb-runtime-smoke"
+        remote_runs_dir = smoke_root / ".local" / "remote-runs"
+        fake_bin_dir = smoke_root / ".tmp-bin"
+        fake_sshpass = fake_bin_dir / "sshpass"
+
+        incident_dir.mkdir(parents=True, exist_ok=True)
+        remote_runs_dir.mkdir(parents=True, exist_ok=True)
+        fake_bin_dir.mkdir(parents=True, exist_ok=True)
+        fake_sshpass.write_text(
+            "#!/bin/sh\n"
+            "echo 'ssh: connect to host 192.0.2.10 port 22: Connection refused' >&2\n"
+            "exit 255\n",
+            encoding="utf-8",
+        )
+        fake_sshpass.chmod(0o755)
+
+        write_json(
+            incident_dir / "input.yaml",
+            {
+                "incident_id": "mongodb-runtime-smoke",
+                "middleware": "mongodb",
+                "namespace": "psmdb-test",
+                "cluster_id": "",
+                "customer_clue": "runtime smoke check",
+                "scenario": "unknown",
+            },
+        )
+        write_json(
+            incident_dir / "meta.yaml",
+            {
+                "incident_id": "mongodb-runtime-smoke",
+                "middleware": "mongodb",
+                "status": "ready",
+                "current_command": "start",
+            },
+        )
+        write_json(
+            incident_dir / "remote-config.yaml",
+            {
+                "name": "mongodb-runtime-smoke-remote",
+                "purpose": "runtime smoke check",
+                "access": {
+                    "candidate_ips": ["192.0.2.10"],
+                    "primary_ip": "192.0.2.10",
+                    "username": "root",
+                    "password": "secret",
+                    "port": 22,
+                },
+            },
+        )
+
+        env = dict(os.environ)
+        env["MIDSTACK_TRIAGE_WORKSPACE"] = str(smoke_root)
+        env["PATH"] = str(fake_bin_dir) + os.pathsep + env.get("PATH", "")
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(wrapper_path),
+                "analyse",
+                "--incident-dir",
+                str(incident_dir),
+                "--remote-output-dir",
+                str(remote_runs_dir),
+            ],
+            cwd=str(smoke_root),
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if proc.returncode != 0:
+            detail = proc.stderr.strip() or proc.stdout.strip() or "unknown error"
+            errors.append("installed plugin analyse smoke failed: %s" % detail)
+            return errors
+        if "Traceback" in proc.stdout or "Traceback" in proc.stderr:
+            errors.append("installed plugin analyse smoke raised a traceback")
+            return errors
+
+        adapter_path = incident_dir / "adapter-output.yaml"
+        if not adapter_path.exists():
+            errors.append("installed plugin analyse smoke did not write adapter-output.yaml")
+            return errors
+        adapter_text = adapter_path.read_text(encoding="utf-8")
+        if "status: blocked" not in adapter_text:
+            errors.append("installed plugin analyse smoke did not produce blocked adapter output")
+        if "ssh_unreachable" not in adapter_text:
+            errors.append("installed plugin analyse smoke did not report ssh_unreachable")
+
+        run_path = incident_dir / "remote-executor-run.yaml"
+        if not run_path.exists():
+            errors.append("installed plugin analyse smoke did not persist remote-executor-run.yaml")
+        else:
+            run_text = run_path.read_text(encoding="utf-8")
+            if "status: blocked" not in run_text or "ssh_unreachable" not in run_text:
+                errors.append("installed plugin analyse smoke did not preserve blocked remote executor status")
+
+    return errors
+
+
 def check_install(workspace: Path) -> List[str]:
     errors: List[str] = []
     plugin_id = "%s@%s" % (PLUGIN_NAME, MARKETPLACE_NAME)
@@ -446,6 +556,9 @@ def check_install(workspace: Path) -> List[str]:
                 errors.append("installed plugin selfcheck reports an unexpected source repo dependency")
             for item in selfcheck_payload.get("errors") or []:
                 errors.append("installed plugin selfcheck: %s" % item)
+
+    wrapper_path = install_path / "runtime" / "bin" / "midstack-local.py"
+    errors.extend(run_installed_runtime_smoke(wrapper_path, workspace))
 
     marketplace_info = run(["claude", "plugin", "marketplace", "list"], workspace)
     if marketplace_info.returncode != 0:

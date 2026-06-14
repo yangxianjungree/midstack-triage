@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .analysis_common import analysis_text, as_list
 from .workspace import load_yaml, now_iso, write_yaml
 
 
@@ -13,31 +14,6 @@ ANALYSIS_RULES_FALLBACK_FILENAME = "analysis.rules-fallback.yaml"
 LEGACY_ANALYSIS_RULE_DRAFT_FILENAME = "analysis.rule-draft.yaml"
 ANALYSIS_RULE_DRAFT_FILENAME = ANALYSIS_RULES_FALLBACK_FILENAME
 AGENT_REASONING_TASK_FILENAME = "agent-reasoning-task.md"
-LEVEL_VALUE = {"low": 1, "medium": 2, "high": 3}
-
-
-def as_list(value: Any) -> List[Any]:
-    return value if isinstance(value, list) else []
-
-
-def flatten_strings(value: Any) -> List[str]:
-    if isinstance(value, str):
-        return [value]
-    if isinstance(value, dict):
-        result: List[str] = []
-        for item in value.values():
-            result.extend(flatten_strings(item))
-        return result
-    if isinstance(value, list):
-        result = []
-        for item in value:
-            result.extend(flatten_strings(item))
-        return result
-    return []
-
-
-def analysis_text(analysis: Dict[str, Any]) -> str:
-    return "\n".join(flatten_strings(analysis)).lower()
 
 
 def analysis_summary_text(analysis: Dict[str, Any]) -> str:

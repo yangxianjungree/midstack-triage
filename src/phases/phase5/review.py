@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
+from shared.analysis_common import analysis_text, flatten_strings
 from shared.workspace import (
     adapter_output,
     load_incident_meta,
@@ -52,26 +53,6 @@ def downgrade_level(level: str, target: str) -> str:
 def append_reason(item: Dict[str, str], reason: str) -> None:
     current = str(item.get("reason") or "").strip()
     item["reason"] = ("%s %s" % (current, reason)).strip() if current else reason
-
-
-def flatten_strings(value: Any) -> List[str]:
-    if isinstance(value, str):
-        return [value]
-    if isinstance(value, dict):
-        result: List[str] = []
-        for item in value.values():
-            result.extend(flatten_strings(item))
-        return result
-    if isinstance(value, list):
-        result = []
-        for item in value:
-            result.extend(flatten_strings(item))
-        return result
-    return []
-
-
-def analysis_text(analysis: Dict[str, Any]) -> str:
-    return "\n".join(flatten_strings(analysis)).lower()
 
 
 def conclusion_level(conclusion: Dict[str, Any]) -> str:

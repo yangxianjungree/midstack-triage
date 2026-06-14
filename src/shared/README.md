@@ -6,6 +6,8 @@
 
 - `workspace.py`
   工作区路径、incident marker、adapter-output、文件 I/O 合同。
+- `analysis_common.py`
+  analysis payload 的轻量通用读取辅助，如 `analysis_text()`。
 - `analysis_runtime.py`
   分析结果合同、报告生成、结论 guardrail。
 - `patch_merge.py`

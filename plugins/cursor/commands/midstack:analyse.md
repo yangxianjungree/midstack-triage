@@ -53,7 +53,7 @@ Local remote config:
 - Read `agent-reasoning-task.md` in the incident directory.
 - Read `input.yaml`, `structured_record.yaml`, `signal_bundle.yaml`, and `collection_report.yaml`.
 - Inspect `signal_bundle.log_highlights`, `structured_record.details.dns_checks`, `structured_record.details.pod_terminations`, and any `file_tail` log evidence.
-- Treat `analysis.rule-draft.yaml` as fallback only.
+- Treat `analysis.rules-fallback.yaml` as fallback only.
 - Update `analysis.yaml` and `report.md` with Agent-led multi-hypothesis reasoning, gap classification, source-boundary handling, DNS/file-log validation, and conclusion-depth limits.
 - Classify gaps as `expected_gap` or `critical_gap`.
 - Use `deepest_supported_level` when useful: `phenomenon`, `impact`, `mechanism`, or `root_cause`.

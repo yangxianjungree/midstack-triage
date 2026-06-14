@@ -6,11 +6,11 @@ from pathlib import Path
 
 from shared.analysis_runtime import (
     AGENT_REASONING_TASK_FILENAME,
-    ANALYSIS_RULE_DRAFT_FILENAME,
-    analysis_matches_rule_draft,
+    analysis_matches_rules_fallback,
     analysis_next_action_texts,
     analysis_summary_text,
     apply_analysis_guardrails,
+    find_analysis_rules_fallback_file,
     write_report,
 )
 from shared.workspace import (
@@ -105,13 +105,21 @@ def finalize_analysis(args, normalize_collection_report_gaps) -> int:
     output = adapter_output("analyse", incident_id, middleware, "completed", analysis_summary_text(analysis), incident_dir)
     output["user_message"] = output["summary"]
     add_record_ref_if_exists(output, incident_dir, "analysis", "analysis.yaml", "finalized analysis result")
-    add_record_ref_if_exists(output, incident_dir, "analysis_rule_draft", ANALYSIS_RULE_DRAFT_FILENAME, "rules fallback draft before Agent reasoning refinement")
+    rules_fallback_file = find_analysis_rules_fallback_file(incident_dir)
+    if rules_fallback_file is not None:
+        output["record_refs"].append(
+            {
+                "name": "analysis_rules_fallback",
+                "path": str(rules_fallback_file),
+                "description": "rules fallback analysis before Agent reasoning refinement",
+            }
+        )
     add_record_ref_if_exists(output, incident_dir, "agent_reasoning_task", AGENT_REASONING_TASK_FILENAME, "phase-4/5 Agent reasoning task and output contract")
     add_record_ref_if_exists(output, incident_dir, "report", "report.md", "finalized human-readable report")
     add_record_ref_if_exists(output, incident_dir, "collection_report", "collection_report.yaml", "stage-3 collection summary")
     output["next_actions"] = analysis_next_action_texts(analysis)
-    if analysis_matches_rule_draft(analysis, incident_dir):
-        output["warnings"].append("analysis.yaml still matches the rules draft; no additional Agent reasoning was detected.")
+    if analysis_matches_rules_fallback(analysis, incident_dir):
+        output["warnings"].append("analysis.yaml still matches the rules fallback analysis; no additional Agent reasoning was detected.")
 
     update_incident_meta(incident_dir, {"status": "analysed", "current_command": "analyse"})
     write_current_incident(output_root, incident_dir)

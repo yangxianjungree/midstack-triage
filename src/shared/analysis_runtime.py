@@ -9,7 +9,9 @@ from typing import Any, Dict, List, Optional
 from .workspace import load_yaml, now_iso, write_yaml
 
 
-ANALYSIS_RULE_DRAFT_FILENAME = "analysis.rule-draft.yaml"
+ANALYSIS_RULES_FALLBACK_FILENAME = "analysis.rules-fallback.yaml"
+LEGACY_ANALYSIS_RULE_DRAFT_FILENAME = "analysis.rule-draft.yaml"
+ANALYSIS_RULE_DRAFT_FILENAME = ANALYSIS_RULES_FALLBACK_FILENAME
 AGENT_REASONING_TASK_FILENAME = "agent-reasoning-task.md"
 LEVEL_VALUE = {"low": 1, "medium": 2, "high": 3}
 
@@ -61,14 +63,42 @@ def analysis_next_action_texts(analysis: Dict[str, Any]) -> List[str]:
     return items
 
 
-def analysis_matches_rule_draft(analysis: Dict[str, Any], output_dir: Path) -> bool:
-    rule_draft_file = output_dir / ANALYSIS_RULE_DRAFT_FILENAME
-    if not rule_draft_file.exists():
-        return False
-    try:
-        return analysis == load_yaml(rule_draft_file)
-    except Exception:
-        return False
+def analysis_rules_fallback_candidates(output_dir: Path) -> List[Path]:
+    return [
+        output_dir / ANALYSIS_RULES_FALLBACK_FILENAME,
+        output_dir / LEGACY_ANALYSIS_RULE_DRAFT_FILENAME,
+    ]
+
+
+def find_analysis_rules_fallback_file(output_dir: Path) -> Optional[Path]:
+    for path in analysis_rules_fallback_candidates(output_dir):
+        if path.exists():
+            return path
+    return None
+
+
+def write_analysis_rules_fallback(output_dir: Path, analysis: Dict[str, Any]) -> Path:
+    primary = output_dir / ANALYSIS_RULES_FALLBACK_FILENAME
+    write_yaml(primary, analysis)
+    legacy = output_dir / LEGACY_ANALYSIS_RULE_DRAFT_FILENAME
+    if legacy.exists():
+        write_yaml(legacy, analysis)
+    return primary
+
+
+def analysis_matches_rules_fallback(analysis: Dict[str, Any], output_dir: Path) -> bool:
+    for path in analysis_rules_fallback_candidates(output_dir):
+        if not path.exists():
+            continue
+        try:
+            if analysis == load_yaml(path):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+analysis_matches_rule_draft = analysis_matches_rules_fallback
 
 
 def direct_error_terms_present(analysis: Dict[str, Any]) -> bool:
@@ -228,7 +258,7 @@ def write_agent_reasoning_task(
     output_dir: Path,
     input_data: Dict[str, Any],
     analysis_file: Path,
-    rule_draft_file: Path,
+    rules_fallback_file: Path,
     report_file: Path,
     matched_skills: Optional[List[Dict[str, Any]]] = None,
 ) -> Path:
@@ -246,7 +276,7 @@ def write_agent_reasoning_task(
         "## Goal",
         "",
         "Use the stage-3 evidence package to complete stage-4 reasoning and stage-5 summarization.",
-        "Treat `%s` as a non-authoritative rules draft only." % rule_draft_file.name,
+        "Treat `%s` as a non-authoritative rules fallback only." % rules_fallback_file.name,
         "",
         "## Incident",
         "",
@@ -288,7 +318,7 @@ def write_agent_reasoning_task(
             "- `structured_record.yaml`: structured object, topology, status, and log details.",
             "- `signal_bundle.yaml`: curated abnormal signals, object links, and timeline hints.",
             "- `collection_report.yaml`: collection coverage, failures, and evidence gaps.",
-            "- `%s`: current rules fallback draft for reference only." % rule_draft_file.name,
+            "- `%s`: current rules fallback analysis for reference only." % rules_fallback_file.name,
             "",
             "## Required Output Files",
             "",
@@ -346,4 +376,3 @@ def write_agent_reasoning_task(
     )
     task_file.write_text("\n".join(lines), encoding="utf-8")
     return task_file
-

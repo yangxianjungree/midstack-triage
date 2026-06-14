@@ -22,8 +22,9 @@ from shared.workspace import (
     write_yaml,
 )
 from shared.analysis_runtime import (
-    ANALYSIS_RULE_DRAFT_FILENAME,
+    ANALYSIS_RULES_FALLBACK_FILENAME,
     apply_analysis_guardrails,
+    write_analysis_rules_fallback,
     write_agent_reasoning_task,
     write_report,
 )
@@ -242,7 +243,7 @@ def run(
             {
                 "code": "unsupported_middleware_analyse",
                 "message": summary,
-                "required_user_action": "use a supported middleware or add a Phase 4 rule-draft analyser for %s" % middleware,
+                "required_user_action": "use a supported middleware or add a Phase 4 rules analyser for %s" % middleware,
             }
         ]
         output["next_actions"] = ["use a supported middleware such as %s" % ", ".join(supported)]
@@ -254,7 +255,7 @@ def run(
         phase4_result = run_phase4_analysis(output_dir)
         print("Phase 4 reasoning completed: %d rounds" % phase4_result["total_rounds"], file=sys.stderr)
     except Exception as exc:
-        print("Phase 4 warning: %s (falling back to legacy analyse)" % exc, file=sys.stderr)
+        print("Phase 4 warning: %s (falling back to rules analysis)" % exc, file=sys.stderr)
     try:
         analysis = generate_rule_analysis(middleware, output_dir)
         write_yaml(analysis_file, analysis)
@@ -278,22 +279,21 @@ def run(
     if apply_analysis_guardrails(analysis, collection_report, signal_bundle):
         analysis["updated_at"] = now_iso()
         write_yaml(analysis_file, analysis)
-    rule_draft_file = output_dir / ANALYSIS_RULE_DRAFT_FILENAME
-    write_yaml(rule_draft_file, analysis)
+    rules_fallback_file = write_analysis_rules_fallback(output_dir, analysis)
     report_file = write_report(output_dir, input_data, analysis)
     task_file = write_agent_reasoning_task(
         output_dir,
         input_data,
         analysis_file,
-        rule_draft_file,
+        rules_fallback_file,
         report_file,
         matched_skills=skill_runtime.get("skills") if skill_runtime else None,
     )
     output["record_refs"].append(
         {
-            "name": "analysis_rule_draft",
-            "path": str(rule_draft_file),
-            "description": "rules fallback draft before Agent reasoning refinement",
+            "name": "analysis_rules_fallback",
+            "path": str(rules_fallback_file),
+            "description": "rules fallback analysis before Agent reasoning refinement",
         }
     )
     output["record_refs"].append(
@@ -304,7 +304,7 @@ def run(
         }
     )
     output["record_refs"].append({"name": "report", "path": str(report_file), "description": "generated human-readable report"})
-    output["warnings"].append("analysis.yaml is currently a rules-based fallback draft; Agent reasoning should refine analysis.yaml and report.md.")
+    output["warnings"].append("analysis.yaml is currently seeded from the rules fallback analysis; Agent reasoning should refine analysis.yaml and report.md.")
     output["next_actions"] = [
         "read agent-reasoning-task.md and update analysis.yaml with Agent-led multi-hypothesis reasoning, gap classification, and conclusion ceiling",
         "refresh report.md so it matches the final analysis.yaml conclusion",

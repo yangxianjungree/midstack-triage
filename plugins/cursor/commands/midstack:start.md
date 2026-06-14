@@ -17,7 +17,7 @@ If `start` fails or times out:
 - Do not run `analyse` or `finalize-analysis`.
 - Do not manually SSH to any environment node.
 - Do not read `.cursor/commands/midstack:analyse.md`.
-- Do not read, create, or edit `analysis.yaml`, `analysis.rule-draft.yaml`, `agent-reasoning-task.md`, `report.md`, `signal_bundle.yaml`, or `collection_report.yaml`.
+- Do not read, create, or edit `analysis.yaml`, `analysis.rules-fallback.yaml`, `agent-reasoning-task.md`, `report.md`, `signal_bundle.yaml`, or `collection_report.yaml`.
 - If an incident directory was created, only read `adapter-output.yaml`, `meta.yaml`, `input.yaml`, or `object-inventory.yaml` to report the start status.
 
 Extract fields from the user's natural-language request:

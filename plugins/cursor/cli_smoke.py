@@ -135,13 +135,14 @@ def assert_incident_outputs(
     incident_dir = workspace / incident_relpath
     analysis_file = incident_dir / "analysis.yaml"
     reasoning_task_file = incident_dir / "agent-reasoning-task.md"
-    rule_draft_file = incident_dir / "analysis.rule-draft.yaml"
+    rules_fallback_file = incident_dir / "analysis.rules-fallback.yaml"
+    legacy_rule_draft_file = incident_dir / "analysis.rule-draft.yaml"
     if not analysis_file.exists():
         raise AssertionError("missing analysis.yaml under %s" % incident_relpath)
     if not reasoning_task_file.exists():
         raise AssertionError("missing agent-reasoning-task.md under %s" % incident_relpath)
-    if not rule_draft_file.exists():
-        raise AssertionError("missing analysis.rule-draft.yaml under %s" % incident_relpath)
+    if not rules_fallback_file.exists() and not legacy_rule_draft_file.exists():
+        raise AssertionError("missing analysis.rules-fallback.yaml under %s" % incident_relpath)
     reasoning_task_text = reasoning_task_file.read_text(encoding="utf-8")
     for expected in ("expected_gap", "critical_gap", "deepest_supported_level"):
         if expected not in reasoning_task_text:

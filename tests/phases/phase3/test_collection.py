@@ -4,10 +4,12 @@ from types import SimpleNamespace
 
 import yaml
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 SRC_DIR = ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
+
+FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "mongodb"
 
 from phases import phase3_collection
 
@@ -42,7 +44,7 @@ def test_apply_scenario_routing_sets_unknown_scenario(tmp_path):
             "customer_clue": "mongos connection timeout and connection refused",
         },
     )
-    fixture_root = Path(__file__).resolve().parents[1] / "fixtures" / "mongodb" / "connection-failure-sample"
+    fixture_root = FIXTURE_ROOT / "connection-failure-sample"
     write_yaml(output_dir / "signal_bundle.yaml", yaml.safe_load((fixture_root / "signal_bundle.yaml").read_text(encoding="utf-8")))
     write_yaml(output_dir / "structured_record.yaml", yaml.safe_load((fixture_root / "structured_record.yaml").read_text(encoding="utf-8")))
 

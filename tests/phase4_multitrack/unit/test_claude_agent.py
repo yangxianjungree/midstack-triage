@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import Mock, patch
-from phase4_multitrack.agent_interface import ClaudeAgent
+from phases.phase4.multitrack.agent_interface import ClaudeAgent
 
 
 def test_claude_agent_requires_api_key():

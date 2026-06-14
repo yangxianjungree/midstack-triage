@@ -1,7 +1,7 @@
 """E2E完整流程测试"""
 
 import pytest
-from phase4_multitrack import LeadOrchestrator, L1TemplateMapper
+from phases.phase4.multitrack import LeadOrchestrator, L1TemplateMapper
 
 
 def test_e2e_single_hypothesis_supported(tmp_path, mock_agent_supported):

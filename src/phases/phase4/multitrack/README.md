@@ -53,7 +53,7 @@ Phase R2: 读取验证结果 -> 更新假设状态
 ```python
 from pathlib import Path
 
-from phase4_multitrack import LeadOrchestrator
+from phases.phase4.multitrack import LeadOrchestrator
 
 incident_dir = Path(".local/examples/phase4/basic")
 incident_dir.mkdir(parents=True, exist_ok=True)

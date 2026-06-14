@@ -1,7 +1,7 @@
 """ReasoningBoard单元测试"""
 
 import pytest
-from phase4_multitrack.reasoning_board import ReasoningBoard
+from phases.phase4.multitrack.reasoning_board import ReasoningBoard
 
 
 def test_board_initialization(tmp_path):

@@ -6,7 +6,7 @@ import secrets
 from datetime import datetime
 from typing import Any, Dict
 
-from midstack_runtime import adapter_output, now_iso, path_from_arg, write_current_incident, write_yaml
+from shared.workspace import adapter_output, now_iso, path_from_arg, write_current_incident, write_yaml
 
 
 INCIDENT_ID_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789"

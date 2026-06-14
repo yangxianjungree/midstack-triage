@@ -2,7 +2,7 @@
 
 import pytest
 from pathlib import Path
-from phase4_multitrack.agent_interface import ClaudeAgent
+from phases.phase4.multitrack.agent_interface import ClaudeAgent
 
 
 def test_claude_agent_list_files_tool(tmp_path):

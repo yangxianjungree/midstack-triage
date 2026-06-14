@@ -7,7 +7,7 @@ SRC_DIR = Path(__file__).resolve().parents[2] / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from phase4_multitrack import LeadOrchestrator, L1TemplateMapper
+from phases.phase4.multitrack import LeadOrchestrator, L1TemplateMapper
 
 
 def example_basic_usage():

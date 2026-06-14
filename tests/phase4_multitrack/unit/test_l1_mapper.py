@@ -1,7 +1,7 @@
 """L1TemplateMapper单元测试"""
 
 import pytest
-from phase4_multitrack.l1_mapper import L1TemplateMapper
+from phases.phase4.multitrack.l1_mapper import L1TemplateMapper
 
 
 def test_map_from_symptom_connection_refused():

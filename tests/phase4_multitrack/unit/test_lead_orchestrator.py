@@ -1,7 +1,7 @@
 """LeadOrchestrator单元测试"""
 
 import pytest
-from phase4_multitrack import LeadOrchestrator, ReasoningBoard
+from phases.phase4.multitrack import LeadOrchestrator, ReasoningBoard
 
 
 def test_orchestrator_initialization(tmp_path):

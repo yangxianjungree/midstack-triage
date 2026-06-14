@@ -1,7 +1,7 @@
 """HypothesisTrack单元测试"""
 
 import pytest
-from phase4_multitrack import HypothesisTrack, ReasoningBoard
+from phases.phase4.multitrack import HypothesisTrack, ReasoningBoard
 
 
 def test_track_initialization(tmp_path):

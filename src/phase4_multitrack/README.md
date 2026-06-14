@@ -46,7 +46,7 @@ Phase R2: 读取验证结果 -> 更新假设状态
 ```python
 from pathlib import Path
 
-from phase4_multitrack import LeadOrchestrator
+from phases.phase4.multitrack import LeadOrchestrator
 
 incident_dir = Path(".local/examples/phase4/basic")
 incident_dir.mkdir(parents=True, exist_ok=True)
@@ -56,6 +56,8 @@ result = LeadOrchestrator(incident_dir, hypotheses).run()
 
 print(result["total_rounds"])
 ```
+
+如果只是仓库内部新代码、测试或示例，请直接导入正式路径 `phases.phase4.multitrack`，不要继续扩大对这个兼容目录的依赖。
 
 ## 测试入口
 

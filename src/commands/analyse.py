@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-from midstack_runtime import (
+from shared.workspace import (
     adapter_output,
     add_record_ref_if_exists,
     copy_if_exists,
@@ -22,7 +22,7 @@ from midstack_runtime import (
     write_current_incident,
     write_yaml,
 )
-from midstack_runtime.analysis import (
+from shared.analysis_runtime import (
     ANALYSIS_RULE_DRAFT_FILENAME,
     apply_analysis_guardrails,
     write_agent_reasoning_task,

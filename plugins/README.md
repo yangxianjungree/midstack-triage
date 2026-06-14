@@ -33,9 +33,12 @@ plugins/
   `${CLAUDE_PLUGIN_ROOT}` and must not assume the source repository checkout is
   available from the sandbox.
 - `plugins/cursor/` is the Cursor adapter source. It installs Cursor command
-  and rule projections only.
+  and rule projections only; runtime execution still goes through the source
+  repository checkout referenced by workspace `engine_root`.
 - Shared runtime code stays in project-level source directories such as
-  `tools/`, `src/`, `domains/`, `core/`, and `scenarios/`.
+  `src/` for reusable implementation, `tools/` for thin entrypoints and
+  validators, plus `domains/`, `core/`, and `scenarios/` for knowledge/runtime
+  assets.
 
 ## Claude Directory Contract
 
@@ -89,7 +92,7 @@ Always:
 Ask first:
 
 - Adding a new adapter directory under `plugins/`.
-- Changing the shared runtime contract in `tools/plugin/midstack-local.py`.
+- Changing the shared runtime contract in `src/commands/` or the plugin CLI adapter contract in `tools/plugin/midstack-local.py`.
 - Replacing an existing install mode.
 
 Never:

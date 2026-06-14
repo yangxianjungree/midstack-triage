@@ -1,12 +1,22 @@
 # Local Plugin Prototype
 
-本目录存放本地插件命令原型。
+本目录存放本地插件 CLI 适配层。
 
 目标：
 
 - 验证 `/start`、`/analyse`、`/review` 三个命令的文件流转
 - 不绑定 Claude Code、Codex 或 Cursor
 - 默认写入 `.local/`，避免生成运行时 incident 到仓库正文
+- 保持 `midstack-local.py` 为薄入口，核心实现放到 `src/commands/`、`src/phases/` 与 `src/shared/`
+- 作为“本地原型 / 本地调试入口”，而不是 Claude 插件安装后的实际运行时源码目录
+
+边界：
+
+- `tools/plugin/midstack-local.py`
+  只负责参数解析、调用 `src/commands/*`、返回退出码。
+- Claude 插件安装后的真实运行入口在 `plugins/claude/runtime/bin/`
+- Cursor 适配器通过 workspace `engine_root` 调用这个本地入口
+- 新的共享逻辑不要继续写回 `tools/plugin/`
 
 ## Usage
 
@@ -95,5 +105,5 @@ python3 tools/plugin/midstack-local.py review \
 - 当 remote executor preflight `blocked` 或 batch `failed` 时，`analyse` 会保留 incident 侧 `collection_report.yaml` 和 run-level 证据，并返回对应 `blocked` / `failed` adapter output
 - 可从 `/start` 生成的 incident 目录继续执行 `/analyse`
 - 不实现 vendor 插件协议
-- analyse 当前调用本地 MongoDB analyse runner
+- analyse 当前调用本地 rules runner 生成 `analysis.yaml` 草稿，并结合第 4 段 / 第 5 段运行时继续整理输出
 - review 当前基于 `analysis.yaml` 做本地五维评分，不单独生成 `review.yaml`

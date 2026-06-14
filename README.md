@@ -115,12 +115,12 @@
 当前仓库按“共性层 + 领域层 + 场景层”组织：
 
 - `docs/`：架构原则、资产规范、接口约定
-- `src/`：可复用运行时代码；当前包含第 4 段多轨推理和 Midstack 共享运行时辅助层
+- `src/`：可复用运行时代码；当前按 `commands/`、`phases/`、`shared/` 划分正式实现
 - `core/`：模板、通用分类、共享诊断能力
 - `scenarios/`：跨中间件的标准场景定义
 - `domains/`：按具体中间件划分的专属资产
 - `interfaces/`：给 Claude Code、Codex、Cursor 等适配器消费的接口定义
-- `plugins/`：厂商适配器源实现，例如 `plugins/cursor/`
+- `plugins/`：厂商适配器源实现，例如 `plugins/claude/`、`plugins/cursor/`
 - `tools/`：薄入口、校验、生成、导入和回放工具
 - `tests/`：fixture、回放、打分和离线验证代码
 
@@ -128,12 +128,14 @@
 
 - 需要被多个入口复用、或者需要被插件 bundle 一起打包的正式实现，优先放 `src/`
 - `tools/` 负责命令入口和工程脚本，不再长期承载膨胀的核心实现
+- `src/midstack_runtime/`、`src/phase4_multitrack/`、`tools/lib/` 当前都只保留兼容 shim，不再新增正式逻辑
 - `scenarios/` 只定义场景，不存产品专属 runbook
 - `domains/<product>/` 只存具体中间件资产
 - runbook 只存一份，物理上按组件组织，逻辑上按场景检索
 - `interfaces/` 放跨适配器接口定义，`plugins/<agent>/` 放对应适配器源实现
 - 源码仓库自己的 `.cursor/` 不承载 Midstack 插件安装投影；安装投影应写入目标 Cursor 项目的 `.cursor/`
 - 主仓库中的脚本是资产源文件，适配器需要通过明确的映射和执行合同调用
+- Claude 适配器安装后运行的是打包进插件 payload 的运行时；Cursor 适配器当前仍通过 workspace `engine_root` 调用源仓库入口
 
 ## 插件使用方式
 

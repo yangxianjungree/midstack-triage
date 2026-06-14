@@ -12,8 +12,10 @@
 目录：
 
 - `fixtures/`：可离线回放的 incident 样例
+- `phase4_multitrack/`：第 4 段多轨推理的专属模块测试
 - `replay/`：回放流程说明和后续工具入口
 - `scores/`：评分样例和后续评分结果
+- `unit/`：仓库级单元测试，覆盖 plugin / start / analyse / shared helpers 等稳定模块
 
 原则：
 
@@ -21,3 +23,4 @@
 - 不存放大段原始日志
 - fixture 保存结构化摘要和期望结论
 - 真实环境 smoke 结果继续保存在 `.local/`
+- 运行时生成物不要回写 `tests/fixtures/`

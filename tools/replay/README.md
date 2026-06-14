@@ -2,6 +2,8 @@
 
 本目录存放离线 replay 工具。
 
+共享工程 helper 位于 `tools/support/common.py`；这里只保留 replay 领域逻辑，不再在每个脚本里重复 repo 根路径、YAML I/O、子进程调用封装。
+
 ## MongoDB Fixture Replay
 
 从已完成的 remote run 冻结 fixture：

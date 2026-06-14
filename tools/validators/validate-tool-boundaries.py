@@ -16,6 +16,7 @@ REQUIRED_TOOL_DIRS = {
     "remote-executor",
     "remote-smoke",
     "replay",
+    "support",
     "validators",
 }
 THIN_WRAPPER_SPECS = {
@@ -168,7 +169,7 @@ def validate_tool_directories(root: Path) -> List[str]:
     if missing_dirs:
         errors.append("tools/ missing required subdirectories: %s" % missing_dirs)
 
-    for name in sorted(actual_dirs & REQUIRED_TOOL_DIRS):
+    for name in sorted(actual_dirs):
         readme = tools_dir / name / "README.md"
         if not readme.exists():
             errors.append("missing tools README: %s" % readme)

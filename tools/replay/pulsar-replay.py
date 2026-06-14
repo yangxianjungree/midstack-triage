@@ -2,14 +2,16 @@
 
 import argparse
 import json
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
-import yaml
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
 
-ROOT = Path(__file__).resolve().parents[2]
+from support.common import ROOT, load_yaml, run_command  # noqa: E402
+
 REQUIRED_FILES = [
     "input.yaml",
     "structured_record.yaml",
@@ -17,14 +19,6 @@ REQUIRED_FILES = [
     "collection_report.yaml",
     "expected_analysis.yaml",
 ]
-
-
-def load_yaml(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a YAML object" % path)
-    return data
 
 
 def parse_args() -> argparse.Namespace:
@@ -59,7 +53,7 @@ def replay_case(case_dir: Path, run_analyse: bool, output_root: Path) -> Dict[st
     }
     if run_analyse:
         output_file = output_root / ("%s.analysis.yaml" % case_dir.name)
-        proc = subprocess.run(
+        proc = run_command(
             [
                 sys.executable,
                 str(ROOT / "tools" / "analyse" / "pulsar-analyse.py"),
@@ -67,10 +61,7 @@ def replay_case(case_dir: Path, run_analyse: bool, output_root: Path) -> Dict[st
                 str(case_dir),
                 "--output-file",
                 str(output_file),
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
+            ]
         )
         result["analyse_exit_code"] = proc.returncode
         result["analysis_output"] = str(output_file)

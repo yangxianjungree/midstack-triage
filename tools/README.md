@@ -23,6 +23,8 @@
   兼容保留的 smoke CLI 包装层；实际执行本体仍走 `src/execution/remote/`。
 - `lib/`
   历史兼容导入层，只转发到 `src/shared/*` 或 `src/execution/*`，不再新增正式实现。
+- `support/`
+  `tools/` 内部复用的工程辅助模块；只服务工程脚本，不进入正式 runtime 边界。
 - `validators/`
   仓库结构、资产合同和工程回归校验器。
 - `replay/`
@@ -41,6 +43,7 @@
 | `remote-executor/` | runtime 兼容入口 | 是 | 已迁，主实现已在 `src/execution/remote/` |
 | `remote-smoke/` | smoke 包装入口 | 是 | 不迁；它是工程 smoke 壳，执行本体已在 `src/` |
 | `lib/` | 历史兼容导入层 | 是 | 已迁，主实现已在 `src/shared/` / `src/execution/` |
+| `support/` | 工程辅助模块 | 否 | 不迁 |
 | `validators/` | 工程校验 | 否 | 不迁 |
 | `replay/` | 工程回放/评分 | 否 | 不迁 |
 | `generators/` | 工程生成器 | 否 | 不迁 |

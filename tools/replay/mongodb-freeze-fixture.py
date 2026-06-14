@@ -2,16 +2,16 @@
 
 import argparse
 import shutil
-import subprocess
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
-import yaml
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
 
+from support.common import ROOT, load_yaml, now_iso, resolve_repo_path, run_command, write_yaml  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_FILES = [
     "input.yaml",
     "structured_record.yaml",
@@ -19,29 +19,6 @@ FIXTURE_FILES = [
     "collection_report.yaml",
     "expected_analysis.yaml",
 ]
-
-
-def now_iso() -> str:
-    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
-
-
-def resolve_path(value: str) -> Path:
-    path = Path(value)
-    return path if path.is_absolute() else ROOT / path
-
-
-def load_yaml(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a YAML object" % path)
-    return data
-
-
-def write_yaml(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
-        yaml.safe_dump(payload, fh, sort_keys=False, allow_unicode=False)
 
 
 def parse_args() -> argparse.Namespace:
@@ -72,13 +49,7 @@ def build_incident_from_remote_run(remote_run_dir: Path, case_id: str, scenario:
     ]
     if customer_clue:
         command.extend(["--customer-clue", customer_clue])
-    proc = subprocess.run(
-        command,
-        cwd=str(ROOT),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
+    proc = run_command(command)
     if proc.returncode != 0:
         raise RuntimeError("failed to build incident from remote run: %s" % proc.stderr.strip())
     return incident_dir
@@ -87,7 +58,7 @@ def build_incident_from_remote_run(remote_run_dir: Path, case_id: str, scenario:
 def ensure_analysis(incident_dir: Path) -> None:
     if (incident_dir / "analysis.yaml").exists():
         return
-    proc = subprocess.run(
+    proc = run_command(
         [
             sys.executable,
             str(ROOT / "tools" / "analyse" / "mongodb-analyse.py"),
@@ -95,11 +66,7 @@ def ensure_analysis(incident_dir: Path) -> None:
             str(incident_dir),
             "--output-file",
             str(incident_dir / "analysis.yaml"),
-        ],
-        cwd=str(ROOT),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
+        ]
     )
     if proc.returncode != 0:
         raise RuntimeError("failed to generate analysis for fixture: %s" % proc.stderr.strip())
@@ -140,12 +107,12 @@ def freeze_fixture(incident_dir: Path, fixture_dir: Path, case_id: str, scenario
 
 def main() -> int:
     args = parse_args()
-    fixture_dir = resolve_path(args.fixture_dir)
+    fixture_dir = resolve_repo_path(args.fixture_dir)
     case_id = args.case_id or fixture_dir.name
     if args.remote_run_dir:
-        incident_dir = build_incident_from_remote_run(resolve_path(args.remote_run_dir), case_id, args.scenario, args.customer_clue)
+        incident_dir = build_incident_from_remote_run(resolve_repo_path(args.remote_run_dir), case_id, args.scenario, args.customer_clue)
     else:
-        incident_dir = resolve_path(args.incident_dir)
+        incident_dir = resolve_repo_path(args.incident_dir)
     freeze_fixture(incident_dir, fixture_dir, case_id, args.scenario, args.customer_clue, args.overwrite)
     print(str(fixture_dir))
     return 0

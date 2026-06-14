@@ -2,16 +2,16 @@
 
 import argparse
 import json
-import subprocess
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-import yaml
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
 
+from support.common import ROOT, load_yaml, now_iso, run_command, write_yaml  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[2]
 DIMENSIONS = [
     "evidence_completeness",
     "hypothesis_coverage",
@@ -20,24 +20,6 @@ DIMENSIONS = [
     "knowledge_reusability",
 ]
 LEVEL_ORDER = {"low": 1, "medium": 2, "high": 3}
-
-
-def now_iso() -> str:
-    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
-
-
-def load_yaml(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a YAML object" % path)
-    return data
-
-
-def write_yaml(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
-        yaml.safe_dump(payload, fh, sort_keys=False, allow_unicode=False)
 
 
 def parse_args() -> argparse.Namespace:
@@ -79,7 +61,7 @@ def ensure_analysis(case_dir: Path, analysis_file: Path, run_analyse: bool) -> T
         return True, ""
     if not run_analyse:
         return False, "missing analysis file: %s" % analysis_file
-    proc = subprocess.run(
+    proc = run_command(
         [
             sys.executable,
             str(ROOT / "tools" / "analyse" / "mongodb-analyse.py"),
@@ -87,10 +69,7 @@ def ensure_analysis(case_dir: Path, analysis_file: Path, run_analyse: bool) -> T
             str(case_dir),
             "--output-file",
             str(analysis_file),
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
+        ]
     )
     if proc.returncode != 0:
         return False, proc.stderr.strip()

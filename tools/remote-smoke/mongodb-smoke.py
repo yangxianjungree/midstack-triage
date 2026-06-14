@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 
-import runpy
+import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+SRC_DIR = ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from execution.remote.executor import main as executor_main
 
 
 def main() -> int:
-    module_path = ROOT / "src" / "execution" / "remote" / "executor.py"
-    globals_dict = runpy.run_path(str(module_path), run_name="__main__")
-    return int(globals_dict.get("__return_code__", 0))
+    return executor_main()
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -348,9 +349,14 @@ def build_incident_from_remote_run(remote_run_dir: Path, output_dir: Path, args,
 
 def run_remote_smoke(args, output_dir: Path, script_ids: List[str] = None) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
+    src_dir = str(Path(__file__).resolve().parents[2])
+    env = os.environ.copy()
+    pythonpath = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = src_dir if not pythonpath else "%s%s%s" % (src_dir, os.pathsep, pythonpath)
     command = [
         sys.executable,
-        str(Path(__file__).resolve().parents[2] / "execution" / "remote" / "executor.py"),
+        "-m",
+        "execution.remote.executor",
         "--config",
         str(resolve_path(args.remote_config)),
         "--output-dir",
@@ -365,6 +371,7 @@ def run_remote_smoke(args, output_dir: Path, script_ids: List[str] = None) -> Pa
     try:
         proc = subprocess.run(
             command,
+            env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,

@@ -166,3 +166,38 @@ def test_directed_recollection_falls_back_when_skill_pool_misses(tmp_path):
     assert phase3_collection.SCRIPT_LOG_SINK_DISCOVER in selected
     collection_report = yaml.safe_load((output_dir / "collection_report.yaml").read_text(encoding="utf-8"))
     assert "skill_pool_miss" in collection_report["warnings"][0]
+
+
+def test_run_remote_smoke_invokes_execution_module(tmp_path, monkeypatch):
+    output_dir = tmp_path / "incident"
+    remote_output_dir = tmp_path / "remote-runs"
+    remote_run_dir = remote_output_dir / "mongodb-remote-smoke-20260614-000000"
+    remote_run_dir.mkdir(parents=True, exist_ok=True)
+    remote_config = tmp_path / "remote.yaml"
+    remote_config.write_text("access: {}\n", encoding="utf-8")
+    captured = {}
+
+    def fake_run(command, env, stdout, stderr, universal_newlines, timeout):
+        captured["command"] = command
+        captured["env"] = env
+
+        class Result:
+            returncode = 0
+            stdout = "local_dir=%s\n" % remote_run_dir
+            stderr = ""
+
+        return Result()
+
+    monkeypatch.setattr(phase3_collection.subprocess, "run", fake_run)
+    args = SimpleNamespace(
+        remote_config=str(remote_config),
+        remote_output_dir=str(remote_output_dir),
+        remote_namespace="",
+        object_inventory="",
+    )
+
+    result = phase3_collection.run_remote_smoke(args, output_dir)
+
+    assert result == remote_run_dir
+    assert captured["command"][:3] == [sys.executable, "-m", "execution.remote.executor"]
+    assert str(ROOT / "src") in captured["env"]["PYTHONPATH"].split(":")[0]

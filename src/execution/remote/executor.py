@@ -993,7 +993,7 @@ def run_script(
     return result
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run MongoDB MVP scripts against a remote Kubernetes environment.")
     parser.add_argument("--config", required=True, help="Path to ignored local environment config YAML.")
     parser.add_argument("--output-dir", default=str(DEFAULT_LOCAL_OUTPUT), help="Local directory for smoke test results.")
@@ -1005,11 +1005,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--namespace", default="", help="Explicit namespace. If omitted, a known MongoDB namespace is selected.")
     parser.add_argument("--namespace-candidates", default="mongo,psmdb-test,mongodb,default", help="Comma-separated namespace candidates.")
     parser.add_argument("--inventory-file", default="", help="Optional object-inventory.yaml from /start for topology and target hints.")
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: List[str] | None = None) -> int:
+    args = parse_args(argv)
     started_at = now_iso()
     incident_id = "mongodb-remote-smoke-%s" % now_id()
     local_dir = Path(args.output_dir) / incident_id

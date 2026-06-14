@@ -168,10 +168,10 @@ def test_directed_recollection_falls_back_when_skill_pool_misses(tmp_path):
     assert "skill_pool_miss" in collection_report["warnings"][0]
 
 
-def test_run_remote_smoke_invokes_execution_module(tmp_path, monkeypatch):
+def test_run_remote_collection_invokes_execution_module(tmp_path, monkeypatch):
     output_dir = tmp_path / "incident"
     remote_output_dir = tmp_path / "remote-runs"
-    remote_run_dir = remote_output_dir / "mongodb-remote-smoke-20260614-000000"
+    remote_run_dir = remote_output_dir / "mongodb-remote-run-20260614-000000"
     remote_run_dir.mkdir(parents=True, exist_ok=True)
     remote_config = tmp_path / "remote.yaml"
     remote_config.write_text("access: {}\n", encoding="utf-8")
@@ -196,7 +196,7 @@ def test_run_remote_smoke_invokes_execution_module(tmp_path, monkeypatch):
         object_inventory="",
     )
 
-    result = phase3_collection.run_remote_smoke(args, output_dir)
+    result = phase3_collection.run_remote_collection(args, output_dir)
 
     assert result == remote_run_dir
     assert captured["command"][:3] == [sys.executable, "-m", "execution.remote.executor"]

@@ -76,4 +76,4 @@ pytest tests/phases/phase4/multitrack/e2e -v
 
 - 示例和测试不要把输出写回仓库根目录或真实 fixture 目录。
 - 设计文档只留在 `docs/proposals/...`，不要再在仓库根目录放额外 `SPEC.md`。
-- Phase 4 的命令入口由 `src/commands/analyse.py` 编排；本地插件 CLI 调度在 `src/commands/plugin_cli.py`，`tools/plugin/midstack-local.py` 只保留启动壳。
+- Phase 4 的命令入口由 `src/commands/analyse.py` 编排；本地 CLI 调度在 `src/commands/plugin_cli.py`，`tools/plugin/midstack-local.py` 只保留启动壳。

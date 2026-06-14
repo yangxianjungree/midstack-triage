@@ -10,10 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_TOOL_DIRS = {
     "generators",
     "importers",
-    "lib",
     "plugin",
-    "remote-executor",
-    "remote-smoke",
     "replay",
     "support",
     "validators",
@@ -36,91 +33,111 @@ THIN_WRAPPER_SPECS = {
             "def parse_args",
         ],
     },
-    "tools/remote-executor/mongodb-executor.py": {
-        "max_lines": 25,
+    "tools/generators/generate-asset.py": {
+        "max_lines": 20,
         "required": [
-            'SRC_DIR = Path(__file__).resolve().parents[2] / "src"',
-            "from execution.remote.executor import *",
+            'TOOLS_DIR = Path(__file__).resolve().parents[1]',
+            "from generators.asset_generator.core import main",
             "raise SystemExit(main())",
         ],
         "forbidden": [
             "argparse",
-            "subprocess",
             "yaml",
             "json",
             "def parse_args",
+            "KIND_CONFIG",
         ],
     },
-    "tools/remote-smoke/mongodb-smoke.py": {
-        "max_lines": 30,
+    "tools/importers/import-runbook.py": {
+        "max_lines": 20,
         "required": [
-            'SRC_DIR = ROOT / "src"',
-            "from execution.remote.executor import main as executor_main",
-            "return executor_main()",
+            'TOOLS_DIR = Path(__file__).resolve().parents[1]',
+            "from importers.markdown_importer.core import main",
             "raise SystemExit(main())",
         ],
         "forbidden": [
             "argparse",
-            "subprocess",
             "yaml",
             "json",
             "def parse_args",
+            "VALID_RISK_LEVELS",
+            "KIND_CONFIG",
         ],
     },
-    "tools/lib/mongodb_collection_runtime.py": {
+    "tools/replay/mongodb-freeze-fixture.py": {
         "max_lines": 20,
         "required": [
-            'SRC_DIR = ROOT / "src"',
-            "from execution.remote.mongodb_collection_runtime import *",
+            'TOOLS_DIR = Path(__file__).resolve().parents[1]',
+            "from replay.mongodb.freeze_fixture import main",
+            "raise SystemExit(main())",
         ],
         "forbidden": [
             "argparse",
-            "subprocess",
+            "shutil",
             "yaml",
             "json",
             "def parse_args",
+            "FIXTURE_FILES",
         ],
     },
-    "tools/lib/patch_merge.py": {
+    "tools/replay/mongodb-replay.py": {
         "max_lines": 20,
         "required": [
-            'SRC_DIR = ROOT / "src"',
-            "from shared.patch_merge import *",
+            'TOOLS_DIR = Path(__file__).resolve().parents[1]',
+            "from replay.mongodb.replay import main",
+            "raise SystemExit(main())",
         ],
         "forbidden": [
             "argparse",
-            "subprocess",
             "yaml",
             "json",
             "def parse_args",
+            "REQUIRED_FILES",
         ],
     },
-    "tools/lib/scenario_router.py": {
+    "tools/replay/mongodb-score.py": {
         "max_lines": 20,
         "required": [
-            'SRC_DIR = ROOT / "src"',
-            "from shared.scenario_router import *",
+            'TOOLS_DIR = Path(__file__).resolve().parents[1]',
+            "from replay.mongodb.score import main",
+            "raise SystemExit(main())",
         ],
         "forbidden": [
             "argparse",
-            "subprocess",
             "yaml",
             "json",
             "def parse_args",
+            "DIMENSIONS",
         ],
     },
-    "tools/lib/skill_resolver.py": {
+    "tools/replay/mongodb-score-summary.py": {
         "max_lines": 20,
         "required": [
-            'SRC_DIR = ROOT / "src"',
-            "from shared.skill_resolver import *",
+            'TOOLS_DIR = Path(__file__).resolve().parents[1]',
+            "from replay.mongodb.score_summary import main",
+            "raise SystemExit(main())",
         ],
         "forbidden": [
             "argparse",
-            "subprocess",
             "yaml",
             "json",
             "def parse_args",
+            "DIMENSIONS",
+        ],
+    },
+    "tools/replay/pulsar-replay.py": {
+        "max_lines": 20,
+        "required": [
+            'TOOLS_DIR = Path(__file__).resolve().parents[1]',
+            "from replay.pulsar.replay import main",
+            "raise SystemExit(main())",
+        ],
+        "forbidden": [
+            "argparse",
+            "yaml",
+            "json",
+            "def parse_args",
+            "REQUIRED_FILES",
         ],
     },
     "tools/validators/validate-mongodb-scripts.py": {
@@ -159,6 +176,13 @@ def validate_tool_directories(root: Path) -> List[str]:
     return errors
 
 
+def validate_removed_compat_layers(root: Path) -> List[str]:
+    legacy_dir = root / "tools" / "lib"
+    if legacy_dir.exists():
+        return ["legacy compatibility layer must stay removed: %s" % legacy_dir]
+    return []
+
+
 def validate_wrapper_script(path: Path, spec: Dict[str, object]) -> List[str]:
     errors: List[str] = []
     if not path.exists():
@@ -188,6 +212,19 @@ def validate_wrapper_scripts(root: Path) -> List[str]:
     return errors
 
 
+def validate_removed_compat_paths(root: Path) -> List[str]:
+    errors: List[str] = []
+    for relative_path in (
+        root / "tools" / "remote-executor",
+        root / "tools" / "remote-smoke",
+        root / "tests" / "replay",
+        root / "tests" / "tools" / "analyse",
+    ):
+        if relative_path.exists():
+            errors.append("obsolete compatibility path must stay removed: %s" % relative_path)
+    return errors
+
+
 def validate_src_import_boundary(root: Path) -> List[str]:
     errors: List[str] = []
     src_dir = root / "src"
@@ -204,6 +241,8 @@ def validate_src_import_boundary(root: Path) -> List[str]:
 def main() -> int:
     errors: List[str] = []
     errors.extend(validate_tool_directories(ROOT))
+    errors.extend(validate_removed_compat_layers(ROOT))
+    errors.extend(validate_removed_compat_paths(ROOT))
     errors.extend(validate_wrapper_scripts(ROOT))
     errors.extend(validate_src_import_boundary(ROOT))
 

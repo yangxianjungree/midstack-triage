@@ -4,6 +4,8 @@ Use **Agent CLI + shell** only.
 
 Read `.cursor/midstack-triage.workspace.json` for `engine_root`. Set `MIDSTACK_TRIAGE_WORKSPACE` to the absolute workspace path.
 
+Cursor runs Midstack in source-checkout mode. Use `engine_root` from workspace state and do not assume a bundled plugin runtime like Claude.
+
 If the user just ran `/midstack:start` and does not provide an incident directory, run `analyse` without `--incident-dir` (uses `.local/incidents/.current-incident`).
 
 If the user provides an incident directory, pass `--incident-dir <path>` relative to the workspace or absolute.
@@ -39,13 +41,20 @@ cd "/abs/path/to/midstack-triage" && python3 tools/plugin/midstack-local.py anal
 Remote run directory:
 
 ```bash
-... analyse --remote-run-dir .local/remote-runs/<run-id> --output-root .local/incidents
+export MIDSTACK_TRIAGE_WORKSPACE="/abs/path/to/workspace"
+cd "/abs/path/to/midstack-triage" && python3 tools/plugin/midstack-local.py analyse \
+  --remote-run-dir .local/remote-runs/<run-id> \
+  --output-root .local/incidents
 ```
 
 Local remote config:
 
 ```bash
-... analyse --remote-config .local/test-envs/mongodb-k8s.yaml --remote-output-dir .local/remote-runs --output-root .local/incidents
+export MIDSTACK_TRIAGE_WORKSPACE="/abs/path/to/workspace"
+cd "/abs/path/to/midstack-triage" && python3 tools/plugin/midstack-local.py analyse \
+  --remote-config .local/test-envs/mongodb-k8s.yaml \
+  --remote-output-dir .local/remote-runs \
+  --output-root .local/incidents
 ```
 
 ## After analyse shell succeeds

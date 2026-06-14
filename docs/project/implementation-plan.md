@@ -270,7 +270,7 @@ superseded_by: none
 当前状态：
 
 - 已在 `mongos getShardMap` 和 `replicaset rs.status` 采集脚本中支持 `secret_ref`
-- 已通过真实 MongoDB remote smoke 验证 Bitnami 现有认证路径未被破坏
+- 已通过真实 MongoDB 远程采集回归验证 Bitnami 现有认证路径未被破坏
 
 ### 4. MongoDB 更多场景
 
@@ -322,9 +322,9 @@ superseded_by: none
 
 当前前置状态：
 
-- 已补充本地插件命令原型用于验证 `start/analyse/review` 文件流转
-- 本地插件 `review` 已能基于 `analysis.yaml` 生成五维评分和改进建议
-- 已补充 `plugins/cursor/` Cursor 集成源实现，可安装到临时 Cursor 项目并自动化 smoke test
+- 已补充本地 CLI 适配层用于验证 `start/analyse/review` 文件流转
+- 本地 CLI `review` 已能基于 `analysis.yaml` 生成五维评分和改进建议
+- 已补充 `plugins/cursor/` Cursor 集成源实现，可安装到临时 Cursor 项目并自动化适配器冒烟回归
 - Cursor 安装投影已明确写入目标项目 `.cursor/`，源码仓库只保留 `plugins/cursor/` 源实现
 
 扩展原则：
@@ -352,12 +352,12 @@ superseded_by: none
 产出物：
 
 - `.local/test-envs/mongodb-k8s.yaml`
-- `tools/remote-smoke/mongodb-smoke.py` 继续作为真实环境 smoke 入口
+- `src/execution/remote/executor.py` 继续作为真实环境远程采集验证入口
 
 验收条件：
 
 - 能稳定跑通 MongoDB MVP 11 个脚本
-- 能生成一次完整 remote smoke 结果目录
+- 能生成一次完整远程采集 run 结果目录
 
 ### 2. Baseline fixture
 
@@ -422,8 +422,8 @@ tests/fixtures/mongodb/<case_id>/
 - 已补充 remote run / incident 到 fixture 的冻结工具
 - 已补充最小 MongoDB 本地 analyse runner
 - replay 已支持生成 analysis 输出并对比 expected/actual 一级归因
-- 本地插件 analyse 原型已支持消费已完成的 remote smoke 结果目录
-- 本地插件 analyse 原型已支持通过 remote smoke 工具调度真实只读采集
+- 本地 CLI analyse 已支持消费已完成的远程采集结果目录
+- 本地 CLI analyse 已支持通过远程执行入口调度真实只读采集
 - 完整插件 analyse runner 尚未实现正式 remote executor 调度
 
 ### 4. Score comparison
@@ -468,18 +468,18 @@ tests/scores/mongodb/
 1. 跑 validator
 2. 跑 fixture replay
 3. 跑 score comparison
-4. 必要时跑 remote smoke
+4. 必要时跑真实远程采集回归
 
 验收条件：
 
 - 改脚本时必须至少跑 validator 和相关 replay
-- 改远程执行或采集逻辑时必须跑 remote smoke
+- 改远程执行或采集逻辑时必须跑真实远程采集回归
 - 改推理、prompt、review 逻辑时必须跑 replay 和 score comparison
 
 当前状态：
 
 - 已补充 `tools/validators/validate-repo.py` 作为本地最小回归入口
-- 已补充 `plugins/cursor/test-agent-cli.py`，在临时工作区自动化验证 agent-cli analyse/review
+- 已补充 `plugins/cursor/test-agent-cli.py`，在临时工作区自动化验证 Cursor source-checkout adapter 的 analyse/review
 - 已补充 `plugins/cursor/test-sandbox.py`，在 `/home/stephen/AI/midstack-cursor-sandbox` 安装并保留一个可被 Cursor 打开的测试项目
 - 已补充 Kubernetes runtime 通用分类检查，要求 normalizer 发出的 K8s runtime signal 必须登记在 middleware-agnostic taxonomy
 - 已补充 MongoDB Kubernetes scheduling 故障 fixture，用于回归验证未知场景下的通用运行时故障归因

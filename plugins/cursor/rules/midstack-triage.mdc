@@ -7,6 +7,7 @@ alwaysApply: true
 When the user asks to triage MongoDB or middleware incidents in this workspace:
 
 - Use **shell** to run `tools/plugin/midstack-local.py` from `engine_root` in `.cursor/midstack-triage.workspace.json`.
+- Treat Cursor as source-checkout mode: use `engine_root` from workspace state, not Claude-style bundled runtime paths.
 - Export `MIDSTACK_TRIAGE_WORKSPACE` to the absolute workspace path before every Midstack command.
 - For `/midstack:start`, run `midstack-local.py start` after extracting middleware, IPs, username/password, optional port, and customer clue.
 - For `/midstack:analyse`, run `midstack-local.py analyse` (or `--input-dir` / `--remote-run-dir` / `--remote-config` when appropriate).

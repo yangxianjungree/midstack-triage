@@ -19,7 +19,7 @@ from phases.phase3.collection import (
     remote_executor_next_actions,
     remote_executor_required_user_action,
     run_directed_recollection_if_needed,
-    run_remote_smoke,
+    run_remote_collection,
 )
 
 def command_start(args: argparse.Namespace) -> int:
@@ -39,7 +39,7 @@ def command_analyse(args: argparse.Namespace) -> int:
 
     return analyse_command.run(
         args,
-        run_remote_smoke=run_remote_smoke,
+        run_remote_collection=run_remote_collection,
         load_remote_executor_run_result=load_remote_executor_run_result,
         build_incident_from_remote_run=build_incident_from_remote_run,
         apply_scenario_routing_if_needed=apply_scenario_routing_if_needed,
@@ -57,7 +57,7 @@ def command_review(args: argparse.Namespace) -> int:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Local midstack-triage plugin command prototype.")
+    parser = argparse.ArgumentParser(description="Local Midstack CLI adapter for slash-command flows.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     start = subparsers.add_parser("start")
@@ -77,7 +77,7 @@ def parse_args() -> argparse.Namespace:
     input_source = analyse.add_mutually_exclusive_group(required=False)
     input_source.add_argument("--input-dir")
     input_source.add_argument("--remote-run-dir")
-    input_source.add_argument("--remote-config", help="Run MongoDB remote smoke first, then analyse the generated remote run directory.")
+    input_source.add_argument("--remote-config", help="Run MongoDB remote collection first, then analyse the generated remote run directory.")
     input_source.add_argument("--incident-dir", help="Run analyse from a started incident directory containing remote-config.yaml.")
     analyse.add_argument("--output-dir")
     analyse.add_argument("--output-root", default=".local/incidents")

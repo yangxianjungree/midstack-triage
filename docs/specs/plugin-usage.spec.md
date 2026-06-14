@@ -1,6 +1,6 @@
 ---
 status: authoritative
-last_updated: 2026-06-10
+last_updated: 2026-06-14
 supersedes: none
 superseded_by: none
 ---
@@ -17,7 +17,7 @@ superseded_by: none
 
 - `/<plugin_name>` 表示插件名称前缀占位
 - 实际命令形态应为 `/<plugin_name>:start`、`/<plugin_name>:analyse`、`/<plugin_name>:review`
-- 当前 Cursor 集成使用的插件名前缀为 `/midstack`
+- 当前 Claude 与 Cursor 适配器都使用 `/midstack` 作为命令前缀
 
 当前对外保留 3 个面向用户的主命令：
 
@@ -25,9 +25,15 @@ superseded_by: none
 - `/midstack:analyse`
 - `/midstack:review`
 
-此外保留 1 个工程自检命令 `/midstack:validate`，仅用于资产校验、replay、score gate 和 Cursor agent-cli 插件 smoke 自检，不属于用户排障主路径。
+此外保留 1 个工程自检命令 `/midstack:validate`，仅用于资产校验、replay、score gate 和适配器自检，不属于用户排障主路径。
 
 内部仍然映射到项目的 5 段排障主流程，但对用户不暴露过多内部细节。
+
+运行时说明：
+
+- Claude 适配器安装后运行 bundled runtime
+- Cursor 适配器当前通过 workspace state 中的 `engine_root` 回调源仓库入口
+- 两者对外命令面保持一致，均收敛为 `/midstack:*`
 
 ## 2. 插件命令与排障主流程对应表
 

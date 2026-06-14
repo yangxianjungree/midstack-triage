@@ -1,6 +1,6 @@
-# Local Plugin Prototype
+# Local Plugin CLI Adapter
 
-本目录存放本地插件 CLI 适配层。
+本目录存放本地 CLI 适配层。
 
 目标：
 
@@ -8,7 +8,7 @@
 - 不绑定 Claude Code、Codex 或 Cursor
 - 默认写入 `.local/`，避免生成运行时 incident 到仓库正文
 - 保持 `midstack-local.py` 为薄入口，核心实现放到 `src/commands/plugin_cli.py`、`src/phases/` 与 `src/shared/`
-- 作为“本地原型 / 本地调试入口”，而不是 Claude 插件安装后的实际运行时源码目录
+- 作为本地 CLI 调试入口，而不是 Claude 插件安装后的实际运行时源码目录
 
 边界：
 
@@ -66,16 +66,16 @@ python3 tools/plugin/midstack-local.py analyse \
   --output-dir .local/incidents/connection-failure-sample
 ```
 
-基于真实远程 smoke 结果执行 analyse：
+基于已完成的远程采集结果执行 analyse：
 
 ```bash
 python3 tools/plugin/midstack-local.py analyse \
-  --remote-run-dir .local/remote-runs/mongodb-remote-smoke-20260607-182217 \
-  --output-dir .local/incidents/from-remote-smoke \
+  --remote-run-dir .local/remote-runs/mongodb-remote-run-20260607-182217 \
+  --output-dir .local/incidents/from-remote-run \
   --scenario baseline
 ```
 
-调度真实远程 smoke 后直接执行 analyse：
+调度真实远程采集后直接执行 analyse：
 
 ```bash
 python3 tools/plugin/midstack-local.py analyse \
@@ -95,9 +95,9 @@ python3 tools/plugin/midstack-local.py review \
 
 当前限制：
 
-- 本地插件原型当前通过 `src/execution/remote/executor.py` 调度真实只读采集
-- 可消费已完成的 remote smoke 结果目录
-- 可通过兼容保留的 remote smoke 入口调度同一执行器
+- 本地 CLI 适配层当前通过 `src/execution/remote/executor.py` 调度真实只读采集
+- 可消费已完成的远程采集结果目录
+- 可通过 `--remote-config` 直接调度同一执行器
 - 当前 remote executor 已按 `script-runtime-map` 查找脚本，并为每个脚本执行生成 `remote-executor-request.yaml` / `remote-executor-result.yaml`
 - 当前 remote executor 也会为整批 remote run 生成 `remote-executor-run.yaml`
 - 当前 remote executor 已对 `mongos.get_shard_map` 和 `replicaset.rs_status` 增加脚本级 target / pod tool preflight

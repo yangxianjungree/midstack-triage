@@ -2,6 +2,13 @@
 
 本目录存放资产骨架生成工具。
 
+目录结构：
+
+- `generate-asset.py`
+  薄 CLI 入口
+- `asset_generator/`
+  正式实现包；参数解析、模板渲染和输出计划都收敛在这里
+
 ## Asset Generator
 
 基于 `core/templates/` 生成 runbook、command、skill 资产目录。
@@ -46,3 +53,4 @@ python3 tools/generators/generate-asset.py \
 - 需要覆盖时显式传 `--force`
 - `--dry-run` 只打印计划写入的文件，不落盘
 - `--scenario` 必须已存在 `scenarios/<scenario>/scenario.yaml`
+- 不要把新的模板渲染或文件生成逻辑继续写回顶层入口脚本

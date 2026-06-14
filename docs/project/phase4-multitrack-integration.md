@@ -11,20 +11,27 @@ superseded_by: none
 
 ## 当前集成位置
 
-第 4 段运行时入口已经接在 [tools/plugin/midstack-local.py](/home/stephen/AI/midstack-triage/tools/plugin/midstack-local.py) 的 `analyse` 路径中。
+第 4 段运行时入口已经接在正式 analyse 主链路中。`tools/plugin/midstack-local.py` 只是本地 CLI 适配壳，不是 Phase 4 的正式集成点。
 
 当前链路是：
 
 1. 第 1-3 段生成 `signal_bundle.yaml`、`structured_record.yaml`、`collection_report.yaml`
-2. `analyse` 在 incident 目录上调用 `phases.phase4.reasoning.run_phase4_analysis()`
+2. `src/commands/analyse.py` 在 incident 目录上调用 `phases.phase4.reasoning.run_phase4_analysis()`
 3. Phase 4 落盘 `reasoning-board.yaml`
 4. 后续 analyse runner 继续生成 `analysis.yaml`、`report.md` 等终态文件
 
-也就是说，Phase 4 现在是 analyse 主路径中的一个过程阶段，不是一个独立 CLI 产品。
+当前不同适配器的入口只在外层不同：
+
+- Cursor source-checkout mode：`tools/plugin/midstack-local.py` -> `src/commands/plugin_cli.py` -> `src/commands/analyse.py`
+- Claude bundled runtime mode：`plugins/claude/runtime/bin/midstack-local.py` -> bundled `src/commands/plugin_cli.py` -> bundled `src/commands/analyse.py`
+
+也就是说，Phase 4 现在是 analyse 主路径中的一个过程阶段，不是一个独立 CLI 产品；适配器差异只在进入 analyse 主链路之前。
 
 ## 模块边界
 
 - 运行时代码：`src/phases/phase4/multitrack/`
+- 正式阶段入口：`src/phases/phase4/reasoning.py`
+- 正式命令编排入口：`src/commands/analyse.py`
 - 设计提案和 review：`docs/proposals/2026-06-12-phase4-reasoning-model/`
 - 示例脚本：`examples/phase4/`
 - 测试：`tests/phases/phase4/multitrack/`

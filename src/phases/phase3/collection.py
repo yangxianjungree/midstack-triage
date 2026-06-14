@@ -347,7 +347,7 @@ def build_incident_from_remote_run(remote_run_dir: Path, output_dir: Path, args,
     write_yaml(output_dir / "collection_report.yaml", collection_report)
 
 
-def run_remote_smoke(args, output_dir: Path, script_ids: List[str] = None) -> Path:
+def run_remote_collection(args, output_dir: Path, script_ids: List[str] = None) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     src_dir = str(Path(__file__).resolve().parents[2])
     env = os.environ.copy()
@@ -746,6 +746,6 @@ def run_directed_recollection_if_needed(args, output_dir: Path, skill_pool: Opti
     if not script_ids:
         return False
     trace_dir = output_dir / "directed-recollection"
-    remote_run_dir = run_remote_smoke(args, trace_dir, script_ids)
+    remote_run_dir = run_remote_collection(args, trace_dir, script_ids)
     merge_remote_run_outputs(remote_run_dir, output_dir)
     return True

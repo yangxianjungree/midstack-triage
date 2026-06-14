@@ -1,1 +1,0 @@
-"""MongoDB asset validator package."""

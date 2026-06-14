@@ -23,6 +23,6 @@
 
 - 这里是 execution plane，不是 phase 流程目录。
 - `phase1`、`phase2`、`phase3` 可以调用这里，但不要把 transport 逻辑重新散落回 phase 目录。
-- `tools/remote-executor/` 和 `tools/remote-smoke/` 只保留 CLI 壳。
+- 仓库不再保留 `tools/remote-executor/` 和 `tools/remote-smoke/` 兼容壳；正式入口统一是 `src/execution/remote/executor.py`。
 - `executor.py` 可以作为兼容门面对外暴露符号，但新实现优先写入对应子模块。
 - 需要 monkeypatch transport 的验证器，继续从 `executor.py` 打补丁；门面负责把当前模块的 `run_ssh`/`scp_*` 注入到底层实现。

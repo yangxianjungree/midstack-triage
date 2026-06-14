@@ -9,7 +9,7 @@ score:
     reason: Baseline case only requires no-incident hypothesis.
   validation_depth:
     level: medium
-    reason: Remote smoke validates collection, but analyse replay runner is not implemented yet.
+    reason: Remote collection validates collection, but analyse replay runner is not implemented yet.
   conclusion_confidence:
     level: high
     reason: Baseline conclusion is intentionally simple.

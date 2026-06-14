@@ -19,7 +19,7 @@ When triaging MongoDB Kubernetes runtime failures (e.g. ephemeral-storage evicti
 
 ## Tech Stack
 
-- Python 3 — `tools/remote-executor/mongodb-executor.py`, `tools/plugin/midstack-local.py`, `tools/lib/skill_resolver.py`
+- Python 3 — `src/execution/remote/executor.py`, `tools/plugin/midstack-local.py`, `src/shared/skill_resolver.py`
 - Shell/Python hybrid — `domains/mongodb/scripts/collect/collect-replicaset-rs-status.sh`
 - YAML incident contracts — `collection_report.yaml`, `structured_record.yaml`, `analysis.yaml`
 
@@ -30,8 +30,8 @@ When triaging MongoDB Kubernetes runtime failures (e.g. ephemeral-storage evicti
 python3 tools/validators/validate-repo.py --skip-cursor
 
 # Unit tests for routing/skill resolver
-python3 tests/unit/test_scenario_router.py
-python3 tests/unit/test_skill_resolver.py
+pytest tests/shared/test_scenario_router.py -q
+pytest tests/shared/test_skill_resolver.py -q
 
 # MongoDB replay (offline golden path)
 python3 tools/replay/mongodb-replay.py --run-analyse
@@ -48,7 +48,7 @@ cat .local/incidents/<id>/script_outputs/mongodb.collect.replicaset.rs_status/re
 
 ```
 domains/mongodb/scripts/collect/collect-replicaset-rs-status.sh  → rs.status + peer fallback
-tools/remote-executor/mongodb-executor.py                          → preflight (pod_tool probe)
+src/execution/remote/executor.py                                  → preflight (pod_tool probe)
 domains/mongodb/skills/kubernetes-runtime/.../metadata.yaml        → directed recollection pool
 domains/mongodb/skills/replica-set/.../metadata.yaml               → rs.status in required_assets
 tools/plugin/midstack-local.py                                   → MVP batch + directed recollection
@@ -65,9 +65,9 @@ docs/specs/analyse-mvp.spec.md                                   → MVP script 
 
 | Level | What | Where |
 |-------|------|-------|
-| Unit | `probe_pod_tool`, `shell_candidates`, gap-driven recollection selection | `tests/unit/` |
+| Unit | `probe_pod_tool`, `shell_candidates`, gap-driven recollection selection | `tests/execution/remote/`, `tests/shared/`, `tests/phases/phase3/` |
 | Replay | MVP pipeline includes rs.status merge | `tests/golden-paths/` |
-| Integration | Live PSMDB/Bitnami cluster rs.status success | manual / remote-smoke |
+| Integration | Live PSMDB/Bitnami cluster rs.status success | manual / `PYTHONPATH=src python3 -m execution.remote.executor` |
 | Regression | Incident `mongodb-20260612-170221-ygxb` fixture | new fixture once fixed |
 
 ## Boundaries
@@ -220,12 +220,12 @@ Add `should_run_rs_status_recollection()` when `evidence_gaps` or script status 
 ### Components
 
 ```text
-tools/lib/mongodb_collection_runtime.py   ← NEW: target + container resolution
-tools/remote-executor/mongodb-executor.py   ← build_context, soft preflight
+src/execution/remote/mongodb_collection_runtime.py  ← target + container resolution
+src/execution/remote/executor.py                    ← build_context, soft preflight
 domains/mongodb/scripts/collect/
   collect-mongos-get-shard-map.sh         ← loop all mongos_pod_refs
   collect-replicaset-rs-status.sh         ← loop all mongod_pod_refs, -c container
-tests/unit/test_mongodb_collection_runtime.py
+tests/execution/remote/test_mongodb_collection_runtime.py
 ```
 
 ### Step 1 — Runtime target resolver
@@ -267,7 +267,7 @@ tests/unit/test_mongodb_collection_runtime.py
 
 | Step | Verify |
 |------|--------|
-| 1 | `python3 tests/unit/test_mongodb_collection_runtime.py` |
+| 1 | `pytest tests/execution/remote/test_mongodb_collection_runtime.py -q` |
 | 2 | Sandbox incident: both scripts reach `partial` or `success`, not executor `blocked` |
 | 3 | `mongodb-replay.py --run-analyse` still green |
 | 4 | 3 mongos / 9 mongod cluster: collection_report shows N successful_items |

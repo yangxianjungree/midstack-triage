@@ -1,6 +1,6 @@
 ---
 status: authoritative
-last_updated: 2026-06-10
+last_updated: 2026-06-14
 supersedes: none
 superseded_by: none
 ---
@@ -33,6 +33,21 @@ superseded_by: none
 
 `review` 只用于插件效果评分和优化反馈，不属于用户排障主路径。
 
+### 运行时入口说明
+
+第一版 `analyse` 的 incident 合同、采集合同和推理合同在不同适配器之间保持一致；当前差异只在运行时分发方式：
+
+- Claude 适配器从安装后的 bundled runtime 进入 `src/commands/analyse.py`
+- Cursor 适配器通过 workspace state 中的 `engine_root` 调用 `tools/plugin/midstack-local.py`，再进入同一套 `src/commands/analyse.py`
+
+两种入口最终都复用：
+
+- `src/commands/analyse.py`
+- `src/phases/phase3/collection.py`
+- `src/phases/phase4/reasoning.py`
+- `src/phases/phase5/finalize.py`
+- `src/execution/remote/executor.py`
+
 ## 2. 前置条件
 
 第一版 `analyse` 的前置条件：
@@ -64,6 +79,8 @@ superseded_by: none
   - 通过 `remote executor` 进入用户提供的远程 K8s 环境
   - 通过 `kubectl` 和 `kubectl exec` 执行采集
   - MongoDB 客户端工具默认在 Pod 内执行
+
+当前正式远程执行入口位于 `src/execution/remote/executor.py`。
 
 第一版 MongoDB 第 3 段执行范围固定为 11 个 MVP 脚本：
 
@@ -98,6 +115,12 @@ superseded_by: none
 ## 5. 第 3 段输出
 
 第 3 段由脚本和 remote executor 主导。
+
+当前正式实现边界：
+
+- control plane 编排位于 `src/commands/` 与 `src/phases/`
+- execution plane 远程执行位于 `src/execution/remote/`
+- `tools/plugin/midstack-local.py` 只保留本地 CLI 适配职责
 
 脚本输出采用统一合同：
 

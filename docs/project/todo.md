@@ -135,7 +135,7 @@ superseded_by: none
 - 已通过真实 K8s 环境验证 `mongodb.normalize.signals.bundle`
 - 已补齐 MongoDB MVP 第一批 11 个脚本的合同级实现
 - 已通过真实 K8s 环境跑通 MongoDB MVP 第一批 11 个脚本
-- 已补充 `tools/remote-smoke/mongodb-smoke.py` 远程脚本测试执行器
+- 已补充基于 `src/execution/remote/executor.py` 的远程脚本测试执行入口
 - 已使用正式远程 smoke 工具跑通 MongoDB MVP 第一批 11 个脚本
 - 已明确第 3 段脚本需兼容 Python 3.6 且不默认依赖 `PyYAML`
 - 已补充 `tools/validators/validate-mongodb-scripts.py`，用于校验 MongoDB 脚本 manifest 与插件运行时映射
@@ -172,7 +172,7 @@ superseded_by: none
 - 已补充 MongoDB scripts helpers 边界说明
 - validator 已支持 MongoDB 领域资产 component 引用校验
 - MongoDB `mongos getShardMap` 和 `replicaset rs.status` 脚本已支持从 Kubernetes Secret 读取认证信息
-- Secret 认证支持改动后已通过真实 MongoDB remote smoke，10 个原有 MVP 脚本全部 `success`
+- Secret 认证支持改动后已通过真实 MongoDB 远程采集回归，10 个原有 MVP 脚本全部 `success`
 - 已补充 MongoDB `resource-exhaustion`、`latency-spike`、`data-hotspot` 场景资产
 - 已补充 P3 测试闭环基础目录：fixtures、replay、scores
 - 已补充 MongoDB 第一批 replay fixture：baseline、replica-inconsistency、connection-failure
@@ -185,11 +185,11 @@ superseded_by: none
 - 已补充最小 MongoDB 本地 analyse runner
 - MongoDB analyse runner 已能基于领域资产 metadata 生成场景匹配的知识沉淀候选
 - MongoDB replay 已支持 `--run-analyse` 并对比 expected/actual 一级归因
-- 已补充本地插件命令原型 `start/analyse/review`，用于验证 incident 文件流转
-- 本地插件 `analyse` 已支持消费已完成的 remote smoke 结果目录，归并脚本输出并生成 incident 分析结果
-- 本地插件 `analyse` 已支持通过 `.local` remote config 调用 remote smoke 工具执行真实只读采集后继续分析
-- 本地插件 `review` 已能基于 `analysis.yaml` 生成五维评分和改进建议
-- 已补充 `plugins/cursor/` Cursor 集成源实现、`/midstack:*` 命令和自动化 smoke test
+- 已补充本地 CLI 适配层 `start/analyse/review`，用于验证 incident 文件流转
+- 本地 CLI `analyse` 已支持消费已完成的远程采集结果目录，归并脚本输出并生成 incident 分析结果
+- 本地 CLI `analyse` 已支持通过 `.local` remote config 调用远程执行入口执行真实只读采集后继续分析
+- 本地 CLI `review` 已能基于 `analysis.yaml` 生成五维评分和改进建议
+- 已补充 `plugins/cursor/` Cursor 集成源实现、`/midstack:*` 命令和自动化适配器冒烟回归
 - 已补充 Cursor 固定 sandbox 测试入口 `/home/stephen/AI/midstack-cursor-sandbox`
 - 已补充 Kubernetes runtime 通用信号 taxonomy 和 `runtime-classification` validator，防止故障分类点对点实现
 - 已补充 MongoDB Kubernetes scheduling 故障 fixture，并验证未知场景下可归因为 `kubernetes-scheduling`

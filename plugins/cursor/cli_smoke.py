@@ -56,16 +56,31 @@ def assert_command_contracts() -> None:
     for name in COMMAND_FILES:
         path = PLUGIN_DIR / "commands" / name
         text = path.read_text(encoding="utf-8")
+        if "engine_root" not in text:
+            errors.append("%s must reference engine_root workspace state" % name)
         if name == "midstack:validate.md":
             if "validate-repo.py" not in text:
                 errors.append("%s must reference validate-repo.py" % name)
+            if "source checkout" not in text.lower():
+                errors.append("%s must declare source-checkout mode" % name)
         elif "midstack-local.py" not in text:
             errors.append("%s must reference midstack-local.py" % name)
+        else:
+            if "MIDSTACK_TRIAGE_WORKSPACE" not in text:
+                errors.append("%s must export MIDSTACK_TRIAGE_WORKSPACE" % name)
+            if "source-checkout mode" not in text.lower():
+                errors.append("%s must declare source-checkout mode" % name)
         if "Agent CLI + shell" not in text:
             errors.append("%s must declare Agent CLI + shell usage" % name)
+        if "${CLAUDE_PLUGIN_ROOT}" in text:
+            errors.append("%s must not reference Claude bundled-runtime paths" % name)
     rule = (PLUGIN_DIR / "rules" / "midstack-triage.mdc").read_text(encoding="utf-8")
     if "midstack-local.py" not in rule:
         errors.append("rules must reference midstack-local.py")
+    if "engine_root" not in rule:
+        errors.append("rules must reference engine_root workspace state")
+    if "source-checkout mode" not in rule.lower():
+        errors.append("rules must declare source-checkout mode")
     if errors:
         raise AssertionError("; ".join(errors))
 

@@ -15,12 +15,6 @@
 
 - `plugin/`
   本地 CLI 适配层；`midstack-local.py` 是薄启动壳，正式调度在 `src/commands/plugin_cli.py`。
-- `remote-executor/`
-  真实远程采集执行器的兼容 CLI 壳；正式实现已迁入 `src/execution/remote/executor.py`。
-- `remote-smoke/`
-  兼容保留的 smoke CLI 包装层；实际执行本体仍走 `src/execution/remote/`。
-- `lib/`
-  历史兼容导入层，只转发到 `src/shared/*` 或 `src/execution/*`，不再新增正式实现。
 - `support/`
   `tools/` 内部复用的工程辅助模块；只服务工程脚本，不进入正式 runtime 边界。
 - `validators/`
@@ -37,9 +31,6 @@
 | 子目录 | 类型 | 是否要求薄壳 | 是否应迁入 `src/` |
 | --- | --- | --- | --- |
 | `plugin/` | runtime 入口适配 | 是 | 已迁，主实现已在 `src/commands/` |
-| `remote-executor/` | runtime 兼容入口 | 是 | 已迁，主实现已在 `src/execution/remote/` |
-| `remote-smoke/` | smoke 包装入口 | 是 | 不迁；它是工程 smoke 壳，执行本体已在 `src/` |
-| `lib/` | 历史兼容导入层 | 是 | 已迁，主实现已在 `src/shared/` / `src/execution/` |
 | `support/` | 工程辅助模块 | 否 | 不迁 |
 | `validators/` | 工程校验 | 否 | 不迁 |
 | `replay/` | 工程回放/评分 | 否 | 不迁 |
@@ -51,6 +42,7 @@
 - 只要代码已经不是“单脚本专用 helper”，就优先迁到 `src/`。
 - 如果代码需要进入 Claude/Cursor 等 agent 插件安装后的 runtime，就应该放到 `src/` 对应模块，而不是继续堆在 `tools/`。
 - `tools/` 下脚本可以 `import src/*`，但不要反过来让 `src/` 依赖 `tools/`。
+- 不再保留历史兼容导入层；共享导入路径统一使用 `src/shared/*` 或 `src/execution/*`。
 - 测试、校验、回放、生成、迁移等工程逻辑继续放在 `tools/` 或 `tests/`，不要因为“顺手复用”把它们塞进 `src/`。
 - 生成输出默认写到 `.local/` 或临时目录，不要回写仓库 fixture。
 - 新增 `tools/*` 子目录时，应同时补一个 README 说明用途和边界。
@@ -59,4 +51,4 @@
 自动约束：
 
 - `tools/validators/validate-tool-boundaries.py`
-  会校验 `tools/plugin/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tools/lib/` 中的包装脚本仍保持薄壳，并校验 `src/` 不反向依赖 `tools/`。
+  会校验 `tools/plugin/` 中的包装脚本仍保持薄壳，并校验 `src/` 不反向依赖 `tools/`，同时禁止重新引入 `tools/lib/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tests/replay/` 和 `tests/tools/analyse/` 这类废弃兼容目录。

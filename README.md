@@ -68,17 +68,17 @@
   - 逻辑上按场景检索
 - 主仓库保留 `interfaces/` 中的跨适配器接口定义，也允许在 `plugins/<agent>/` 下保留厂商适配器源实现
 - `.cursor/`、`.claude/` 等目录只视为目标项目的安装投影，不作为本仓库插件源目录
-- 主仓库中的脚本属于资产源文件，插件安装后运行的脚本应由适配器明确映射和调用；当前本地 Cursor 集成通过 `plugins/cursor/` 调用主仓库工具链
+- 主仓库中的脚本属于资产源文件，运行时执行路径应由适配器明确映射和调用；当前 Cursor 适配器通过 workspace `engine_root` 回调源仓库入口，Claude 适配器通过 bundled runtime 分发同一套运行时合同
 - 脚本应使用稳定的 `script_id` 标识，当前最小规则为 `<middleware>.<phase>.<target>.<action>`
 - 每个中间件的脚本资产应使用单独的 `manifest.yaml` 统一登记，不为每个脚本单独维护一份 metadata
 - 脚本 `manifest.yaml` 采用轻量合同模型并纳入最小校验，不做重型 schema
-- 插件运行时应通过独立映射表将 `script_id` 映射到插件包内脚本路径
+- 插件运行时应通过独立映射表将 `script_id` 映射到适配器运行时视图中的脚本路径
 - 第 3 段脚本统一采用 `context-file + output-file + artifact-dir` 调用合同
 - 远程执行属于 `remote executor`；它负责进入目标环境并执行脚本，脚本本身不内置 SSH 逻辑
 - 中间件工具默认按 Pod 内工具处理，例如通过 `kubectl exec` 在目标 Pod 内执行 `mongosh`
 - `remote executor` 需要使用独立请求/结果模型，区分执行层状态和脚本采集状态
 - 远程执行器错误至少应区分 SSH、认证、`kubectl`、`kubectl exec`、目标 Pod、Pod 内工具、脚本合同和结果回收问题
-- 远程执行器应将插件包内脚本投放到跳板机 `/tmp/<plugin_name>/` 下，再按 `incident_id/script_id` 创建单次执行目录
+- 远程执行器应将当前适配器运行时视图中的脚本投放到跳板机 `/tmp/<plugin_name>/` 下，再按 `incident_id/script_id` 创建单次执行目录
 - 第 3 段脚本应优先使用 Python 标准库，兼容 Python 3.6，不默认依赖跳板机预装 `PyYAML`
 - Cursor 集成测试以 `/home/stephen/AI/` 下的临时项目或固定 sandbox 项目为目标，不把 midstack 源码仓库自己的 `.cursor/` 当作安装结果
 - 第 3 段 `context-file` / `output-file` 采用轻量合同模型，并以最小示例校验，不引入重型 schema
@@ -115,7 +115,7 @@
 当前仓库按“共性层 + 领域层 + 场景层”组织：
 
 - `docs/`：架构原则、资产规范、接口约定
-- `src/`：插件 runtime 会打包的正式实现；当前按 `commands/`、`phases/`、`shared/` 划分
+- `src/`：适配器 runtime 会打包或回调的正式实现；当前按 `commands/`、`phases/`、`execution/`、`shared/` 划分
 - `core/`：模板、通用分类、共享诊断能力
 - `scenarios/`：跨中间件的标准场景定义
 - `domains/`：按具体中间件划分的专属资产
@@ -126,10 +126,10 @@
 
 结构原则如下：
 
-- 需要被多个入口复用、或者需要被插件 bundle 一起打包的正式实现，优先放 `src/`
+- 需要被多个入口复用、或者需要被适配器 runtime 打包或回调的正式实现，优先放 `src/`
 - `src/` 只放运行时实现，不放测试、回放、校验、生成、导入或讨论类工程内容
 - `tools/` 负责命令入口和工程脚本，不再长期承载膨胀的核心实现
-- `tools/lib/` 当前只保留兼容 shim，不再新增正式逻辑
+- 不再保留历史兼容导入层；共享实现统一直接从 `src/` 导入
 - `scenarios/` 只定义场景，不存产品专属 runbook
 - `domains/<product>/` 只存具体中间件资产
 - runbook 只存一份，物理上按组件组织，逻辑上按场景检索
@@ -190,10 +190,10 @@ python3 tools/validators/validate-repo.py
 python3 tools/validators/validate-mongodb-scripts.py
 ```
 
-使用真实 K8s 环境做 MongoDB 远程 smoke test 时，配置文件应放在 `.local/` 下，避免敏感信息进入仓库：
+使用真实 K8s 环境做 MongoDB 远程采集验证时，配置文件应放在 `.local/` 下，避免敏感信息进入仓库：
 
 ```bash
-python3 tools/remote-smoke/mongodb-smoke.py --config .local/test-envs/mongodb-k8s.yaml
+PYTHONPATH=src python3 -m execution.remote.executor --config .local/test-envs/mongodb-k8s.yaml
 ```
 
 运行 MongoDB fixture replay 和本地评分：
@@ -260,7 +260,7 @@ python3 plugins/cursor/plugin-install.py --check-workspace /home/stephen/AI/<tar
 - 工具与测试：
   - [Cursor 集成](plugins/cursor/README.md)
   - [资产校验工具](tools/validators/README.md)
-  - [远程 smoke 工具](tools/remote-smoke/README.md)
+  - [远程执行实现](src/execution/remote/README.md)
   - [Replay 工具](tools/replay/README.md)
   - [Phase 4 规则分析器](src/phases/phase4/rules/README.md)
   - [Golden path 测试](tests/golden-paths/README.md)

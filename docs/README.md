@@ -1,6 +1,6 @@
 ---
 status: authoritative
-last_updated: 2026-06-10
+last_updated: 2026-06-14
 supersedes: none
 superseded_by: none
 ---
@@ -16,7 +16,7 @@ superseded_by: none
 |------|----------|--------|
 | `concepts/` | 解释（Explanation） | 架构、流程概览、设计模式——讲「为什么这么设计」 |
 | `specs/` | 规范（Reference） | 稳定的规范定义——与 `core/`（models/templates/taxonomies）共同构成 **L1 唯一事实源** |
-| `guides/` | 操作指南（How-to）·规划中（二期） | 本地校验、远程 smoke、安装等操作步骤；当前散在 README 与 `tools/*/README.md`，待抽取 |
+| `guides/` | 操作指南（How-to）·规划中（二期） | 本地校验、远程采集验证、安装等操作步骤；当前散在 README 与 `tools/*/README.md`，待抽取 |
 | `proposals/` | 变更提案 | 新需求、破坏性调整、跨文档结构变更的定稿前讨论稿 |
 | `project/` | 项目管理 | 实施计划、TODO——时效性内容，允许滞后 |
 | `analysis/` | 分析 | 领域对照等一次性分析快照 |

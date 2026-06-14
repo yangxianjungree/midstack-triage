@@ -98,7 +98,7 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
             "status": status,
             "created_at": created_at,
             "updated_at": created_at,
-            "plugin_version": "local-prototype",
+            "plugin_version": "local-cli",
             "current_command": "start",
             "namespace": args.namespace,
             "cluster_id": args.cluster_id,

@@ -59,7 +59,6 @@ def main() -> int:
     required_paths = [
         (RUNTIME_ROOT / "bin" / "midstack-local.py", "runtime wrapper"),
         (RUNTIME_ROOT / "tools" / "plugin" / "midstack-local.py", "plugin runtime"),
-        (RUNTIME_ROOT / "tools" / "remote-executor" / "mongodb-executor.py", "remote executor"),
         (RUNTIME_ROOT / "tools" / "support" / "common.py", "tools support module"),
         (RUNTIME_ROOT / "src" / "commands" / "plugin_cli.py", "plugin CLI adapter"),
         (RUNTIME_ROOT / "src" / "execution" / "__init__.py", "execution package"),
@@ -74,7 +73,6 @@ def main() -> int:
         (RUNTIME_ROOT / "src" / "shared" / "patch_merge.py", "patch merge library"),
         (RUNTIME_ROOT / "src" / "shared" / "scenario_router.py", "scenario routing library"),
         (RUNTIME_ROOT / "src" / "shared" / "skill_resolver.py", "skill resolver library"),
-        (RUNTIME_ROOT / "src" / "shared" / "mongodb_collection_runtime.py", "mongo collection runtime"),
         (RUNTIME_ROOT / "src" / "phases" / "phase4" / "multitrack" / "__init__.py", "phase4 package"),
         (RUNTIME_ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml", "mongodb script manifest"),
         (RUNTIME_ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml", "script runtime map"),

@@ -3,7 +3,7 @@ summary:
   topology_type: sharded_cluster
   deployment_architecture: bitnami-sharded
   namespace: psmdb-test
-  cluster_id: remote-smoke
+  cluster_id: remote-run
 details:
   pods:
     - name: bnmongo-shard1-data-2

@@ -1,6 +1,6 @@
 ---
 status: draft
-last_updated: 2026-06-10
+last_updated: 2026-06-14
 supersedes: none
 superseded_by: none
 ---
@@ -13,12 +13,40 @@ superseded_by: none
 
 ## 总体进展
 
-- MongoDB MVP 第一批 11 个第 3 段脚本已完成合同级实现，并已通过真实 K8s 环境 smoke test
-- 本地插件原型已能消费 fixture、incident 或已完成的 remote smoke 结果目录来验证 analyse/review 文件流转
-- 本地插件原型已能通过 `.local` remote config 调度真实 MongoDB 只读采集并继续生成分析结果
-- 本地插件 `review` 已能基于 `analysis.yaml` 生成五维评分和改进建议（原型级）
-- 本地插件命令生命周期和 Cursor 集成已完成一轮 L1 对齐，细节见过程性提案目录
-- Cursor 集成源实现已收敛到 `plugins/cursor/`，可安装到临时 Cursor 项目并自动化 smoke test
+- MongoDB MVP 第一批 11 个第 3 段脚本已完成合同级实现，并已通过真实 K8s 环境验证
+- 正式运行时代码已集中到 `src/`，按 `commands/`、`phases/`、`execution/`、`shared/` 划分
+- Claude 适配器已支持 bundled runtime 打包、安装、自检和 sandbox 本地测试
+- Cursor 适配器已收敛到 `plugins/cursor/`，当前仍通过 workspace `engine_root` 调用源仓库入口
+- `tools/plugin/midstack-local.py` 已收敛为本地 CLI 适配层，不再承载膨胀的正式实现
+- 第 4 段多轨推理正式实现已收敛到 `src/phases/phase4/multitrack/`
+- 历史兼容层和旧入口目录已清理：`tools/lib/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tests/replay/`、`tests/tools/analyse/`
+
+## 当前结构状态
+
+### 正式 runtime
+
+- `src/commands/`
+  slash 命令和本地 CLI 的正式编排入口
+- `src/phases/`
+  排障 5 段 control plane 实现
+- `src/execution/`
+  execution plane 的远端接入、脚本投放、远程执行和结果回收
+- `src/shared/`
+  跨命令、跨阶段复用的正式运行时能力
+
+### Agent 适配器
+
+- `plugins/claude/`
+  官方 Claude Code 插件源实现；安装后使用 bundled runtime，不依赖 sandbox 内的源仓库 checkout
+- `plugins/cursor/`
+  Cursor command/rule projection 适配器；当前仍依赖工作区状态中的 `engine_root`
+
+### 工程工具
+
+- `tools/`
+  仅保留薄入口、校验、回放、导入、生成和工程辅助工具
+- `tests/`
+  按 ownership 收敛到 `execution/`、`phases/`、`plugins/`、`shared/`、`tools/` 等目录，不再新增 `tests/unit/` 这类扁平历史目录
 
 ## 第一版已实现能力清单
 
@@ -41,11 +69,16 @@ superseded_by: none
   - `structured_record`
   - `signal_bundle`
   - `collection_report`
-- 执行第 4 段原型推理
+- 执行第 4 段推理
 - 生成多条假设
 - 生成验证动作
 - 输出第 5 段阶段性结论
 - 输出知识沉淀候选
+- 可直接消费：
+  - fixture 输入目录
+  - `/start` 生成的 incident 目录
+  - 已完成的 remote run 目录
+- 可通过 `.local` 远程环境配置调度真实 MongoDB 只读采集，然后继续分析
 
 ### MongoDB
 
@@ -71,7 +104,7 @@ superseded_by: none
 
 真实环境验证状态：
 
-- 以上 11 个脚本已通过真实 K8s 环境 smoke test
+- 以上 11 个脚本已通过真实 K8s 环境远程采集回归
 - 测试环境为 3 节点 Kubernetes 集群
 - 目标 namespace 为 `psmdb-test`
 - 验证对象包括：
@@ -89,7 +122,24 @@ superseded_by: none
 
 - 保留命令入口
 - 保留运行时规则和目标记录选择规则
-- 五维评分与改进建议已有原型实现
+- 五维评分与改进建议已有第一版实现
+
+### Claude 插件
+
+- 已支持插件打包、安装、更新到目标 sandbox 工作区
+- 已支持 sandbox 本地 marketplace 安装模式
+- 已支持 bundled runtime 自检和安装后完整性校验
+- 已清理旧的 namespaced / hyphen slash surface，当前正式命令为：
+  - `/midstack:start`
+  - `/midstack:analyse`
+  - `/midstack:review`
+  - `/midstack:validate`
+
+### Cursor 插件
+
+- 已支持本地 Cursor 插件链接和工作区命令/rule projection
+- 已支持工作区状态文件校验和版本检查
+- 已支持固定 sandbox 自动化适配器冒烟回归
 
 ## 第一版未实现能力清单
 
@@ -98,8 +148,7 @@ superseded_by: none
 - `scope` 参数
 - `force_recollect` 参数
 - 复杂多记录切换命令
-- 正式 remote executor 调度层
-- 正式 Agent 主导推理编排
+- 默认启用的真实 Claude API 推理编排（当前 bundled runtime 默认 mock agent）
 - 深入层能力：
   - 基线扫描
   - 代码逻辑分析

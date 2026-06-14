@@ -140,6 +140,12 @@ def test_build_marketplace_runs_bundled_runtime_selfcheck(tmp_path, monkeypatch)
     ]
 
 
+def test_runtime_markers_do_not_include_removed_remote_shims():
+    module = load_claude_plugin_install()
+    assert "runtime/tools/remote-executor/mongodb-executor.py" not in module.RUNTIME_MARKER_FILES
+    assert all("remote-executor" not in item for item in module.RUNTIME_COPY_DIRS)
+
+
 def test_check_install_reports_installed_plugin_selfcheck_errors(tmp_path, monkeypatch):
     module = load_claude_plugin_install()
     workspace = (tmp_path / "sandbox").resolve()

@@ -1,6 +1,6 @@
 ---
 status: draft
-last_updated: 2026-06-12
+last_updated: 2026-06-14
 supersedes: none
 superseded_by: none
 related:
@@ -11,6 +11,8 @@ related:
 # Spec: Sandbox 最小依赖画像（使用者视角）
 
 ## Objective
+
+> 说明：本文件只描述 **当前 Cursor source-checkout mode** 下的 sandbox 依赖画像，不描述 Claude bundled runtime mode。通用命令合同以 [plugin-runtime.spec.md](plugin-runtime.spec.md) 为准。
 
 **我们在回答什么**
 
@@ -27,7 +29,7 @@ related:
 
 1. 解压到任意目录，运行一条安装命令。
 2. 用 Cursor（或等价 Agent 宿主）打开该目录。
-3. **离线**：可对 fixture 跑通 `midstack_analyse_fixture`。
+3. **离线**：可对 fixture 跑通离线 analyse。
 4. **在线**（可选）：提供 SSH/K8s 凭据后可跑 live 采集与分析。
 5. 除 Agent/LLM 与（在线时的）远程环境外，**不隐式依赖** 开发者本机的 `midstack-triage` 源码路径。
 
@@ -50,7 +52,7 @@ related:
 | 层级 | 组件 | 是否可省略 |
 |------|------|------------|
 | Agent 宿主 | Cursor IDE + Cursor Agent（或 `agent` CLI） | 插件 UX 不可省略；纯 CLI 可直调 `midstack-local.py` |
-| 运行时引擎 | `midstack-triage` 仓库中的 `tools/`、`domains/`、`scenarios/` | **当前不可省略**（见 §2.1） |
+| 运行时引擎 | `midstack-triage` 仓库中的 `src/`、`tools/plugin/`、`domains/`、`scenarios/` | **当前不可省略**（见 §2.1） |
 | 语言 | Python 3.10+ | 不可省略 |
 | Python 包 | PyYAML（`import yaml`） | 不可省略 |
 | 本地工具（live） | `sshpass` | 仅 live 采集 |
@@ -59,9 +61,9 @@ related:
 
 ---
 
-## 当前架构：双根（Two-Root）+ agent-cli Plugin
+## 当前架构：双根（Two-Root）+ Cursor source-checkout mode
 
-Sandbox **不是** 自包含运行时。它是 **薄工作区（workspace）**；引擎始终在 **midstack-triage 源码根（ROOT）** 执行。Cursor 通过 **官方 Plugin**（commands/rules）让 Agent 用 shell 调用 `midstack-local.py`。
+Sandbox **不是** 自包含运行时。它是 **薄工作区（workspace）**；引擎始终在 **midstack-triage 源码根（ROOT）** 执行。当前 Cursor 适配器通过命令/rule projection 让 Agent 用 shell 调用 `midstack-local.py`。
 
 ```mermaid
 flowchart LR
@@ -78,7 +80,7 @@ flowchart LR
   subgraph root ["ROOT（midstack-triage 仓库）"]
     LocalPy["tools/plugin/midstack-local.py"]
     Domains["domains/mongodb/*"]
-    Tools["tools/remote-executor/*"]
+    Remote["src/execution/remote/*"]
     Rules["src/phases/phase4/rules/*"]
   end
 
@@ -87,7 +89,7 @@ flowchart LR
   State -->|"engine_root"| LocalPy
   LocalPy -->|"MIDSTACK_TRIAGE_WORKSPACE"| Local
   LocalPy --> Domains
-  LocalPy --> Tools
+  LocalPy --> Remote
   LocalPy --> Rules
 ```
 
@@ -98,7 +100,9 @@ flowchart LR
 - `MIDSTACK_TRIAGE_WORKSPACE`：解析 **输出/输入相对路径**（如 `.local/incidents`）；不切换脚本查找根。
 - `skill_resolver.py`：skills/scripts/runbooks 一律从 `ROOT/domains/...` 读取。
 
-因此：换机器或只拷贝 sandbox 目录 **不够**；必须仍有可访问的 `midstack-triage` 克隆（或由 `engine_root` 指向的等价路径）。
+因此：在 **当前 Cursor source-checkout mode** 下，换机器或只拷贝 sandbox 目录 **不够**；必须仍有可访问的 `midstack-triage` 克隆（或由 `engine_root` 指向的等价路径）。
+
+这与 Claude bundled runtime mode 不同：Claude 安装后运行的是插件 payload 内的 bundled runtime，不依赖 sandbox 邻近的源码 checkout。
 
 ---
 
@@ -121,7 +125,7 @@ python3 plugins/cursor/plugin-install.py --check-workspace /path/to/my-sandbox
 python3 plugins/cursor/test-agent-cli.py
 ```
 
-### 使用者：插件主路径
+### 使用者：Cursor 插件主路径
 
 在 Cursor 中打开 sandbox 工作区后：
 
@@ -138,7 +142,7 @@ python3 plugins/cursor/test-agent-cli.py
 export MIDSTACK_TRIAGE_WORKSPACE=/path/to/my-sandbox
 
 # 离线 fixture 分析
-python3 tools/plugin/midstack-local.py analyse-fixture \
+python3 tools/plugin/midstack-local.py analyse \
   --input-dir tests/fixtures/mongodb/kubernetes-scheduling-failure-sample \
   --output-dir /path/to/my-sandbox/.local/incidents/offline-test
 
@@ -181,16 +185,17 @@ Plugin（用户级 symlink，不在 sandbox 内）：
   rules/midstack-triage.mdc
 ```
 
-### 运行时仍从 ROOT 读取（未安装到 sandbox）
+### 运行时仍从 ROOT 读取（当前 Cursor source-checkout mode，未安装到 sandbox）
 
 ```text
 midstack-triage/
   tools/
     plugin/midstack-local.py
-    remote-executor/mongodb-executor.py
-    src/phases/phase4/rules/mongodb.py
-    lib/skill_resolver.py
     validators/validate-repo.py
+  src/
+    execution/remote/executor.py
+    phases/phase4/rules/mongodb.py
+    shared/skill_resolver.py
   domains/mongodb/
     scripts/              # 采集脚本 + manifest
     skills/               # 领域 skill（metadata.yaml + skill.md）
@@ -264,8 +269,8 @@ midstack-triage/
 
 | 模式 | 入口 | 必需依赖 | 不需要 |
 |------|------|----------|--------|
-| **A. Fixture 离线分析** | `/midstack:analyse` → `analyse-fixture` | ROOT 引擎 + Python + PyYAML + workspace 写权限 | SSH、集群、sshpass |
-| **B. 已有 remote-run 回放** | `/midstack:analyse` → `analyse-remote-run` | 同 A + 已采集目录 | 实时 SSH |
+| **A. Fixture 离线分析** | `/midstack:analyse --input-dir ...` | ROOT 引擎 + Python + PyYAML + workspace 写权限 | SSH、集群、sshpass |
+| **B. 已有 remote-run 回放** | `midstack-local.py analyse --remote-run-dir ...` | 同 A + 已采集目录 | 实时 SSH |
 | **C. Live start + analyse** | `/midstack:start` → `/midstack:analyse` | A + Tier 3 全部 + Agent | — |
 | **D. 工程自检** | `/midstack:validate` | 完整 git 仓库 + tests | — |
 
@@ -288,7 +293,7 @@ midstack-triage/
 |------|------|----------|
 | 安装检查 | `plugin-install.py --check-workspace` | workspace state 与 plugin 版本一致 |
 | agent-cli 冒烟 | `test-agent-cli.py` / `test-sandbox.py` | shell 调用 + fixture analyse |
-| 单元测试 | `python3 -m pytest tests/unit` | 引擎逻辑（在 ROOT） |
+| pytest 回归 | `python3 -m pytest tests/plugins tests/tools tests/phases tests/execution tests/shared` | 按 ownership 划分的引擎与适配器逻辑 |
 | Live 回归 | 用户对真实集群跑 start/analyse | Tier 3 依赖满足 |
 
 **最小依赖验收（目标态，待实现）**：在 **仅含 portable 包 + sandbox 目录、无 sibling git 克隆** 的机器上，模式 A 通过 `test-sandbox.py`。
@@ -334,14 +339,14 @@ midstack-triage/
 
 1. **最小场景优先级**：只要 fixture 离线，还是必须 live 集群也算「最小」？→ 待定
 2. ~~**是否必须 Cursor**~~ → **已确认：暂只支持 Cursor**
-3. **分发形态**：官方 Plugin 本地 symlink（已采用）/ Team Marketplace / tarball？→ Portable 暂缓
+3. **分发形态**：Cursor 本地插件链接安装（已采用）/ Team Marketplace / tarball？→ Portable 暂缓
 4. **Cursor Agent Skills**（`.cursor/skills`）是否要随 portable 包分发，还是仅文档推荐？→ 待定
 5. ~~**sshpass**~~ → **已确认：设计如此，不消除**
 
 ---
 
 
-## 8. 已实现（agent-cli Plugin）
+## 8. 已实现（Cursor source-checkout adapter）
 
 | 文件 | 作用 |
 |------|------|
@@ -354,7 +359,7 @@ midstack-triage/
 
 **评审结论（2026-06-12）**
 
-- [x] 官方 Plugin 本地安装（symlink `plugins/cursor/`）
+- [x] Cursor 本地插件链接安装（symlink `plugins/cursor/`）
 - [x] 不上传 Cursor Marketplace
 - [x] agent-cli + shell 为唯一集成路径
 - [x] CI 最小门禁：`test-agent-cli.py` + `test-plugin-manifest.py`

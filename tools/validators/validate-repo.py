@@ -17,7 +17,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the repository validation suite.")
     parser.add_argument("--skip-replay", action="store_true", help="Skip fixture replay.")
     parser.add_argument("--skip-score", action="store_true", help="Skip replay score gate.")
-    parser.add_argument("--skip-cursor", action="store_true", help="Skip Cursor agent-cli plugin smoke test.")
+    parser.add_argument("--skip-cursor", action="store_true", help="Skip Cursor source-checkout adapter smoke check.")
     parser.add_argument("--score-min-level", choices=["low", "medium", "high"], default="medium")
     parser.add_argument("--format", choices=["text", "json"], default="text")
     return parser.parse_args()
@@ -70,8 +70,8 @@ def checks(args: argparse.Namespace) -> List[Dict[str, Any]]:
             "command": [sys.executable, "tools/validators/validate-scenario-routing.py"],
         },
         {
-            "check_id": "remote-smoke",
-            "command": [sys.executable, "tools/validators/validate-remote-smoke.py"],
+            "check_id": "remote-run-contracts",
+            "command": [sys.executable, "tools/validators/validate-remote-executor.py"],
         },
     ]
     if not args.skip_replay:
@@ -97,7 +97,7 @@ def checks(args: argparse.Namespace) -> List[Dict[str, Any]]:
     if not args.skip_cursor:
         plan.append(
             {
-                "check_id": "cursor-agent-cli-smoke",
+                "check_id": "cursor-adapter-smoke",
                 "command": [sys.executable, "plugins/cursor/test-agent-cli.py"],
             }
         )

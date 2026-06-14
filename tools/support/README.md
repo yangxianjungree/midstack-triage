@@ -6,7 +6,7 @@
 
 - 这里只放工程脚本公共 helper，例如 repo 根路径解析、YAML 读写、子进程调用封装。
 - 不放插件 runtime 正式实现；需要进入 Claude/Cursor runtime payload 的代码仍然归 `src/`。
-- 不放历史兼容导出；兼容导出仍放 `tools/lib/`。
+- 不放历史兼容导出；旧兼容层已移除。
 
 当前用途：
 

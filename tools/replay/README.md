@@ -2,6 +2,15 @@
 
 本目录存放离线 replay 工具。
 
+目录结构：
+
+- `mongodb/`
+  MongoDB replay、freeze、score 和 score summary 的实现包
+- `pulsar/`
+  Pulsar replay 的实现包
+- 顶层 `*.py`
+  只保留薄 CLI 入口
+
 共享工程 helper 位于 `tools/support/common.py`；这里只保留 replay 领域逻辑，不再在每个脚本里重复 repo 根路径、YAML I/O、子进程调用封装。
 
 ## MongoDB Fixture Replay

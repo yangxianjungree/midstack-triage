@@ -185,7 +185,7 @@ def validate_runtime_map(runtime_map_path: Path, manifest_by_id: Dict[str, Dict[
         runtime_by_id[script_id] = item
         runtime_path = str(item.get("runtime_path") or "")
         if os.path.isabs(runtime_path):
-            fail(errors, "%s runtime_path must be plugin-relative" % script_id)
+            fail(errors, "%s runtime_path must be runtime-relative" % script_id)
         if not runtime_path.startswith("assets/scripts/mongodb/"):
             fail(errors, "%s runtime_path must start with assets/scripts/mongodb/" % script_id)
 

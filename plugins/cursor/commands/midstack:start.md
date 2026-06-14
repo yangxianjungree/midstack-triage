@@ -4,6 +4,8 @@ Use **Agent CLI + shell** only.
 
 Read `.cursor/midstack-triage.workspace.json` for `engine_root`. Set `MIDSTACK_TRIAGE_WORKSPACE` to the absolute workspace path.
 
+Cursor runs Midstack in source-checkout mode. Use `engine_root` from workspace state and do not assume a bundled plugin runtime like Claude.
+
 Hard boundary: `/midstack:start` only creates or recovers an incident record. It must not run analysis.
 
 Do not inspect plugin source files, repository code, or existing `.local/incidents` before running `start`.

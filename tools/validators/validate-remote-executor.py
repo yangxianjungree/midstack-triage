@@ -21,7 +21,7 @@ from phases.phase2 import build_auth_hints, mongodb_auth_secret_refs  # noqa: E4
 from phases.phase3.collection import directed_recollection_script_ids  # noqa: E402
 
 
-def load_remote_smoke_module() -> Any:
+def load_remote_executor_module() -> Any:
     return importlib.reload(importlib.import_module("execution.remote.executor"))
 
 
@@ -49,7 +49,7 @@ def validate_multiline_ssh_quoting() -> None:
 
 
 def validate_runtime_map_resolution() -> None:
-    module = load_remote_smoke_module()
+    module = load_remote_executor_module()
     entries = module.load_script_entries(
         ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml",
         ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml",
@@ -73,7 +73,7 @@ def validate_runtime_map_resolution() -> None:
         raise AssertionError("selected directed recollection script did not resolve correctly: %r" % directed_entries)
     first = entries[0]
     if not str(first.get("runtime_path") or "").startswith("assets/scripts/mongodb/"):
-        raise AssertionError("runtime_path must be plugin-relative: %r" % first)
+        raise AssertionError("runtime_path must be runtime-relative: %r" % first)
     if not Path(first["source_path"]).exists():
         raise AssertionError("source_path must resolve to an existing file: %r" % first)
 
@@ -138,8 +138,8 @@ def validate_directed_recollection_gate() -> None:
 
 
 def validate_inventory_profile_and_executor_outputs() -> None:
-    module = load_remote_smoke_module()
-    with tempfile.TemporaryDirectory(prefix="midstack-remote-smoke-validate-") as tmp:
+    module = load_remote_executor_module()
+    with tempfile.TemporaryDirectory(prefix="midstack-remote-executor-validate-") as tmp:
         tmp_path = Path(tmp)
         inventory_path = tmp_path / "object-inventory.yaml"
         inventory_path.write_text(
@@ -229,7 +229,7 @@ def validate_inventory_profile_and_executor_outputs() -> None:
         local_dir.mkdir(parents=True, exist_ok=True)
         module.run_script(
             {"primary_ip": "192.0.2.10", "username": "root", "password": "secret", "port": 22},
-            "mongodb-remote-smoke-20260610-000000",
+            "mongodb-remote-run-20260610-000000",
             {
                 "script_id": "mongodb.collect.pods.state",
                 "runtime_path": "assets/scripts/mongodb/collect-pods-state.sh",
@@ -304,8 +304,8 @@ def validate_inventory_secret_ref_extraction() -> None:
 
 
 def validate_mongos_script_capability_checks() -> None:
-    module = load_remote_smoke_module()
-    with tempfile.TemporaryDirectory(prefix="midstack-remote-smoke-mongos-") as tmp:
+    module = load_remote_executor_module()
+    with tempfile.TemporaryDirectory(prefix="midstack-remote-executor-mongos-") as tmp:
         tmp_path = Path(tmp)
         profile = module.default_context_profile("mongo")
         captured: Dict[str, Any] = {"commands": []}
@@ -370,7 +370,7 @@ def validate_mongos_script_capability_checks() -> None:
         local_dir.mkdir(parents=True, exist_ok=True)
         module.run_script(
             {"primary_ip": "192.0.2.10", "username": "root", "password": "secret", "port": 22},
-            "mongodb-remote-smoke-20260610-000000",
+            "mongodb-remote-run-20260610-000000",
             {
                 "script_id": "mongodb.collect.mongos.get_shard_map",
                 "runtime_path": "assets/scripts/mongodb/collect-mongos-get-shard-map.sh",
@@ -409,8 +409,8 @@ def validate_mongos_script_capability_checks() -> None:
 
 
 def validate_replicaset_target_filtering() -> None:
-    module = load_remote_smoke_module()
-    with tempfile.TemporaryDirectory(prefix="midstack-remote-smoke-replicaset-") as tmp:
+    module = load_remote_executor_module()
+    with tempfile.TemporaryDirectory(prefix="midstack-remote-executor-replicaset-") as tmp:
         tmp_path = Path(tmp)
         profile = module.default_context_profile("mongo")
         profile["targets"]["pod_refs"] = ["mongo-mongos-0", "mongo-shard0-0", "mongo-configsvr-0"]
@@ -488,7 +488,7 @@ def validate_replicaset_target_filtering() -> None:
         local_dir.mkdir(parents=True, exist_ok=True)
         module.run_script(
             {"primary_ip": "192.0.2.10", "username": "root", "password": "secret", "port": 22},
-            "mongodb-remote-smoke-20260610-000000",
+            "mongodb-remote-run-20260610-000000",
             {
                 "script_id": "mongodb.collect.replicaset.rs_status",
                 "runtime_path": "assets/scripts/mongodb/collect-replicaset-rs-status.sh",
@@ -524,8 +524,8 @@ def validate_replicaset_target_filtering() -> None:
 
 
 def validate_script_output_contract_checks() -> None:
-    module = load_remote_smoke_module()
-    with tempfile.TemporaryDirectory(prefix="midstack-remote-smoke-contract-") as tmp:
+    module = load_remote_executor_module()
+    with tempfile.TemporaryDirectory(prefix="midstack-remote-executor-contract-") as tmp:
         tmp_path = Path(tmp)
         good_path = tmp_path / "good-output.yaml"
         good_path.write_text(
@@ -580,12 +580,12 @@ def validate_script_output_contract_checks() -> None:
 
 
 def validate_blocked_remote_run_import() -> None:
-    with tempfile.TemporaryDirectory(prefix="midstack-remote-smoke-import-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="midstack-remote-executor-import-") as tmp:
         tmp_path = Path(tmp)
         remote_run_dir = tmp_path / "remote-run"
         remote_run_dir.mkdir(parents=True, exist_ok=True)
         run_result = {
-            "incident_id": "mongodb-remote-smoke-20260610-000000",
+            "incident_id": "mongodb-remote-run-20260610-000000",
             "plugin_name": "midstack-triage",
             "status": "blocked",
             "selected_ip": "192.0.2.10",
@@ -630,7 +630,7 @@ def validate_blocked_remote_run_import() -> None:
         if adapter.get("status") != "blocked":
             raise AssertionError("expected adapter output status blocked, got %r" % adapter.get("status"))
         input_data = yaml.safe_load((output_dir / "input.yaml").read_text(encoding="utf-8")) or {}
-        if input_data.get("incident_id") != "mongodb-remote-smoke-20260610-000000":
+        if input_data.get("incident_id") != "mongodb-remote-run-20260610-000000":
             raise AssertionError("expected blocked remote run import to preserve run-level incident_id, got %r" % input_data.get("incident_id"))
         collection_report = yaml.safe_load((output_dir / "collection_report.yaml").read_text(encoding="utf-8")) or {}
         if not (collection_report.get("failed_items") or []):
@@ -649,7 +649,7 @@ def main() -> int:
     validate_replicaset_target_filtering()
     validate_script_output_contract_checks()
     validate_blocked_remote_run_import()
-    print("Remote smoke validation passed")
+    print("Remote execution contract validation passed")
     return 0
 
 

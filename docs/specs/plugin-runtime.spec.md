@@ -1,6 +1,6 @@
 ---
 status: authoritative
-last_updated: 2026-06-10
+last_updated: 2026-06-14
 supersedes: none
 superseded_by: none
 ---
@@ -26,12 +26,30 @@ superseded_by: none
 - `/<plugin_name>:analyse`
 - `/<plugin_name>:review`
 
-此外保留 1 个工程自检命令 `/<plugin_name>:validate`，仅用于资产校验、replay、score gate 和 agent-cli 插件 smoke 自检，不属于用户排障主路径。
+此外保留 1 个工程自检命令 `/<plugin_name>:validate`，仅用于资产校验、replay、score gate 和适配器自检，不属于用户排障主路径。
 
 说明：
 
 - `/<plugin_name>` 仅作为插件名称前缀占位
-- 实际命令形态应替换为真实插件名；当前 Cursor 集成使用 `/midstack`
+- 实际命令形态应替换为真实插件名；当前 Claude 与 Cursor 适配器都使用 `/midstack`
+
+### 当前适配器运行时分发模式
+
+当前命令行为合同在适配器之间保持一致，但运行时分发方式分两种：
+
+1. bundled runtime mode
+   - 代表：Claude
+   - 运行时位于已安装插件 payload 内
+   - 命令通过插件内部 wrapper 进入 bundled `src/`、`domains/`、`core/`、`interfaces/`
+   - sandbox 不依赖单独的源仓库 checkout
+
+2. source-checkout mode
+   - 代表：当前 Cursor
+   - 工作区通过状态文件中的 `engine_root` 回调源仓库入口
+   - `tools/plugin/midstack-local.py` 作为本地 CLI 适配层进入同一套 `src/` runtime
+   - 工作区本身不承载 runtime 实现文件，只投影命令和规则
+
+两种模式都必须复用同一套正式 runtime 实现与 incident 合同；差异只允许出现在适配器入口、安装方式和运行时分发方式。
 
 ## 2. 命令与流程映射
 
@@ -240,15 +258,17 @@ superseded_by: none
 当前运行时规则明确如下：
 
 - `domains/<product>/scripts/` 中的脚本属于主仓库脚本资产源文件
-- 插件安装后的运行脚本必须位于插件包内部
-- 插件运行时不应直接依赖主仓库源码路径
+- 运行时执行必须通过稳定的 `script_id` 和 `script-runtime-map` 完成解析
+- 适配器不应直接根据源码目录字符串拼接出执行路径
+- bundled runtime mode 不应直接依赖主仓库源码路径
+- source-checkout mode 可以从 `engine_root` 读取资产源文件，但执行路径仍应通过运行时映射与 staged runtime 路径表达
 
 当前建议流程：
 
 1. 主仓库维护脚本资产源文件
 2. 插件构建或发布流程选择需要的脚本
-3. 将脚本复制或打包到插件包内部目录
-4. 插件运行时按 `script_id` 或插件包内相对路径执行
+3. 由适配器构建自己的运行时视图
+4. 运行时按 `script_id` 或运行时相对路径执行
 
 ### 最小 `script_id` 规则
 
@@ -267,13 +287,13 @@ superseded_by: none
 使用原则：
 
 - `script_id` 是稳定标识，不直接等同于源码路径
-- 插件运行时应优先按 `script_id` 查找打包后的运行脚本
-- 文件名、插件包内路径可以变化，但 `script_id` 应尽量保持稳定
+- 插件运行时应优先按 `script_id` 查找运行时视图中的脚本
+- 文件名、运行时相对路径可以变化，但 `script_id` 应尽量保持稳定
 
 第一版约束：
 
 - 先不定义完整的脚本打包工具链
-- 先不定义统一的插件包内目录结构
+- 先不定义统一的适配器运行时目录结构
 - 先不定义严格的脚本 manifest schema
 - 但必须明确“源码资产路径”和“运行时执行路径”不是同一个概念
 
@@ -327,17 +347,17 @@ domains/mongodb/scripts/
 
 1. 读取 `manifest.yaml`
 2. 选出 `default_packaged: true` 的脚本
-3. 复制到插件包内部目录
-4. 生成 `script_id -> plugin_relative_path` 的运行时映射
+3. 由适配器构建自己的运行时视图
+4. 生成 `script_id -> runtime_path` 的运行时映射
 5. 插件执行时优先按 `script_id` 查找
 
 轻量合同模型：
 
 - [core/models/script-manifest.schema.yaml](../../core/models/script-manifest.schema.yaml)
 
-### 插件侧最小运行时映射文件
+### 适配器侧最小运行时映射文件
 
-当前建议插件包内维护一份独立映射文件，用于把 `script_id` 映射到真实运行路径。
+当前建议适配器维护一份独立映射文件，用于把 `script_id` 映射到真实运行路径。
 
 建议文件名：
 
@@ -346,7 +366,7 @@ domains/mongodb/scripts/
 建议作用：
 
 - 作为插件运行时查找脚本的唯一入口
-- 将主仓库中的脚本资产标识与插件包内实际落点解耦
+- 将主仓库中的脚本资产标识与适配器运行时视图中的实际落点解耦
 - 避免插件执行逻辑直接依赖主仓库源码路径
 
 当前建议最小字段（字段定义以 [core/models/script-runtime-map.schema.yaml](../../core/models/script-runtime-map.schema.yaml) 为准，本清单为摘要）：
@@ -368,19 +388,21 @@ domains/mongodb/scripts/
 - `script_id`
   - 对应主仓库 manifest 中的稳定标识
 - `runtime_path`
-  - 表示插件包内部的相对路径
+  - 表示运行时视图中的相对路径
+  - 在 Claude bundled runtime mode 下，对应插件 payload 内相对路径
+  - 在 Cursor source-checkout mode 下，对应 staged runtime 使用的相对路径
   - 不允许写主仓库源码路径
 - `runtime`
   - 表示运行方式，例如 `shell`、`python`
 - `readonly`
-  - 表示该脚本在当前插件包中的默认风险属性
+  - 表示该脚本在当前运行时视图中的默认风险属性
 
 当前建议查询规则：
 
 1. 插件收到某个 `script_id`
 2. 从 `script-runtime-map.yaml` 中查找对应条目
 3. 取出 `runtime_path`
-4. 在插件包内部执行该路径对应脚本
+4. 在当前适配器的运行时视图中执行该路径对应脚本
 
 轻量合同模型：
 
@@ -733,13 +755,13 @@ MongoDB 认证来源原则：
   - `primary_ip` 第一版默认取第一个入口 IP
   - `port` 默认 `22`
 - `script`
-  - 使用插件包内运行时脚本路径，不使用主仓库源码路径
+  - 使用运行时视图中的脚本路径，不使用主仓库源码路径作为执行路径
   - `runtime_path` 来自 `script-runtime-map.yaml`
   - `arguments` 必须能映射到第 3 段脚本合同
 - `remote_workspace`
   - 表达远程环境中的临时工作目录和文件落点
   - 建议以 `/tmp/<plugin_name>/` 作为远程根目录
-  - 脚本按插件包内相对路径投放到远程 `assets/scripts/` 下
+  - 脚本按运行时相对路径投放到远程 `assets/scripts/` 下
   - 单次脚本执行以 `incident_id` 和 `script_id` 隔离运行目录
 - `required_capabilities`
   - 表达执行前必须验证的能力
@@ -847,7 +869,7 @@ MongoDB 认证来源原则：
 
 ### 远程工作目录原则
 
-第一版建议远程执行器先把插件包内脚本投放到跳板机，再在远程运行目录中执行。
+第一版建议远程执行器先把当前适配器运行时视图中的脚本投放到跳板机，再在远程运行目录中执行。
 
 远程根目录建议使用：
 
@@ -855,7 +877,7 @@ MongoDB 认证来源原则：
 /tmp/<plugin_name>/
 ```
 
-脚本投放目录建议保持插件包内相对路径：
+脚本投放目录建议保持运行时相对路径：
 
 ```text
 /tmp/<plugin_name>/
@@ -889,7 +911,7 @@ MongoDB 认证来源原则：
 
 当前建议执行顺序：
 
-1. 从 `script-runtime-map.yaml` 根据 `script_id` 找到插件包内 `runtime_path`
+1. 从 `script-runtime-map.yaml` 根据 `script_id` 找到当前运行时视图中的 `runtime_path`
 2. 在跳板机创建 `/tmp/<plugin_name>/assets/scripts/...`
 3. 将脚本和必要 helper 文件投放到对应目录
 4. 在跳板机创建 `/tmp/<plugin_name>/runs/<incident_id>/<script_id>/`

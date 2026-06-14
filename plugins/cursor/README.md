@@ -4,6 +4,22 @@ Official **local Cursor plugin** for Midstack Triage using **Agent CLI + shell**
 
 Commands and rules tell the agent to run `tools/plugin/midstack-local.py`. **Not for Cursor Marketplace upload.**
 
+## Boundary
+
+`plugins/cursor/` is a projection adapter, not a bundled runtime plugin.
+
+- It projects slash commands and rules into the target workspace.
+- Runtime execution still goes through the source checkout referenced by
+  `.cursor/midstack-triage.workspace.json#engine_root`.
+- If code must survive installation as runtime implementation, it belongs under
+  `src/`, not under `plugins/cursor/`.
+- If code is only for repository-side validation or replay, it belongs under
+  `tools/` or `tests/`.
+
+Do not copy partial runtime files into a Cursor sandbox to simulate install.
+The supported flow is: keep source in this repo, project commands/rules into
+the target workspace, and let the adapter call back into the source checkout.
+
 ## Plugin layout
 
 ```text

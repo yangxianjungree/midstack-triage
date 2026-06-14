@@ -278,7 +278,7 @@ def run_script(
 def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run MongoDB MVP scripts against a remote Kubernetes environment.")
     parser.add_argument("--config", required=True, help="Path to ignored local environment config YAML.")
-    parser.add_argument("--output-dir", default=str(DEFAULT_LOCAL_OUTPUT), help="Local directory for smoke test results.")
+    parser.add_argument("--output-dir", default=str(DEFAULT_LOCAL_OUTPUT), help="Local directory for remote collection run outputs.")
     parser.add_argument("--remote-root", default=DEFAULT_REMOTE_ROOT, help="Remote plugin root under /tmp.")
     parser.add_argument("--plugin-name", default=DEFAULT_PLUGIN_NAME, help="Plugin name used for remote executor workspace layout.")
     parser.add_argument("--runtime-map", default=str(DEFAULT_RUNTIME_MAP), help="Runtime map used to resolve packaged script paths.")
@@ -293,7 +293,7 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
 def main(argv: List[str] | None = None) -> int:
     args = parse_args(argv)
     started_at = now_iso()
-    incident_id = "mongodb-remote-smoke-%s" % now_id()
+    incident_id = "mongodb-remote-run-%s" % now_id()
     local_dir = Path(args.output_dir) / incident_id
     local_dir.mkdir(parents=True, exist_ok=True)
     namespace = str(args.namespace or "")

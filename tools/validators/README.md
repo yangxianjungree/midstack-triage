@@ -1,6 +1,30 @@
 # Validators
 
-本目录存放仓库结构和资产一致性校验工具。
+本目录存放仓库结构、资产合同、工程回归和运行时边界的校验工具。
+
+## 边界
+
+这里的校验器默认是“仓库侧校验”：
+
+- 校验源码仓库里的资产、接口合同、回放数据、工具边界是否一致
+- 校验本仓库打包出来的 runtime payload 是否满足预期结构
+- 服务于开发、重构、提交前回归，不要求先安装 Claude 插件
+
+这里不是“安装后插件自检”的唯一入口。
+
+安装后的 Claude 插件完整性和本地依赖检查，走已安装 runtime 的自检：
+
+- `plugins/claude/commands/validate.md`
+- `plugins/claude/runtime/bin/selfcheck.py`
+
+两者关系：
+
+- `tools/validators/`
+  仓库工程校验层，面向源码仓库
+- `plugins/claude/runtime/bin/selfcheck.py`
+  安装后插件包自检，面向已安装 runtime
+- `plugins/claude/runtime/bin/validate-repo.py`
+  只是把插件 bundle 内携带的 `tools/validators/validate-repo.py` 重新作为 runtime 命令入口暴露出来
 
 ## MongoDB Scripts
 
@@ -17,7 +41,7 @@ python3 tools/validators/validate-repo.py
 - MongoDB replay score gate，默认要求所有评分维度至少达到 `medium`
 - Fixture hygiene 检查，防止运行产物写回 `tests/fixtures/`
 - Kubernetes runtime 通用分类检查，防止故障分类点对点实现
-- Cursor agent-cli plugin smoke test (`plugins/cursor/test-agent-cli.py`)
+- Cursor source-checkout adapter 冒烟回归 (`plugins/cursor/test-agent-cli.py`)
 
 可跳过 replay 或 score：
 
@@ -65,7 +89,7 @@ python3 tools/validators/validate-tool-boundaries.py
 - `phase` 是否与 `script_id` 对齐
 - `mvp` 脚本数量是否为 10
 - `script-runtime-map` 是否与 `default_packaged` 脚本对齐
-- `runtime_path` 是否为插件包内相对路径
+- `runtime_path` 是否为适配器运行时视图下的相对路径
 - `context.example.yaml` 是否满足最小 `context-file` 合同
 - `output.example.yaml` 是否满足最小 `output-file` 合同
 - `output-file.status` 是否为 `success` / `partial` / `blocked`
@@ -84,7 +108,9 @@ python3 tools/validators/validate-tool-boundaries.py
 - `tests/fixtures/mongodb/*` 是否包含最小 replay fixture 文件集
 - `adapter-output.example.yaml` 是否满足插件命令输出最小合同
 - Kubernetes runtime signal 是否全部登记在通用 taxonomy，且 normalizer 不能发出未登记的点对点 signal
-- `tools/plugin/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tools/lib/` 是否仍保持薄壳边界
+- `tools/plugin/` 是否仍保持薄壳边界
+- `tools/generators/generate-asset.py`、`tools/importers/import-runbook.py` 是否仍保持薄 CLI 边界
 - `tools/validators/validate-mongodb-scripts.py` 是否仍保持薄 CLI 边界
-- `tools/*` 顶级子目录是否保留 README
+- `tools/*` 顶级子目录是否保留 README；`tools/remote-executor/`、`tools/remote-smoke/`、`tests/replay/`、`tests/tools/analyse/` 等废弃兼容目录不得重新出现
 - `src/` 是否错误反向导入 `tools/`
+- `tools/lib/` 是否被重新引入

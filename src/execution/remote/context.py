@@ -133,7 +133,7 @@ def build_context(
         "middleware": "mongodb",
         "script_id": script_id,
         "namespace": namespace,
-        "cluster_id": "remote-smoke",
+        "cluster_id": "remote-run",
         "artifact_root": str(local_artifact_root),
         "deployment_architecture": context_profile.get("deployment_architecture") or "unknown",
         "topology_type": context_profile.get("topology_type") or "unknown",

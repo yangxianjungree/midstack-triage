@@ -19,6 +19,8 @@ def load_module():
 def test_current_repo_boundaries_pass():
     module = load_module()
     assert module.validate_tool_directories(ROOT) == []
+    assert module.validate_removed_compat_layers(ROOT) == []
+    assert module.validate_removed_compat_paths(ROOT) == []
     assert module.validate_wrapper_scripts(ROOT) == []
     assert module.validate_src_import_boundary(ROOT) == []
 
@@ -67,3 +69,13 @@ def test_validate_src_import_boundary_rejects_tools_import(tmp_path):
     errors = module.validate_src_import_boundary(tmp_path)
 
     assert errors == ["src runtime must not import tools/: %s" % source_file]
+
+
+def test_validate_removed_compat_layers_rejects_tools_lib(tmp_path):
+    module = load_module()
+    legacy_dir = tmp_path / "tools" / "lib"
+    legacy_dir.mkdir(parents=True)
+
+    errors = module.validate_removed_compat_layers(tmp_path)
+
+    assert errors == ["legacy compatibility layer must stay removed: %s" % legacy_dir]

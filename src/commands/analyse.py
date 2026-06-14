@@ -36,7 +36,7 @@ ANALYSABLE_STATUSES = ("ready", "analysed")
 def run(
     args,
     *,
-    run_remote_smoke,
+    run_remote_collection,
     load_remote_executor_run_result,
     build_incident_from_remote_run,
     apply_scenario_routing_if_needed,
@@ -148,7 +148,7 @@ def run(
         if incident_mode and incident_dir is not None:
             update_incident_meta(incident_dir, {"status": "analysing", "current_command": "analyse"})
         if args.remote_config:
-            remote_run_dir = run_remote_smoke(args, output_dir)
+            remote_run_dir = run_remote_collection(args, output_dir)
             remote_run_result = load_remote_executor_run_result(remote_run_dir)
             build_incident_from_remote_run(remote_run_dir, output_dir, args, preserve_existing_input=incident_mode)
         elif args.remote_run_dir:

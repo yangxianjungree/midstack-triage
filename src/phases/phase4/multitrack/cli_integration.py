@@ -1,4 +1,4 @@
-"""Phase 4集成入口 - 被midstack-local.py调用"""
+"""Phase 4 integration entrypoint used by the local plugin CLI."""
 
 from pathlib import Path
 from typing import Any, Dict
@@ -11,7 +11,7 @@ from .lead_orchestrator import LeadOrchestrator
 
 def run_phase4_analysis(incident_dir: Path) -> Dict[str, Any]:
     """
-    Phase 4分析入口 - 被midstack-local.py的command_analyse调用
+    Phase 4 analysis entrypoint invoked by `src/commands/plugin_cli.py`.
 
     输入：incident_dir包含
         - signal_bundle.yaml (Phase 1-3收集的信号)

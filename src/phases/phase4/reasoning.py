@@ -1,4 +1,4 @@
-"""Phase 4 reasoning compatibility entrypoint."""
+"""Phase 4 reasoning facade entrypoint."""
 
 from __future__ import annotations
 

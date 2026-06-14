@@ -48,3 +48,17 @@ def test_run_command_captures_stdout_and_stderr():
     assert proc.returncode == 0
     assert proc.stdout.strip() == "ok"
     assert proc.stderr.strip() == "warn"
+
+
+def test_write_text_files_dry_run_and_conflict(tmp_path, capsys):
+    module = load_module()
+    existing = tmp_path / "existing.txt"
+    existing.write_text("hello\n", encoding="utf-8")
+
+    rc = module.write_text_files([(existing, "updated\n")], force=False, dry_run=True)
+    assert rc == 0
+    assert "would write" in capsys.readouterr().out
+
+    rc = module.write_text_files([(existing, "updated\n")], force=False, dry_run=False)
+    assert rc == 1
+    assert "already exists" in capsys.readouterr().err

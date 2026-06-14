@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Sequence
@@ -42,3 +43,20 @@ def run_command(command: Sequence[str], cwd: Path | None = None) -> subprocess.C
         stderr=subprocess.PIPE,
         universal_newlines=True,
     )
+
+
+def write_text_files(planned_files: Sequence[tuple[Path, str]], force: bool, dry_run: bool) -> int:
+    for path, _ in planned_files:
+        if path.exists() and not force and not dry_run:
+            print("ERROR: %s already exists; use --force to overwrite" % path, file=sys.stderr)
+            return 1
+
+    for path, content in planned_files:
+        if dry_run:
+            suffix = " (exists)" if path.exists() else ""
+            print("would write %s%s" % (path, suffix))
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        print("wrote %s" % path)
+    return 0

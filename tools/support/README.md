@@ -11,7 +11,7 @@
 当前用途：
 
 - `common.py`
-  提供 `ROOT`、`now_iso()`、`resolve_repo_path()`、`load_yaml()`、`write_yaml()`、`run_command()`。
+  提供 `ROOT`、`now_iso()`、`resolve_repo_path()`、`load_yaml()`、`write_yaml()`、`run_command()`、`write_text_files()`。
 
 规则：
 

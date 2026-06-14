@@ -5,8 +5,12 @@ import sys
 from pathlib import Path
 from typing import List, Tuple
 
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
 
-ROOT = Path(__file__).resolve().parents[2]
+from support.common import ROOT, write_text_files  # noqa: E402
+
 VALID_RISK_LEVELS = {"read-only", "low-risk", "high-risk"}
 KIND_CONFIG = {
     "runbook": {
@@ -151,23 +155,6 @@ def planned_files(args: argparse.Namespace) -> List[Tuple[Path, str]]:
     ]
 
 
-def write_files(files: List[Tuple[Path, str]], force: bool, dry_run: bool) -> int:
-    for path, _ in files:
-        if path.exists() and not force and not dry_run:
-            print("ERROR: %s already exists; use --force to overwrite" % path, file=sys.stderr)
-            return 1
-
-    for path, content in files:
-        if dry_run:
-            suffix = " (exists)" if path.exists() else ""
-            print("would write %s%s" % (path, suffix))
-            continue
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
-        print("wrote %s" % path)
-    return 0
-
-
 def main() -> int:
     args = parse_args()
     source_path = Path(args.source_file)
@@ -175,7 +162,7 @@ def main() -> int:
         print("ERROR: source file does not exist: %s" % source_path, file=sys.stderr)
         return 1
     files = planned_files(args)
-    return write_files(files, args.force, args.dry_run)
+    return write_text_files(files, args.force, args.dry_run)
 
 
 if __name__ == "__main__":

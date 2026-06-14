@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
@@ -10,7 +11,8 @@ from typing import Any, Dict, List
 import yaml
 
 
-ROOT = Path(__file__).resolve().parents[4]
+RUNTIME_ROOT = Path(os.environ.get("MIDSTACK_TRIAGE_RUNTIME_ROOT", "")).expanduser().resolve() if os.environ.get("MIDSTACK_TRIAGE_RUNTIME_ROOT") else None
+ROOT = RUNTIME_ROOT if RUNTIME_ROOT else Path(__file__).resolve().parents[4]
 DEFAULT_LOCAL_OUTPUT = ROOT / ".local" / "remote-runs"
 DEFAULT_REMOTE_ROOT = "/tmp/midstack-triage"
 DEFAULT_RUNTIME_MAP = ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml"

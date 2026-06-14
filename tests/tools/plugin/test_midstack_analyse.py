@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import shutil
 import subprocess
 import sys
@@ -44,6 +45,60 @@ class MidstackAnalyseTest(unittest.TestCase):
             self.assertEqual(adapter["status"], "failed")
             self.assertEqual(adapter["blocking_items"][0]["code"], "unsupported_middleware_analyse")
             self.assertFalse((output_dir / "analysis.yaml").exists())
+
+    def test_analyse_incident_dir_missing_remote_config_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            incident_dir = workspace / ".local" / "incidents" / "mongodb-ready-incident"
+            incident_dir.mkdir(parents=True, exist_ok=True)
+            (incident_dir / "input.yaml").write_text(
+                yaml.safe_dump(
+                    {
+                        "incident_id": "mongodb-ready-incident",
+                        "middleware": "mongodb",
+                        "namespace": "mongo",
+                        "customer_clue": "MongoDB pod is not ready.",
+                        "scenario": "unknown",
+                    },
+                    sort_keys=False,
+                    allow_unicode=False,
+                ),
+                encoding="utf-8",
+            )
+            (incident_dir / "meta.yaml").write_text(
+                yaml.safe_dump(
+                    {
+                        "incident_id": "mongodb-ready-incident",
+                        "middleware": "mongodb",
+                        "status": "ready",
+                        "current_command": "start",
+                    },
+                    sort_keys=False,
+                    allow_unicode=False,
+                ),
+                encoding="utf-8",
+            )
+            env = dict(os.environ)
+            env["MIDSTACK_TRIAGE_WORKSPACE"] = str(workspace)
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "tools" / "plugin" / "midstack-local.py"),
+                    "analyse",
+                    "--incident-dir",
+                    str(incident_dir),
+                ],
+                cwd=str(ROOT),
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
+            self.assertEqual(proc.returncode, 0)
+            adapter = yaml.safe_load((incident_dir / "adapter-output.yaml").read_text(encoding="utf-8"))
+            self.assertEqual(adapter["status"], "blocked")
+            self.assertEqual(adapter["blocking_items"][0]["code"], "missing_remote_config")
+            self.assertIn("rerun /midstack:start", adapter["next_actions"][0])
 
 
 if __name__ == "__main__":

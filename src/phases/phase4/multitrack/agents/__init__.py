@@ -2,7 +2,7 @@
 
 from .base import ReasoningAgent
 from .claude import ClaudeAgent
-from .factory import AgentFactory
+from .factory import AgentFactory, bind_incident_dir
 from .mock import MockAgent
 
 __all__ = [
@@ -10,4 +10,5 @@ __all__ = [
     "MockAgent",
     "ClaudeAgent",
     "AgentFactory",
+    "bind_incident_dir",
 ]

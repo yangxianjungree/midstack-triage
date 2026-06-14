@@ -40,8 +40,9 @@ def test_agent_factory_mock():
 
 def test_agent_factory_claude():
     """测试AgentFactory创建ClaudeAgent"""
-    agent = AgentFactory.create("claude", api_key="test_key")
+    agent = AgentFactory.create("claude", api_key="test_key", incident_dir="/tmp/midstack-phase4")
     assert isinstance(agent, ClaudeAgent)
+    assert agent.incident_dir == "/tmp/midstack-phase4"
 
 
 def test_agent_factory_invalid():

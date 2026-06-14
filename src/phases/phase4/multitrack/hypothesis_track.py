@@ -11,8 +11,10 @@ from .data_structures import (
     CausalNode,
     CausalEdge
 )
+from .agents.base import ReasoningAgent
+from .agents.factory import bind_incident_dir
+from .agents.mock import MockAgent
 from .reasoning_board import ReasoningBoard
-from .agent_interface import ReasoningAgent, MockAgent
 
 
 class HypothesisTrack:
@@ -32,14 +34,9 @@ class HypothesisTrack:
         self.board = board
         self.incident_dir = incident_dir
 
-        # 如果没提供agent，创建默认MockAgent
         if agent is None:
             agent = MockAgent()
-        # 如果agent是ClaudeAgent，设置incident_dir
-        elif hasattr(agent, 'incident_dir') and incident_dir:
-            agent.incident_dir = str(incident_dir)
-
-        self.agent = agent
+        self.agent = bind_incident_dir(agent, incident_dir)
 
         # 隔离上下文
         self.hypothesis_evolution: List[HypothesisVersion] = []

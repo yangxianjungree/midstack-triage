@@ -17,6 +17,30 @@ def test_track_initialization(tmp_path):
     assert track.get_current_hypothesis() == "DNS配置错误"
 
 
+def test_track_binds_incident_dir_on_agent(tmp_path):
+    """测试track会为支持该属性的agent绑定incident_dir"""
+
+    class DummyAgent:
+        def __init__(self):
+            self.incident_dir = None
+
+        def reason(self, observations):
+            return {
+                "hypothesis_status": "pending",
+                "confidence": 0.5,
+                "reasoning": "dummy",
+                "validation_actions": [],
+                "findings": [],
+                "causal_chain_update": None,
+            }
+
+    board = ReasoningBoard(tmp_path)
+    agent = DummyAgent()
+    HypothesisTrack("track_h1", "h1", "DNS配置错误", board, agent=agent, incident_dir=tmp_path)
+
+    assert agent.incident_dir == str(tmp_path)
+
+
 def test_phase_r1_requests_validation(tmp_path):
     """测试Phase R1请求验证"""
     board = ReasoningBoard(tmp_path)

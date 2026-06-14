@@ -2,11 +2,10 @@
 
 from typing import List, Dict, Optional
 from pathlib import Path
-import time
 
+from .agents.factory import AgentFactory
 from .reasoning_board import ReasoningBoard
 from .hypothesis_track import HypothesisTrack
-from .agent_interface import ReasoningAgent, AgentFactory
 
 
 class LeadOrchestrator:
@@ -26,7 +25,8 @@ class LeadOrchestrator:
         self.current_round = 0
         self.max_rounds = 10
 
-        agent_kwargs = agent_kwargs or {}
+        agent_kwargs = dict(agent_kwargs or {})
+        agent_kwargs.setdefault("incident_dir", self.incident_dir)
 
         for i, hyp_text in enumerate(initial_hypotheses, 1):
             hyp_id = f"h{i}"

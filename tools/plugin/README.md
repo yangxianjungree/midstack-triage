@@ -7,13 +7,13 @@
 - 验证 `/start`、`/analyse`、`/review` 三个命令的文件流转
 - 不绑定 Claude Code、Codex 或 Cursor
 - 默认写入 `.local/`，避免生成运行时 incident 到仓库正文
-- 保持 `midstack-local.py` 为薄入口，核心实现放到 `src/commands/`、`src/phases/` 与 `src/shared/`
+- 保持 `midstack-local.py` 为薄入口，核心实现放到 `src/commands/plugin_cli.py`、`src/phases/` 与 `src/shared/`
 - 作为“本地原型 / 本地调试入口”，而不是 Claude 插件安装后的实际运行时源码目录
 
 边界：
 
 - `tools/plugin/midstack-local.py`
-  只负责参数解析、调用 `src/commands/*`、返回退出码。
+  只负责启动 `src/commands/plugin_cli.py`、返回退出码。
 - Claude 插件安装后的真实运行入口在 `plugins/claude/runtime/bin/`
 - Cursor 适配器通过 workspace `engine_root` 调用这个本地入口
 - 新的共享逻辑不要继续写回 `tools/plugin/`

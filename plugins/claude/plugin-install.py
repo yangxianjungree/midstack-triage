@@ -41,6 +41,7 @@ RUNTIME_MARKER_FILES = [
     "runtime/bin/selfcheck.py",
     "runtime/tools/remote-executor/mongodb-executor.py",
     "runtime/tools/analyse/mongodb-analyse.py",
+    "runtime/src/commands/plugin_cli.py",
     "runtime/src/midstack_runtime/__init__.py",
     "runtime/src/midstack_runtime/workspace.py",
     "runtime/src/shared/__init__.py",

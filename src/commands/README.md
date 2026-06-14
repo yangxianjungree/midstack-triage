@@ -4,6 +4,8 @@
 
 目标边界：
 
+- `plugin_cli.py`
+  本地插件 CLI 调度层，负责把 `start/analyse/review/finalize-analysis` 接到阶段实现。
 - `start.py`
   第 1/2 段启动编排、incident 初始化。
 - `analyse.py`
@@ -13,10 +15,11 @@
 - `finalize.py`
   第 5 段 finalize 入口壳，转发到 `phases/phase5/finalize.py`。
 
-`tools/plugin/midstack-local.py` 应逐步收敛成：
+当前边界：
 
-1. 参数解析
-2. 调用 `src/commands/*`
-3. 返回退出码
+- `src/commands/plugin_cli.py`
+  持有本地插件 CLI 的参数解析和命令调度。
+- `tools/plugin/midstack-local.py`
+  只负责引导 Python 路径并调用 `plugin_cli.main()`。
 
 不再长期承载主逻辑。

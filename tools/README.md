@@ -14,7 +14,7 @@
 ## 当前子目录职责
 
 - `plugin/`
-  本地 CLI 适配层；`midstack-local.py` 负责参数解析和调用 `src/commands/*`。
+  本地 CLI 适配层；`midstack-local.py` 是薄启动壳，正式调度在 `src/commands/plugin_cli.py`。
 - `remote-executor/`
   真实远程采集执行器。
 - `remote-smoke/`

@@ -13,21 +13,17 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
+SRC_DIR = ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from phases.phase2 import build_auth_hints, mongodb_auth_secret_refs  # noqa: E402
+from phases.phase3.collection import directed_recollection_script_ids  # noqa: E402
 
 
 def load_remote_smoke_module() -> Any:
     path = ROOT / "tools" / "remote-executor" / "mongodb-executor.py"
     spec = importlib.util.spec_from_file_location("mongodb_smoke", path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("failed to load %s" % path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def load_local_plugin_module() -> Any:
-    path = ROOT / "tools" / "plugin" / "midstack-local.py"
-    spec = importlib.util.spec_from_file_location("midstack_local", path)
     if spec is None or spec.loader is None:
         raise RuntimeError("failed to load %s" % path)
     module = importlib.util.module_from_spec(spec)
@@ -89,7 +85,6 @@ def validate_runtime_map_resolution() -> None:
 
 
 def validate_directed_recollection_gate() -> None:
-    module = load_local_plugin_module()
     with tempfile.TemporaryDirectory(prefix="midstack-directed-gate-") as tmp:
         incident = Path(tmp)
         (incident / "structured_record.yaml").write_text(
@@ -138,7 +133,7 @@ def validate_directed_recollection_gate() -> None:
             yaml.safe_dump({"evidence_gaps": []}, sort_keys=False, allow_unicode=False),
             encoding="utf-8",
         )
-        selected = module.directed_recollection_script_ids(incident)
+        selected = directed_recollection_script_ids(incident)
         expected = [
             "mongodb.collect.dns.coredns",
             "mongodb.collect.network.overlay",
@@ -276,7 +271,6 @@ def validate_inventory_profile_and_executor_outputs() -> None:
 
 
 def validate_inventory_secret_ref_extraction() -> None:
-    module = load_local_plugin_module()
     statefulset = {
         "metadata": {"namespace": "mongo", "name": "mongo-shard0"},
         "spec": {
@@ -303,13 +297,13 @@ def validate_inventory_secret_ref_extraction() -> None:
         },
     }
     roles = ["shard", "replicaset"]
-    candidates = module.mongodb_auth_secret_refs("StatefulSet", statefulset, roles)
+    candidates = mongodb_auth_secret_refs("StatefulSet", statefulset, roles)
     if len(candidates) != 1:
         raise AssertionError("expected one secret_ref candidate, got %r" % candidates)
     candidate = candidates[0]
     if candidate.get("name") != "mongo-root-secret" or candidate.get("key") != "mongodb-root-password":
         raise AssertionError("unexpected secret_ref candidate: %r" % candidate)
-    hints = module.build_auth_hints("mongo", candidates)
+    hints = build_auth_hints("mongo", candidates)
     selected = hints.get("selected_secret_ref") or {}
     if selected.get("name") != "mongo-root-secret":
         raise AssertionError("expected selected secret_ref to be propagated, got %r" % selected)
@@ -333,6 +327,7 @@ def validate_mongos_script_capability_checks() -> None:
                             "items": [
                                 {
                                     "metadata": {"name": "mongo-mongos-0", "labels": {"app.kubernetes.io/component": "mongos"}},
+                                    "spec": {"containers": [{"name": "mongos"}]},
                                     "status": {"phase": "Running"},
                                 }
                             ]
@@ -340,8 +335,8 @@ def validate_mongos_script_capability_checks() -> None:
                     ),
                     "",
                 )
-            if "kubectl exec -n mongo mongo-mongos-0 -- sh -lc" in remote_script:
-                return CompletedProcess(["ssh"], 0, "", "")
+            if "kubectl exec -n mongo mongo-mongos-0 -c mongos -- bash -c" in remote_script:
+                return CompletedProcess(["ssh"], 0, "mongosh\n", "")
             return CompletedProcess(["ssh"], 0, "ok", "")
 
         def fake_scp_to(access: Dict[str, Any], local_path: Path, remote_path: str) -> None:
@@ -411,6 +406,10 @@ def validate_mongos_script_capability_checks() -> None:
             raise AssertionError("expected target_pod.mongos success capability check, got %r" % check_names.get("target_pod.mongos"))
         if check_names.get("pod_tool.mongosh", {}).get("status") != "success":
             raise AssertionError("expected pod_tool.mongosh success capability check, got %r" % check_names.get("pod_tool.mongosh"))
+        mongo_exec = context.get("mongo_exec") or {}
+        pod_targets = mongo_exec.get("pod_targets") or {}
+        if pod_targets.get("mongo-mongos-0", {}).get("shell") != "mongosh":
+            raise AssertionError("expected mongo_exec to record detected mongosh target, got %r" % pod_targets)
         if not captured.get("uploads"):
             raise AssertionError("expected mongos script context upload")
 
@@ -434,14 +433,17 @@ def validate_replicaset_target_filtering() -> None:
                             "items": [
                                 {
                                     "metadata": {"name": "mongo-mongos-0", "labels": {"app.kubernetes.io/component": "mongos"}},
+                                    "spec": {"containers": [{"name": "mongos"}]},
                                     "status": {"phase": "Running"},
                                 },
                                 {
                                     "metadata": {"name": "mongo-shard0-0", "labels": {"app.kubernetes.io/component": "shard"}},
+                                    "spec": {"containers": [{"name": "mongod"}]},
                                     "status": {"phase": "Running"},
                                 },
                                 {
                                     "metadata": {"name": "mongo-configsvr-0", "labels": {"app.kubernetes.io/component": "configsvr"}},
+                                    "spec": {"containers": [{"name": "mongod"}]},
                                     "status": {"phase": "Running"},
                                 },
                             ]
@@ -449,10 +451,10 @@ def validate_replicaset_target_filtering() -> None:
                     ),
                     "",
                 )
-            if "kubectl exec -n mongo mongo-shard0-0 -- sh -lc" in remote_script:
-                return CompletedProcess(["ssh"], 0, "", "")
-            if "kubectl exec -n mongo mongo-configsvr-0 -- sh -lc" in remote_script:
-                return CompletedProcess(["ssh"], 0, "", "")
+            if "kubectl exec -n mongo mongo-shard0-0 -c mongod -- bash -c" in remote_script:
+                return CompletedProcess(["ssh"], 0, "mongosh\n", "")
+            if "kubectl exec -n mongo mongo-configsvr-0 -c mongod -- bash -c" in remote_script:
+                return CompletedProcess(["ssh"], 0, "mongosh\n", "")
             return CompletedProcess(["ssh"], 0, "ok", "")
 
         def fake_scp_to(access: Dict[str, Any], local_path: Path, remote_path: str) -> None:
@@ -519,6 +521,12 @@ def validate_replicaset_target_filtering() -> None:
         check_names = {item.get("name"): item for item in checks if isinstance(item, dict)}
         if check_names.get("target_pod.replicaset", {}).get("status") != "success":
             raise AssertionError("expected target_pod.replicaset success capability check, got %r" % check_names.get("target_pod.replicaset"))
+        if check_names.get("pod_tool.mongosh", {}).get("status") != "success":
+            raise AssertionError("expected replicaset pod_tool.mongosh success capability check, got %r" % check_names.get("pod_tool.mongosh"))
+        mongo_exec = context.get("mongo_exec") or {}
+        pod_targets = mongo_exec.get("pod_targets") or {}
+        if sorted(pod_targets) != ["mongo-configsvr-0", "mongo-shard0-0"]:
+            raise AssertionError("expected mongo_exec pod targets for filtered mongod pods, got %r" % pod_targets)
 
 
 def validate_script_output_contract_checks() -> None:

@@ -6,3 +6,9 @@ src/phase4_multitrack/__pycache__/
 tests/phase4_multitrack/__pycache__/
 tests/phase4_multitrack/unit/__pycache__/
 tests/phase4_multitrack/e2e/__pycache__/
+tests/fixtures/**/adapter-output.yaml
+tests/fixtures/**/meta.yaml
+tests/fixtures/**/remote-config.yaml
+tests/fixtures/**/remote-executor-run.yaml
+tests/fixtures/**/remote-executor.stdout.txt
+tests/fixtures/**/remote-executor.stderr.txt

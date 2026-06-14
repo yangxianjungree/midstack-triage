@@ -15,6 +15,7 @@ python3 tools/validators/validate-repo.py
 - MongoDB 资产与接口合同校验
 - MongoDB fixture replay
 - MongoDB replay score gate，默认要求所有评分维度至少达到 `medium`
+- Fixture hygiene 检查，防止运行产物写回 `tests/fixtures/`
 - Kubernetes runtime 通用分类检查，防止故障分类点对点实现
 - Cursor agent-cli plugin smoke test (`plugins/cursor/test-agent-cli.py`)
 
@@ -36,6 +37,12 @@ python3 tools/validators/validate-mongodb-scripts.py
 
 ```bash
 python3 tools/validators/validate-golden-paths.py
+```
+
+校验 fixture 目录中没有运行期生成物：
+
+```bash
+python3 tools/validators/validate-fixture-hygiene.py
 ```
 
 当前校验范围：

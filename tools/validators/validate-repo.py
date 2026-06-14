@@ -58,6 +58,10 @@ def checks(args: argparse.Namespace) -> List[Dict[str, Any]]:
             "command": [sys.executable, "tools/validators/validate-patch-merge.py"],
         },
         {
+            "check_id": "fixture-hygiene",
+            "command": [sys.executable, "tools/validators/validate-fixture-hygiene.py"],
+        },
+        {
             "check_id": "runtime-classification",
             "command": [sys.executable, "tools/validators/validate-runtime-classification.py"],
         },

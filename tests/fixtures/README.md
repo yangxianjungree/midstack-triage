@@ -10,6 +10,18 @@
 - `collection_report.yaml`
 - `expected_analysis.yaml`
 
+仓库内 fixture 约束：
+
+- 只保留最小 replay 合同文件
+- 不要把运行时生成物回写到 `tests/fixtures/`
+- 以下文件属于生成物，应写到 `.local/` 或临时目录，不应纳入仓库：
+  - `adapter-output.yaml`
+  - `meta.yaml`
+  - `remote-config.yaml`
+  - `remote-executor-run.yaml`
+  - `remote-executor.stdout.txt`
+  - `remote-executor.stderr.txt`
+
 第一批 MongoDB fixture：
 
 - `mongodb/baseline-sharded-cluster`

@@ -27,6 +27,10 @@
   跨命令、跨 phase 复用的正式运行时能力。
 - `phases/phase4/`
   第 4 段推理的正式目录；`multitrack/` 放多轨推理底层实现。
+- `phases/phase3/remote_executor.py`
+  第 3 段远程执行器正式实现。
+- `phases/phase4/rule_drafts/`
+  第 4 段规则保底分析器正式实现。
 
 ## 放置规则
 
@@ -40,7 +44,9 @@
   - `phases/phase1/startup.py`
   - `phases/phase2/inventory.py`
   - `phases/phase3/collection.py`
+  - `phases/phase3/remote_executor.py`
   - `phases/phase4/reasoning.py`
+  - `phases/phase4/rule_drafts/*.py`
   - `phases/phase5/finalize.py|review.py`
   - `shared/workspace.py|analysis_runtime.py`
   - `shared/patch_merge.py|scenario_router.py|skill_resolver.py|mongodb_collection_runtime.py`

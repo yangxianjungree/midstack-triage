@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
-
 from commands import analyse as analyse_command
 from commands import finalize as finalize_command
 from commands import review as review_command
@@ -23,10 +21,6 @@ from phases.phase3.collection import (
     run_remote_smoke,
 )
 
-
-ROOT = Path(__file__).resolve().parents[2]
-
-
 def command_start(args: argparse.Namespace) -> int:
     return start_command.run(
         args,
@@ -44,7 +38,6 @@ def command_analyse(args: argparse.Namespace) -> int:
 
     return analyse_command.run(
         args,
-        root=ROOT,
         run_remote_smoke=run_remote_smoke,
         load_remote_executor_run_result=load_remote_executor_run_result,
         build_incident_from_remote_run=build_incident_from_remote_run,

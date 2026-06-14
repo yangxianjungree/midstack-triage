@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import subprocess
 import sys
-from pathlib import Path
 from typing import Any, Dict
 
+from phases.phase4.rule_drafts import generate_rule_draft, supported_middlewares
 from shared.workspace import (
     adapter_output,
     add_record_ref_if_exists,
@@ -36,7 +35,6 @@ ANALYSABLE_STATUSES = ("ready", "analysed")
 def run(
     args,
     *,
-    root: Path,
     run_remote_smoke,
     load_remote_executor_run_result,
     build_incident_from_remote_run,
@@ -234,8 +232,8 @@ def run(
             write_yaml(output_dir / "collection_report.yaml", collection_report)
 
     analysis_file = output_dir / "analysis.yaml"
-    analyse_script = root / "tools" / "analyse" / ("%s-analyse.py" % middleware)
-    if not analyse_script.exists():
+    supported = supported_middlewares()
+    if middleware not in supported:
         summary = "no analyse runner available for middleware %s" % middleware
         if incident_mode and incident_dir is not None and previous_incident_status:
             update_incident_meta(incident_dir, {"status": previous_incident_status, "current_command": "analyse"})
@@ -244,10 +242,10 @@ def run(
             {
                 "code": "unsupported_middleware_analyse",
                 "message": summary,
-                "required_user_action": "use a supported middleware or add tools/analyse/%s-analyse.py" % middleware,
+                "required_user_action": "use a supported middleware or add a Phase 4 rule-draft analyser for %s" % middleware,
             }
         ]
-        output["next_actions"] = ["use a supported middleware such as mongodb or pulsar"]
+        output["next_actions"] = ["use a supported middleware such as %s" % ", ".join(supported)]
         write_yaml(output_dir / "adapter-output.yaml", output)
         print("ERROR: %s" % summary, file=sys.stderr)
         return 1
@@ -257,70 +255,63 @@ def run(
         print("Phase 4 reasoning completed: %d rounds" % phase4_result["total_rounds"], file=sys.stderr)
     except Exception as exc:
         print("Phase 4 warning: %s (falling back to legacy analyse)" % exc, file=sys.stderr)
-    proc = subprocess.run(
-        [
-            sys.executable,
-            str(analyse_script),
-            "--input-dir",
-            str(output_dir),
-            "--output-file",
-            str(analysis_file),
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    status = "completed" if proc.returncode == 0 else "failed"
-    output = adapter_output("analyse", incident_id, middleware, status, "local analyse %s" % status, output_dir)
-    output["record_refs"].append({"name": "analysis", "path": str(analysis_file), "description": "generated analysis result"})
-    if proc.returncode != 0:
+    try:
+        analysis = generate_rule_draft(middleware, output_dir)
+        write_yaml(analysis_file, analysis)
+    except Exception as exc:
         if incident_mode and incident_dir is not None and previous_incident_status:
             update_incident_meta(incident_dir, {"status": previous_incident_status, "current_command": "analyse"})
-        output["warnings"].append(proc.stderr.strip())
-    else:
-        analysis = load_yaml(analysis_file)
-        collection_report = load_yaml(output_dir / "collection_report.yaml") if (output_dir / "collection_report.yaml").exists() else {}
-        signal_bundle = load_yaml(output_dir / "signal_bundle.yaml") if (output_dir / "signal_bundle.yaml").exists() else {}
-        if collection_report:
-            normalize_collection_report_gaps(collection_report)
-            write_yaml(output_dir / "collection_report.yaml", collection_report)
-        if apply_analysis_guardrails(analysis, collection_report, signal_bundle):
-            analysis["updated_at"] = now_iso()
-            write_yaml(analysis_file, analysis)
-        rule_draft_file = output_dir / ANALYSIS_RULE_DRAFT_FILENAME
-        write_yaml(rule_draft_file, analysis)
-        report_file = write_report(output_dir, input_data, analysis)
-        task_file = write_agent_reasoning_task(
-            output_dir,
-            input_data,
-            analysis_file,
-            rule_draft_file,
-            report_file,
-            matched_skills=skill_runtime.get("skills") if skill_runtime else None,
-        )
-        output["record_refs"].append(
-            {
-                "name": "analysis_rule_draft",
-                "path": str(rule_draft_file),
-                "description": "rules fallback draft before Agent reasoning refinement",
-            }
-        )
-        output["record_refs"].append(
-            {
-                "name": "agent_reasoning_task",
-                "path": str(task_file),
-                "description": "phase-4/5 Agent reasoning task and output contract",
-            }
-        )
-        output["record_refs"].append({"name": "report", "path": str(report_file), "description": "generated human-readable report"})
-        output["warnings"].append("analysis.yaml is currently a rules-based fallback draft; Agent reasoning should refine analysis.yaml and report.md.")
-        output["next_actions"] = [
-            "read agent-reasoning-task.md and update analysis.yaml with Agent-led multi-hypothesis reasoning, gap classification, and conclusion ceiling",
-            "refresh report.md so it matches the final analysis.yaml conclusion",
-        ]
-        if incident_mode and incident_dir is not None:
-            update_incident_meta(incident_dir, {"status": "analysed", "current_command": "analyse"})
-            write_current_incident(output_root, incident_dir)
+        output = adapter_output("analyse", incident_id, middleware, "failed", "local analyse failed", output_dir)
+        output["warnings"].append(str(exc))
+        write_yaml(output_dir / "adapter-output.yaml", output)
+        print("ERROR: %s" % exc, file=sys.stderr)
+        return 1
+
+    output = adapter_output("analyse", incident_id, middleware, "completed", "local analyse completed", output_dir)
+    output["record_refs"].append({"name": "analysis", "path": str(analysis_file), "description": "generated analysis result"})
+    analysis = load_yaml(analysis_file)
+    collection_report = load_yaml(output_dir / "collection_report.yaml") if (output_dir / "collection_report.yaml").exists() else {}
+    signal_bundle = load_yaml(output_dir / "signal_bundle.yaml") if (output_dir / "signal_bundle.yaml").exists() else {}
+    if collection_report:
+        normalize_collection_report_gaps(collection_report)
+        write_yaml(output_dir / "collection_report.yaml", collection_report)
+    if apply_analysis_guardrails(analysis, collection_report, signal_bundle):
+        analysis["updated_at"] = now_iso()
+        write_yaml(analysis_file, analysis)
+    rule_draft_file = output_dir / ANALYSIS_RULE_DRAFT_FILENAME
+    write_yaml(rule_draft_file, analysis)
+    report_file = write_report(output_dir, input_data, analysis)
+    task_file = write_agent_reasoning_task(
+        output_dir,
+        input_data,
+        analysis_file,
+        rule_draft_file,
+        report_file,
+        matched_skills=skill_runtime.get("skills") if skill_runtime else None,
+    )
+    output["record_refs"].append(
+        {
+            "name": "analysis_rule_draft",
+            "path": str(rule_draft_file),
+            "description": "rules fallback draft before Agent reasoning refinement",
+        }
+    )
+    output["record_refs"].append(
+        {
+            "name": "agent_reasoning_task",
+            "path": str(task_file),
+            "description": "phase-4/5 Agent reasoning task and output contract",
+        }
+    )
+    output["record_refs"].append({"name": "report", "path": str(report_file), "description": "generated human-readable report"})
+    output["warnings"].append("analysis.yaml is currently a rules-based fallback draft; Agent reasoning should refine analysis.yaml and report.md.")
+    output["next_actions"] = [
+        "read agent-reasoning-task.md and update analysis.yaml with Agent-led multi-hypothesis reasoning, gap classification, and conclusion ceiling",
+        "refresh report.md so it matches the final analysis.yaml conclusion",
+    ]
+    if incident_mode and incident_dir is not None:
+        update_incident_meta(incident_dir, {"status": "analysed", "current_command": "analyse"})
+        write_current_incident(output_root, incident_dir)
     write_yaml(output_dir / "adapter-output.yaml", output)
     print(str(analysis_file))
-    return proc.returncode
+    return 0

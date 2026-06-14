@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import importlib.util
+import importlib
 import json
 import subprocess
 import sys
@@ -22,13 +22,7 @@ from phases.phase3.collection import directed_recollection_script_ids  # noqa: E
 
 
 def load_remote_smoke_module() -> Any:
-    path = ROOT / "tools" / "remote-executor" / "mongodb-executor.py"
-    spec = importlib.util.spec_from_file_location("mongodb_smoke", path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("failed to load %s" % path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return importlib.reload(importlib.import_module("phases.phase3.remote_executor"))
 
 
 def validate_multiline_ssh_quoting() -> None:

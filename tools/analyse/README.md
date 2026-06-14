@@ -1,6 +1,6 @@
 # Analyse Tools
 
-本目录存放本地 analyse 原型工具。
+本目录只保留 analyse CLI 兼容入口。
 
 ## MongoDB Analyse
 
@@ -19,11 +19,11 @@ python3 tools/analyse/mongodb-analyse.py \
 - 读取 `collection_report.yaml`
 - 基于 scenario 和 abnormal signals 生成初步假设与结论
 - 基于 MongoDB 资产 metadata 生成匹配场景的知识沉淀候选
-- 作为 `/midstack:analyse` 的规则保底草稿生成器，供后续 Agent 推理参考
+- 作为 `src/phases/phase4/rule_drafts/` 正式实现的薄壳入口，供 replay、校验、人工单跑复用
 
 当前限制：
 
 - 不连接远程环境
 - 不调度采集脚本
 - 不替代第 4 段正式 Agent 推理
-- 规则仍是 MongoDB MVP 原型
+- 不再承载正式实现；新逻辑应写入 `src/phases/phase4/rule_drafts/`

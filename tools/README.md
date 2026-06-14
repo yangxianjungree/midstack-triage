@@ -16,11 +16,11 @@
 - `plugin/`
   本地 CLI 适配层；`midstack-local.py` 是薄启动壳，正式调度在 `src/commands/plugin_cli.py`。
 - `remote-executor/`
-  真实远程采集执行器。
+  真实远程采集执行器的兼容 CLI 壳；正式实现已迁入 `src/phases/phase3/remote_executor.py`。
 - `remote-smoke/`
   兼容保留的 smoke CLI 包装层。
 - `analyse/`
-  MongoDB / Pulsar 的规则型 analyse runner。
+  MongoDB / Pulsar 规则 analyse runner 的兼容 CLI 壳；正式实现已迁入 `src/phases/phase4/rule_drafts/`。
 - `validators/`
   仓库结构、资产合同和工程回归校验器。
 - `replay/`

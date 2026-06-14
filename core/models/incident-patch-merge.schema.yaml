@@ -47,5 +47,5 @@ principles:
   - Merge order follows analyse script execution order.
 
 implementation:
-  python_module: tools/lib/patch_merge.py
+  python_module: src/shared/patch_merge.py
   spec: docs/specs/incident-patch-merge.spec.md

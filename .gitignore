@@ -1,11 +1,11 @@
 .local/
-__pycache__/
 *.pyc
-
-src/phase4_multitrack/__pycache__/
-tests/phase4_multitrack/__pycache__/
-tests/phase4_multitrack/unit/__pycache__/
-tests/phase4_multitrack/e2e/__pycache__/
+**/__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 tests/fixtures/**/adapter-output.yaml
 tests/fixtures/**/meta.yaml
 tests/fixtures/**/remote-config.yaml

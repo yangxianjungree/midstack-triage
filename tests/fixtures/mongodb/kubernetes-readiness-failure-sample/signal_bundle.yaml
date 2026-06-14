@@ -1,15 +1,11 @@
 incident_id: mongodb-kubernetes-readiness-failure-sample
 middleware: mongodb
 signal_overview:
-  status: abnormal
-  abnormal_signal_count: 1
-abnormal_signals:
-  - signal_id: pod-not-ready
-    severity: high
-    object_ref: pod/mongo-shard-0
-    detail: Pod is Running but readiness probe fails.
+  status: unknown
+  abnormal_signal_count: 0
+abnormal_signals: []
 object_signal_links: []
 timeline_summary: []
 processed_log_highlights: []
-generated_at: "2026-06-07T00:00:00+08:00"
-updated_at: "2026-06-07T00:00:00+08:00"
+generated_at: '2026-06-13T18:00:33+08:00'
+updated_at: '2026-06-13T18:00:33+08:00'

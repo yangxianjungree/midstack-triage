@@ -58,7 +58,7 @@ skill 在运行时承担三层职责，但不替代 MVP 全量采集：
 | Phase 4 Agent | 读取 `skill.md` workflow、inputs、outputs、stop conditions |
 | 知识沉淀 | scenario 已知后，按 skill/runbook/command metadata 生成候选 |
 
-定向补采白名单解析见 `tools/lib/skill_resolver.py`。Scenario 推断见 [scenario-routing.spec.md](scenario-routing.spec.md)。
+定向补采白名单解析见 `src/shared/skill_resolver.py`。Scenario 推断见 [scenario-routing.spec.md](scenario-routing.spec.md)。
 
 ## 模型
 

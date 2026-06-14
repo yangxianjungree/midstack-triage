@@ -5,4 +5,13 @@ namespace: mongo
 cluster_id: fixture
 customer_clue: MongoDB member Pod is running but not ready.
 input_source: fixture
-received_at: "2026-06-07T00:00:00+08:00"
+received_at: '2026-06-07T00:00:00+08:00'
+scenario_inference:
+  method: signal_bundle_rules_v1
+  confidence: low
+  candidates: []
+  unresolved: true
+  matched_signals: []
+updated_at: '2026-06-13T18:00:33+08:00'
+matched_skill_ids: []
+matched_assets: []

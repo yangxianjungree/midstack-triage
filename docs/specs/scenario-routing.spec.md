@@ -44,11 +44,11 @@ superseded_by: none
 ## 5. 规则来源
 
 - 路由表：`core/routing/scenario-signal-map.yaml`
-- 实现：`tools/lib/scenario_router.py`
+- 实现：`src/shared/scenario_router.py`
 
 ## 6. 与 skill 的关系
 
-推断得到 `scenario` 后，运行时通过 `tools/lib/skill_resolver.py` 解析 `primary_scenario` 匹配的 skill，用于：
+推断得到 `scenario` 后，运行时通过 `src/shared/skill_resolver.py` 解析 `primary_scenario` 匹配的 skill，用于：
 
 - 定向补采 script 白名单
 - `agent-reasoning-task.md` 资产注入

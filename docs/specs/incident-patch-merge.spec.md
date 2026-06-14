@@ -11,7 +11,7 @@ superseded_by: none
 
 相关实现：
 
-- [tools/lib/patch_merge.py](../../tools/lib/patch_merge.py)
+- [src/shared/patch_merge.py](../../src/shared/patch_merge.py)
 - [core/models/incident-patch-merge.schema.yaml](../../core/models/incident-patch-merge.schema.yaml)
 
 ## 1. 合并对象

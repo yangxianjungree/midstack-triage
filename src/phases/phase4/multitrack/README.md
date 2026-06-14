@@ -10,7 +10,7 @@
 - `agents/` - 协议、mock、Claude 实现和工厂
 - `agent_interface.py` - 兼容导出层，避免旧 import 断裂
 - `l1_mapper.py` - 从第 3 段输入映射初始假设
-- `cli_integration.py` - 当前由 `src/phases/phase4/reasoning.py` 转发调用的集成入口
+- `cli_integration.py` - 兼容转发层；正式 Phase 4 入口已经上移到 `src/phases/phase4/reasoning.py`
 - `data_structures.py` - 过程态数据结构
 
 `agents/` 子目录约束：
@@ -24,6 +24,7 @@
 正式实现约束：
 
 - 新代码优先写入 `src/phases/phase4/multitrack/`
+- 不要再把 phase 入口、CLI 胶水或 `analysis.yaml` 输出编排新增到这个目录
 - 不再保留 `src/phases/phase4/` 之外的平行 Phase 4 实现目录
 
 配套内容分层如下：

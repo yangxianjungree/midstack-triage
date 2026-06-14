@@ -16,7 +16,7 @@ superseded_by: none
 当前链路是：
 
 1. 第 1-3 段生成 `signal_bundle.yaml`、`structured_record.yaml`、`collection_report.yaml`
-2. `analyse` 在 incident 目录上调用 `phases.phase4.reasoning.run_phase4_analysis()`，再转发到 `phases.phase4.multitrack.cli_integration`
+2. `analyse` 在 incident 目录上调用 `phases.phase4.reasoning.run_phase4_analysis()`
 3. Phase 4 落盘 `reasoning-board.yaml`
 4. 后续 analyse runner 继续生成 `analysis.yaml`、`report.md` 等终态文件
 

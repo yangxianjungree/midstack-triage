@@ -206,5 +206,5 @@ superseded_by: none
 ## 之前提过、暂时记账的事项
 
 - 补齐仓库目录骨架
-- 补一版 `docs/architecture.md`
+- ~~补一版 `docs/architecture.md`~~（已有 [architecture.md](../concepts/architecture.md) 与 [architecture-overview.md](../concepts/architecture-overview.md)）
 - 后续讨论如何在 Claude Code 官方标准下兼容 Cursor 和 Codex

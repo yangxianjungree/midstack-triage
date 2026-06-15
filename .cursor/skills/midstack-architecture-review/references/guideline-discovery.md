@@ -8,6 +8,7 @@
 |------|------|
 | [README.md](../../../../README.md) | 项目目标、MongoDB 首个样例 |
 | [docs/architecture.md](../../../../docs/concepts/architecture.md) | 三层结构、职责边界 |
+| [docs/architecture-overview.md](../../../../docs/concepts/architecture-overview.md) | 排障运行时概念图（主图 + ④ 展开） |
 
 ## 按检视范围追加
 

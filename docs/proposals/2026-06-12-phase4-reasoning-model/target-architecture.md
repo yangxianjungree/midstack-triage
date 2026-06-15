@@ -13,6 +13,8 @@ related:
 
 **用途：** 评审流程与边界，**不代表当前已实现**。
 
+**概念展开图：** [④ 推理验证](../../concepts/diagrams/supplements/architecture-phase4-detail.png)（见 [architecture-overview.md](../../concepts/architecture-overview.md)）
+
 ---
 
 ## 1. 总览：五段中的位置

@@ -9,6 +9,8 @@ superseded_by: none
 
 本文件是排障主流程的概览（L2，解释性质）；规范性定义以[排障流程规范](../specs/triage-workflow.spec.md)为准。
 
+可视化见 [Midstack 架构图](architecture-overview.md)（主图）及其中 [④ 推理验证展开](diagrams/supplements/architecture-phase4-detail.png)。
+
 流程细节讨论见[排障流程讨论](../decisions/triage-workflow-discussion.md)。
 
 ## 结论

@@ -17,6 +17,14 @@ superseded_by: none
 - 不重复存放
 - 不提前抽象
 
+## 相关文档
+
+| 文档 | 内容 |
+|---|---|
+| [Midstack 架构图](architecture-overview.md) | 排障运行时：slash 命令、控制面 / 执行面、五段流程（概念图） |
+| [排障流程概览](triage-workflow.md) | 五段流程文字说明 |
+| [双平面运行时决策](../decisions/2026-06-14-dual-plane-runtime-architecture.md) | control plane / execution plane 代码分层 |
+
 ## 三层结构
 
 ### 1. 共性层

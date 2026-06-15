@@ -1,0 +1,34 @@
+flowchart TB
+    subgraph P4["④ 推理诊断与深入验证 · 控制面"]
+      direction TB
+
+      IN["治理后证据包<br/>+ 场景/技能上下文"]
+
+      subgraph REASON["多假设推理 · Agent / 大模型"]
+        direction LR
+        GEN["大模型提出竞争假设"]
+        VERIFY["证据论证 · 反证 · 验证"]
+        MERGE["收敛阶段性结论"]
+        GEN --> VERIFY --> MERGE
+      end
+
+      GAP{"证据缺口?"}
+      RECOLLECT["定向只读补采<br/>（段内小循环，非新 slash）"]
+
+      OUT["阶段性分析结论"]
+
+      IN --> GEN
+      VERIFY --> GAP
+      GAP -->|是| RECOLLECT
+      RECOLLECT -.-> IN
+      GAP -->|否| MERGE
+      MERGE --> OUT
+    end
+
+    EXP[("经验召回")] -.->|假设与验证路径参考| GEN
+
+    classDef ctrl fill:#e9f7ef,stroke:#3aa66b,stroke-width:2px,color:#1d4d33;
+    classDef exp fill:#f3eafc,stroke:#8a55c2,stroke-width:1px,color:#42215f;
+
+    class IN,GEN,VERIFY,MERGE,GAP,RECOLLECT,OUT ctrl;
+    class EXP exp;

@@ -111,6 +111,7 @@ superseded_by: none
 ### 概念（concepts/）
 
 - [架构设计](concepts/architecture.md)
+- [Midstack 架构图](concepts/architecture-overview.md)（主图 + ④ 展开）
 - [排障流程概览](concepts/triage-workflow.md)
 - [信号治理模式](concepts/signal-governance.md)
 

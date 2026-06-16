@@ -7,6 +7,37 @@ superseded_by: none
 
 # Architecture
 
+## 运行时概览
+
+Midstack 通过 3 条 slash 命令串起 5 段排障流程，并把运行时职责拆成控制面、执行面和后续可扩展的经验回灌路径。
+
+详细图示见 [Midstack 架构图](architecture-overview.md)。
+
+### 命令与阶段映射
+
+| 用户命令 | 执行阶段 | 输出 |
+|---------|---------|------|
+| `/midstack:start` | Phase 1-2 | `ready` 或 `blocked`（含指导） |
+| `/midstack:analyse` | Phase 3-5 | 结构化诊断报告 |
+| `/midstack:review` | 反馈收集 | 评分与改进建议 |
+
+### 架构要点
+
+**控制面（Control Plane）**：
+- 负责：流程编排、状态管理、推理诊断、报告生成、知识沉淀
+- Phase 2 决策点：根据环境检查结果判断 `ready` 或 `blocked`
+- Phase 3 & 4：按需调度执行面进行证据采集
+
+**执行面（Execution Plane）**：
+- 负责：远程环境接入、只读脚本执行、证据采集与回传
+- 触发时机：Phase 3（主要采集）、Phase 4（补充验证）
+- 执行合同：`context-file` + `output-file` + `artifact-dir`
+
+**未来：检索增强层（规划中）**：
+- 向量数据库存储历史事件和领域资产
+- Phase 4 推理时检索相似案例作为参考
+- Phase 5 和 review 的输出回灌知识库
+
 ## 目标
 
 本仓库用于沉淀中间件生产排障资产，并将这些资产组织为可被 Agent 和插件消费的标准化知识。

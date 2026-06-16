@@ -163,7 +163,7 @@ def validate_domain_assets(
 
 
 def validate_fixtures(errors: List[str]) -> None:
-    fixture_root = ROOT / "tests" / "fixtures" / MIDDLEWARE
+    fixture_root = ROOT / "tests" / "fixtures" / "active" / MIDDLEWARE
     if not fixture_root.exists():
         fail(errors, "MongoDB fixture root does not exist: %s" % fixture_root)
         return

@@ -76,7 +76,7 @@ cd "<engine_root>" && python3 tools/plugin/midstack-local.py start ...
 ```bash
 export MIDSTACK_TRIAGE_WORKSPACE="/path/to/workspace"
 cd "/path/to/midstack-triage" && python3 tools/plugin/midstack-local.py analyse \
-  --input-dir tests/fixtures/mongodb/connection-failure-sample \
+  --input-dir tests/fixtures/active/mongodb/connection-failure-sample \
   --output-dir .local/incidents/offline-test
 ```
 

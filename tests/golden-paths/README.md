@@ -7,6 +7,8 @@
 - `fixtures/`：离线 replay analyse 逻辑
 - `golden-paths/`：验证资产引用、场景路由、脚本最小合同
 
+`fixtures/` 子目录用于 golden path 的上下文样本，也会被 `tools/validators/validate-fixture-hygiene.py` 扫描。不要把 raw/private/sensitive 现场材料或运行时生成物放进这里。
+
 ## 运行
 
 ```bash

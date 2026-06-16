@@ -143,7 +143,7 @@ export MIDSTACK_TRIAGE_WORKSPACE=/path/to/my-sandbox
 
 # 离线 fixture 分析
 python3 tools/plugin/midstack-local.py analyse \
-  --input-dir tests/fixtures/mongodb/kubernetes-scheduling-failure-sample \
+  --input-dir tests/fixtures/active/mongodb/kubernetes-scheduling-failure-sample \
   --output-dir /path/to/my-sandbox/.local/incidents/offline-test
 
 # 工程校验（在 ROOT 执行）

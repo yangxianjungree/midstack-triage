@@ -18,7 +18,7 @@ LEVEL_ORDER = {"low": 1, "medium": 2, "high": 3}
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Score MongoDB replay analysis outputs.")
-    parser.add_argument("--fixture-root", default="tests/fixtures/mongodb")
+    parser.add_argument("--fixture-root", default="tests/fixtures/active/mongodb")
     parser.add_argument("--analysis-root", default=".local/replay")
     parser.add_argument("--output-root", default=".local/scores/mongodb")
     parser.add_argument("--run-analyse", action="store_true", help="Generate missing or stale analysis files before scoring.")

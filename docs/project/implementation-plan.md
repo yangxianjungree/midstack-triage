@@ -369,7 +369,7 @@ superseded_by: none
 建议目录：
 
 ```text
-tests/fixtures/mongodb/baseline-sharded-cluster/
+tests/fixtures/active/mongodb/baseline-sharded-cluster/
   input.yaml
   structured_record.yaml
   signal_bundle.yaml
@@ -384,7 +384,7 @@ tests/fixtures/mongodb/baseline-sharded-cluster/
 
 当前状态：
 
-- 已补充 `tests/fixtures/mongodb/baseline-sharded-cluster/`
+- 已补充 `tests/fixtures/active/mongodb/baseline-sharded-cluster/`
 - 已补充 `tools/replay/mongodb-freeze-fixture.py`，可将 remote run 或 incident 冻结为离线 fixture
 
 ### 3. Incident replay
@@ -402,7 +402,7 @@ tests/fixtures/mongodb/baseline-sharded-cluster/
 建议目录：
 
 ```text
-tests/fixtures/mongodb/<case_id>/
+tests/fixtures/active/mongodb/<case_id>/
   input.yaml
   structured_record.yaml
   signal_bundle.yaml

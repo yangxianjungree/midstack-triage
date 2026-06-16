@@ -10,7 +10,7 @@ import yaml
 def test_e2e_cli_integration(tmp_path):
     """测试CLI完整集成：从incident到analysis输出"""
 
-    fixture_dir = Path("tests/fixtures/mongodb/kubernetes-readiness-failure-sample")
+    fixture_dir = Path("tests/fixtures/active/mongodb/kubernetes-readiness-failure-sample")
     incident_dir = tmp_path / "phase4-cli-output"
 
     # 运行CLI分析

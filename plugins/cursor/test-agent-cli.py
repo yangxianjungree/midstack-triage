@@ -33,7 +33,7 @@ def main() -> int:
 
         analyse = run_cli_analyse_fixture(
             workspace,
-            fixture_relpath="tests/fixtures/mongodb/connection-failure-sample",
+            fixture_relpath="tests/fixtures/active/mongodb/connection-failure-sample",
             output_relpath=INCIDENT_RELPATH,
         )
         if analyse.returncode != 0:

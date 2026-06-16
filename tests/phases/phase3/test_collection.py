@@ -9,7 +9,7 @@ SRC_DIR = ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "mongodb"
+FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "active" / "mongodb"
 
 from phases.phase3 import collection as phase3_collection
 

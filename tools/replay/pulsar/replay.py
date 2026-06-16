@@ -17,7 +17,7 @@ REQUIRED_FILES = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Replay Pulsar fixture summaries.")
-    parser.add_argument("--fixture-root", default="tests/fixtures/pulsar")
+    parser.add_argument("--fixture-root", default="tests/fixtures/active/pulsar")
     parser.add_argument("--run-analyse", action="store_true", help="Generate analysis.yaml for each ready fixture.")
     parser.add_argument("--output-root", default=".local/replay", help="Output root for generated analysis files.")
     parser.add_argument("--format", choices=["text", "json"], default="text")

@@ -14,8 +14,8 @@ if str(SRC_DIR) not in sys.path:
 from shared.scenario_router import infer_scenario  # noqa: E402
 
 
-FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "mongodb"
-PULSAR_FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "pulsar"
+FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "active" / "mongodb"
+PULSAR_FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "active" / "pulsar"
 
 
 def load_fixture_signal_bundle(case_id: str) -> dict:

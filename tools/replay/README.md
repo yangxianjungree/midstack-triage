@@ -50,7 +50,7 @@ python3 tools/replay/mongodb-replay.py --run-analyse
 默认读取：
 
 ```text
-tests/fixtures/mongodb/*/
+tests/fixtures/active/mongodb/*/
 ```
 
 输出：

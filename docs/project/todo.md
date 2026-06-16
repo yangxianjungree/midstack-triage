@@ -87,11 +87,9 @@ superseded_by: none
 
 ### 6. Fixture 生命周期与脱敏治理
 
-- 将 `tests/fixtures/` 拆分为 `active` / `legacy`，默认 replay 和 score gate 只扫描 active fixture
 - 为历史 fixture 增加状态和版本元信息，例如 `status`、`schema_version`、`last_verified_with`
-- 将 raw/private/sensitive fixture 目录加入 `.gitignore`，禁止未脱敏现场样本入库
-- 扩展 fixture hygiene validator，阻断明文凭据、疑似真实 IP、客户名、未脱敏日志和私钥/token
-- 迁移或修复 `kubernetes-readiness-failure-sample`，避免历史期望继续阻断默认 validator
+- 继续收敛 fixture hygiene validator 的客户名、未脱敏日志和内网 IP allowlist 策略
+- 将现存 fixture 中的私网 IP 逐步替换为文档保留地址或明确假值，减少 warning 噪音
 
 ### 7. 扩展到其他中间件
 
@@ -102,6 +100,14 @@ superseded_by: none
 - `review` 评分与反馈能力的正式实现
 
 ## 已完成但需后续复核
+
+### 0. Fixture 生命周期与脱敏治理
+
+- 已将 `tests/fixtures/` 拆分为 `active` / `legacy`
+- 默认 replay、score gate 和 MongoDB fixture validator 已切到 active fixture
+- 已将 raw/private/sensitive fixture 目录和 `.local/fixtures/` 加入 `.gitignore`
+- 已扩展 fixture hygiene validator，覆盖 active、legacy 和 golden-path fixtures，阻断运行产物、疑似密钥和公网 IP
+- 已修复 `kubernetes-readiness-failure-sample` 的最小证据链，避免历史期望阻断默认 validator
 
 ### 1. 结构边界
 

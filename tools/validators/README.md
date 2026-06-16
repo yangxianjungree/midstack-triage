@@ -39,7 +39,7 @@ python3 tools/validators/validate-repo.py
 - MongoDB 资产与接口合同校验
 - MongoDB fixture replay
 - MongoDB replay score gate，默认要求所有评分维度至少达到 `medium`
-- Fixture hygiene 检查，防止运行产物写回 `tests/fixtures/`
+- Fixture hygiene 检查，防止运行产物和敏感材料写回 `tests/fixtures/` 或 `tests/golden-paths/fixtures/`
 - Kubernetes runtime 通用分类检查，防止故障分类点对点实现
 - Cursor source-checkout adapter 冒烟回归 (`plugins/cursor/test-agent-cli.py`)
 
@@ -105,7 +105,8 @@ python3 tools/validators/validate-tool-boundaries.py
 - runbook、command、skill 引用的 scenario 是否存在对应场景定义
 - runbook、command、skill 引用的 component 是否存在 MongoDB 组件入口
 - skill `required_assets` 指向的资产目录是否存在
-- `tests/fixtures/mongodb/*` 是否包含最小 replay fixture 文件集
+- `tests/fixtures/active/mongodb/*` 是否包含最小 replay fixture 文件集
+- `tests/fixtures/active/`、`tests/fixtures/legacy/` 和 `tests/golden-paths/fixtures/` 是否通过 fixture hygiene 检查
 - `adapter-output.example.yaml` 是否满足插件命令输出最小合同
 - Kubernetes runtime signal 是否全部登记在通用 taxonomy，且 normalizer 不能发出未登记的点对点 signal
 - `tools/plugin/` 是否仍保持薄壳边界

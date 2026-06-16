@@ -75,7 +75,7 @@ def main() -> int:
     if unused:
         errors.append("taxonomy contains signals not emitted by normalizer: %s" % sorted(unused))
 
-    fixture = ROOT / "tests" / "fixtures" / "mongodb" / "kubernetes-scheduling-failure-sample" / "expected_analysis.yaml"
+    fixture = ROOT / "tests" / "fixtures" / "active" / "mongodb" / "kubernetes-scheduling-failure-sample" / "expected_analysis.yaml"
     expected = load_yaml(fixture)
     category = ((expected.get("conclusion_summary") or {}).get("primary_cause_category"))
     if category != "kubernetes-scheduling":

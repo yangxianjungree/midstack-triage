@@ -1,6 +1,6 @@
 ---
 status: draft
-last_updated: 2026-06-14
+last_updated: 2026-06-16
 supersedes: none
 superseded_by: none
 ---
@@ -19,6 +19,8 @@ superseded_by: none
 - Cursor 适配器已收敛到 `plugins/cursor/`，当前仍通过 workspace `engine_root` 调用源仓库入口
 - `tools/plugin/midstack-local.py` 已收敛为本地 CLI 适配层，不再承载膨胀的正式实现
 - 第 4 段多轨推理正式实现已收敛到 `src/phases/phase4/multitrack/`
+- Replay fixture 已拆分为 `tests/fixtures/active/` 与 `tests/fixtures/legacy/`，默认 replay、score 和仓库门禁只读取 active 样本
+- Fixture hygiene gate 已覆盖 active、legacy 和 golden-path fixtures，阻断运行时生成物、疑似密钥和公网 IP；内网 IP 当前作为 warning 暴露
 - 历史兼容层和旧入口目录已清理：`tools/lib/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tests/replay/`、`tests/tools/analyse/`
 
 ## 当前结构状态
@@ -47,6 +49,8 @@ superseded_by: none
   仅保留薄入口、校验、回放、导入、生成和工程辅助工具
 - `tests/`
   按 ownership 收敛到 `execution/`、`phases/`、`plugins/`、`shared/`、`tools/` 等目录，不再新增 `tests/unit/` 这类扁平历史目录
+- `tests/fixtures/`
+  `active/` 存放默认门禁样本，`legacy/` 存放历史归档样本，raw/private/sensitive 现场材料不得入库
 
 ## 第一版已实现能力清单
 

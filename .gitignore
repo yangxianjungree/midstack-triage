@@ -12,3 +12,9 @@ tests/fixtures/**/remote-config.yaml
 tests/fixtures/**/remote-executor-run.yaml
 tests/fixtures/**/remote-executor.stdout.txt
 tests/fixtures/**/remote-executor.stderr.txt
+tests/fixtures/**/raw/
+tests/fixtures/**/private/
+tests/fixtures/**/sensitive/
+tests/golden-paths/fixtures/**/raw/
+tests/golden-paths/fixtures/**/private/
+tests/golden-paths/fixtures/**/sensitive/

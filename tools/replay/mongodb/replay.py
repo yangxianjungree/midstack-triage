@@ -17,7 +17,7 @@ REQUIRED_FILES = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Replay MongoDB fixture summaries.")
-    parser.add_argument("--fixture-root", default="tests/fixtures/mongodb")
+    parser.add_argument("--fixture-root", default="tests/fixtures/active/mongodb")
     parser.add_argument("--run-analyse", action="store_true", help="Generate analysis.yaml for each ready fixture.")
     parser.add_argument("--output-root", default=".local/replay", help="Output root for generated analysis files.")
     parser.add_argument("--format", choices=["text", "json"], default="text")

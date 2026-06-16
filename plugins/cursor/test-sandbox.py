@@ -18,7 +18,7 @@ from cli_smoke import (
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SANDBOX = Path("/home/stephen/AI/midstack-cursor-sandbox")
 INCIDENT_RELPATH = ".local/incidents/cursor-sandbox-k8s-runtime-test"
-FIXTURE = "tests/fixtures/mongodb/kubernetes-scheduling-failure-sample"
+FIXTURE = "tests/fixtures/active/mongodb/kubernetes-scheduling-failure-sample"
 
 
 def main() -> int:

@@ -33,8 +33,8 @@ def test_path_from_arg_targets_workspace_for_new_output_dir(tmp_path, monkeypatc
 
 def test_resolve_path_falls_back_to_repo_for_fixtures(monkeypatch):
     monkeypatch.delenv("MIDSTACK_TRIAGE_WORKSPACE", raising=False)
-    fixture = resolve_path("tests/fixtures/mongodb/connection-failure-sample")
-    assert fixture == ROOT / "tests" / "fixtures" / "mongodb" / "connection-failure-sample"
+    fixture = resolve_path("tests/fixtures/active/mongodb/connection-failure-sample")
+    assert fixture == ROOT / "tests" / "fixtures" / "active" / "mongodb" / "connection-failure-sample"
 
 
 def test_start_ready_output_points_to_midstack_analyse(tmp_path, monkeypatch):

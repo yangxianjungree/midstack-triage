@@ -343,6 +343,8 @@ def test_build_marketplace_stages_bundled_runtime(tmp_path, monkeypatch):
 
     for marker in module.RUNTIME_MARKER_FILES:
         assert plugin_dir.joinpath(marker).exists(), marker
+    assert (plugin_dir / "LICENSE").read_text(encoding="utf-8") == (ROOT / "LICENSE").read_text(encoding="utf-8")
+    assert (plugin_dir / "NOTICE").read_text(encoding="utf-8") == (ROOT / "NOTICE").read_text(encoding="utf-8")
 
 
 def test_write_workspace_state_uses_bundled_runtime_mode(tmp_path):

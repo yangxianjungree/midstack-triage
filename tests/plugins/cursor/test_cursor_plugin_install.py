@@ -25,6 +25,8 @@ def test_plugin_manifest_check_passes():
         universal_newlines=True,
     )
     assert proc.returncode == 0, proc.stderr or proc.stdout
+    assert (PLUGIN_DIR / "LICENSE").read_text(encoding="utf-8") == (ROOT / "LICENSE").read_text(encoding="utf-8")
+    assert (PLUGIN_DIR / "NOTICE").read_text(encoding="utf-8") == (ROOT / "NOTICE").read_text(encoding="utf-8")
 
 
 def test_workspace_init_links_slash_commands(tmp_path):

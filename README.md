@@ -1,267 +1,160 @@
 # Midstack Triage
 
-面向 PaaS 中间件生产故障的自动排查插件与知识体系。
+把中间件生产排障经验，做成 Agent 可安装、可执行、可持续迭代的插件能力。
 
-项目聚焦 MongoDB、Pulsar 等中间件，目标是将生产排障经验标准化、结构化和可执行化，沉淀为可复用的 `runbook`、命令、脚本、技能和 Agent 能力。
+Midstack 面向 PaaS 中间件生产故障，目标并非构建另一套监控系统，也不会默认代客执行生产变更，而是将“受理客户线索之后，如何确认环境、如何取证、如何推理、如何形成可复核结论”收敛为一套稳定的运行时和知识体系。
 
-实现形式以 **Claude Code 插件官方标准** 为基线，同时兼容 `Cursor`、`Codex` 等其他 Agent 运行环境。
+## 为什么做这个项目
 
-## 核心价值
+生产排障的高成本，通常并非源于命令执行能力不足，而是以下问题长期缺乏产品化支撑：
 
-- 标准化生产排障流程，减少临场排查的随意性
-- 复用中间件专家经验，降低重复排障成本
-- 结构化沉淀证据、假设、结论和知识资产
-- 通过 metadata 模型让 runbook、command、skill 可检索、可校验、可组合
-- 通过插件化方式让排障能力可接入、可复用、可持续迭代
+- 客户上报的初始线索往往不完整、口径不一，故障现象、影响对象和影响范围常混在同一描述里
+- 取证动作分散在聊天记录、历史脚本、个人经验与现场判断中，缺少统一编排
+- 同类问题反复从初始步骤排查，却难以沉淀结构化证据链
+- Agent 可生成分析文本，但若缺少可信证据输入，结论往往难以复核、容易失真
 
-## Scope
+Midstack 旨在填补这一空白：从告警触发或故障报告受理，到产出可交接、可复盘、可继续验证的诊断结果。
 
-本项目当前聚焦以下能力范围：
+## 工作原理
 
-- PaaS 中间件故障的自动化排查与诊断
-- 面向生产环境的 `runbook` 编排与沉淀
-- 面向中间件场景的命令、脚本、工具、知识和技能封装
-- 将排障步骤组织为标准化插件能力，便于不同 Agent 平台复用
-- 优先覆盖高频中间件与高频故障场景，逐步扩展支持面
+Midstack 当前对外保持 3 个主命令：
 
-## 非目标
+- `/midstack:start`：受理原始线索，确认环境 IP 和远端接入信息，建立 incident，给出 `ready / blocked`
+- `/midstack:analyse`：执行采集、推理、验证，默认分析当前 incident，输出分析结果和报告
+- `/midstack:review`：基于本次分析结果自动生成五维评分、改进建议和风险提示，用于后续优化
 
-本项目当前不以以下方向为目标：
+运行时拆成两层：
 
-- 不直接承担中间件托管控制面或资源编排职责
-- 不默认执行高风险变更操作，优先提供只读诊断和风险提示
-- 不追求一次性覆盖所有中间件或所有故障类型
-- 不绑定单一厂商的 Agent 运行时实现，避免将能力写死在某个平台
+- **控制面**：编排 5 段排障流程，管理状态，驱动第 4 段推理和第 5 段结论整合
+- **执行面**：负责远端接入、只读脚本执行、证据采集、结果回传
 
-## 设计理念
+![Midstack 架构图](docs/concepts/diagrams/architecture-overview.svg)
 
-- 先诊断，后建议，最后才是处置
-- 优先沉淀真实生产排障经验，而不是抽象化的空泛流程
-- 所有关键步骤尽量可验证、可审计、可复现
-- 保留原始线索，再做富化和推理
-- 采用“共性骨架 + 中间件专属扩展”的结构设计
-- 高风险操作必须显式确认
-- 插件能力设计优先遵循官方标准，同时兼顾跨平台兼容性
+知识沉淀通过 `knowledge_candidates` 回灌，后续可以接入规则检索或向量数据库，但这不是第一版的前置依赖。
 
-## 稳定结论
+架构图、第 4 段展开图和图解说明见 [架构概览](docs/concepts/architecture-overview.md)；整体设计见 [架构设计](docs/concepts/architecture.md)。
 
-以下内容属于当前已经收敛的稳定结论，应作为后续设计和实现的约束基线：
+## 5 段排障流程
 
-- 排障主流程固定为 5 段：
-  - `受理与启动`
-  - `环境确认与对象盘点`
-  - `信号采集与治理`
-  - `推理诊断与深入验证`
-  - `结论整合与知识沉淀`
-- 插件对外固定为 3 个面向用户的主命令（另有 1 个工程自检命令 `/<plugin_name>:validate`，不属于用户排障主路径）：
-  - `/<plugin_name>:start`
-  - `/<plugin_name>:analyse`
-  - `/<plugin_name>:review`
-- 仓库按“共性层 + 领域层 + 场景层”组织：
-  - `core/` 与 `docs/` 承载共性规范和底座
-  - `domains/` 承载具体中间件资产
-  - `scenarios/` 承载跨中间件场景定义
-- `scenarios/` 只定义场景，不存产品专属 `runbook`、命令或脚本
-- `domains/<product>/` 只存具体中间件资产
-- `runbook` 只存一份：
-  - 物理上按组件组织
-  - 逻辑上按场景检索
-- 主仓库保留 `interfaces/` 中的跨适配器接口定义，也允许在 `plugins/<agent>/` 下保留厂商适配器源实现
-- `.cursor/`、`.claude/` 等目录只视为目标项目的安装投影，不作为本仓库插件源目录
-- 主仓库中的脚本属于资产源文件，运行时执行路径应由适配器明确映射和调用；当前 Cursor 适配器通过 workspace `engine_root` 回调源仓库入口，Claude 适配器通过 bundled runtime 分发同一套运行时合同
-- 脚本应使用稳定的 `script_id` 标识，当前最小规则为 `<middleware>.<phase>.<target>.<action>`
-- 每个中间件的脚本资产应使用单独的 `manifest.yaml` 统一登记，不为每个脚本单独维护一份 metadata
-- 脚本 `manifest.yaml` 采用轻量合同模型并纳入最小校验，不做重型 schema
-- 插件运行时应通过独立映射表将 `script_id` 映射到适配器运行时视图中的脚本路径
-- 第 3 段脚本统一采用 `context-file + output-file + artifact-dir` 调用合同
-- 远程执行属于 `remote executor`；它负责进入目标环境并执行脚本，脚本本身不内置 SSH 逻辑
-- 中间件工具默认按 Pod 内工具处理，例如通过 `kubectl exec` 在目标 Pod 内执行 `mongosh`
-- `remote executor` 需要使用独立请求/结果模型，区分执行层状态和脚本采集状态
-- 远程执行器错误至少应区分 SSH、认证、`kubectl`、`kubectl exec`、目标 Pod、Pod 内工具、脚本合同和结果回收问题
-- 远程执行器应将当前适配器运行时视图中的脚本投放到跳板机 `/tmp/<plugin_name>/` 下，再按 `incident_id/script_id` 创建单次执行目录
-- 第 3 段脚本应优先使用 Python 标准库，兼容 Python 3.6，不默认依赖跳板机预装 `PyYAML`
-- Cursor 集成测试以 `/home/stephen/AI/` 下的临时项目或固定 sandbox 项目为目标，不把 midstack 源码仓库自己的 `.cursor/` 当作安装结果
-- 第 3 段 `context-file` / `output-file` 采用轻量合同模型，并以最小示例校验，不引入重型 schema
-- `script-runtime-map` 和 `remote executor` 请求/结果采用轻量合同模型，并以最小示例校验
-- `runbook`、`command`、`skill` metadata 采用轻量合同模型，以 MongoDB 样例作为校验基准
-- `runbook`、`command`、`skill`、诊断检查单和事件总结统一使用 `core/templates/` 核心模板
-- 插件命令 `adapter output` 采用轻量合同模型，并以示例校验
-- 风险等级、状态、场景类型、能力类型、候选类型和标签规范统一使用 `core/taxonomies/` 共性枚举
-- Kubernetes runtime 异常信号采用通用 taxonomy 加 validator 的方式，避免把故障分类做成单个案例的点对点规则
-- 进入“稳定结论”的内容，必须同步更新 `README` 和对应 spec，不能只留在讨论文档中
-- 实现进展类断言（已完成、已验证、已能运行）不在本节维护，统一记录在[实现进展](docs/project/implementation-status.md)
-- 字段、结构和枚举类结论以 `core/models/`、`core/templates/`、`core/taxonomies/` 为唯一事实源；README 与 spec 只引用或摘抄子集，不平行定义
+| Phase | 名称 | 作用 |
+| --- | --- | --- |
+| 1 | 受理与启动 | 保存原始线索，创建排障记录 |
+| 2 | 环境确认与对象盘点 | 确认目标环境、部署对象和本次排障范围 |
+| 3 | 信号采集与治理 | 执行只读采集，做时间对齐、对象关联、降噪和汇总 |
+| 4 | 推理诊断与深入验证 | 多假设推理、验证动作生成、结论收敛 |
+| 5 | 结论整合与知识沉淀 | 输出报告、建议和知识候选 |
 
-## 总体架构
+流程解释见 [docs/concepts/triage-workflow.md](docs/concepts/triage-workflow.md)。
 
-项目围绕 5 段排障主流程组织：
+## 快速体验
 
-1. `受理与启动`
-2. `环境确认与对象盘点`
-3. `信号采集与治理`
-4. `推理诊断与深入验证`
-5. `结论整合与知识沉淀`
+以下命令默认在 `midstack-triage` 仓库根目录执行。
 
-在执行方式上：
+### 安装到 Claude sandbox
 
-- 第 3 段以脚本为主，负责采集、整理、时间对齐、初步降噪和结构化输出
-- 第 4 段以 Agent 为主，负责多假设推理、验证动作生成和阶段性结论整理
-- 排障结果以结构化记录方式沉淀，便于后续继续分析和知识回灌
+```bash
+python3 plugins/claude/plugin-install.py install --workspace /path/to/sandbox
+python3 plugins/claude/plugin-install.py check --workspace /path/to/sandbox
+```
 
-第 4 段多轨推理模块当前实现位于 `src/phases/phase4/multitrack/`，并通过 `src/phases/phase4/reasoning.py` 暴露阶段入口。集成说明见 [docs/project/phase4-multitrack-integration.md](docs/project/phase4-multitrack-integration.md)，设计过程文档保留在 `docs/proposals/2026-06-12-phase4-reasoning-model/`。
+该命令面向 sandbox；默认会清理目标 workspace 的 Claude 项目历史。需要保留历史时，参考 [plugins/claude/README.md](plugins/claude/README.md) 使用 `--keep-project-state`。
+
+### 安装到 Cursor 工作区
+
+```bash
+python3 plugins/cursor/plugin-install.py --upgrade --workspace-init /path/to/workspace
+python3 plugins/cursor/plugin-install.py --check-workspace /path/to/workspace
+```
+
+安装或升级后，**重新加载 Cursor**（Reload Window），否则已打开的工作区可能不会加载新的 slash 命令投影。
+
+当前 Cursor 适配器通过 workspace state 中的 `engine_root` 回调本仓库入口，目标工作区需要能访问这个 checkout。
+
+### 在已安装的工作区中执行
+
+完成安装后，在 **已安装插件的目标工作区** 里打开 Agent 会话。
+
+用自然语言描述故障即可，环境地址、凭据、客户原话可以写在同一条消息里：
+
+```text
+/midstack:start 192.168.1.10 环境的 MongoDB 副本集有节点异常，账号密码 root/example，客户反馈查询超时
+/midstack:analyse
+```
+
+建议按下面顺序使用：
+
+1. **`/midstack:start`** — 受理线索并确认环境；返回 `ready` 后继续，若提示 `blocked` 则按说明补全后重新执行
+2. **`/midstack:analyse`** — 采集证据、完成分析并生成报告
+3. **`/midstack:review`**（可选）— 对本次分析做质量评估
+
+以上命令仅在已安装的工作区内可用。示例面向测试环境；`start` 会将凭据写入本地 incident 配置供后续 `analyse` 使用，生产环境建议使用临时凭据或后续 secret 引用机制。
+
+## 当前落地情况
+
+| 方向 | 状态 | 说明 |
+| --- | --- | --- |
+| MongoDB | Active MVP | 已打通 `start -> analyse` 主路径；`review` 用于质量反馈；第 3 段只读采集脚本已形成第一批 MVP |
+| Claude Code 插件 | 可用 | bundled runtime 打包、安装、自检和 sandbox 测试；不依赖 sandbox 内再 checkout 源仓库 |
+| Cursor 适配器 | 可用但未完全独立 | 当前仍通过 workspace `engine_root` 调用源仓库入口 |
+| Pulsar | Skeleton | 结构和样例已在，正式分析链路未完成 |
+
+**已验证成果**：
+
+- 第 4 段多轨推理正式实现已收敛到 `src/phases/phase4/multitrack/`
+- MongoDB fixture replay 与本地评分链路已打通，用于回归 analyse 效果
+- analyse 结果已能输出结构化报告与知识沉淀候选
+
+完整实现清单见 [docs/project/implementation-status.md](docs/project/implementation-status.md)。
 
 ## 仓库结构
 
-当前仓库按“共性层 + 领域层 + 场景层”组织：
+```text
+midstack-triage/
+├── docs/                         概念、规范、项目状态与提案
+├── src/
+│   ├── commands/                 slash 命令与编排入口
+│   ├── phases/                   5 段 control plane
+│   ├── execution/                execution plane
+│   └── shared/                   跨阶段复用能力
+├── core/                         模型、模板、taxonomy 与共享诊断能力
+├── domains/
+│   ├── mongodb/                  MongoDB 专属资产
+│   └── pulsar/                   Pulsar 领域样例
+├── scenarios/                    跨中间件标准场景定义
+├── interfaces/                   跨适配器接口定义与示例合同
+├── plugins/
+│   ├── claude/                   Claude Code 插件与 bundled runtime
+│   └── cursor/                   Cursor 投影适配器
+├── tools/                        校验、回放、生成与工程工具
+└── tests/                        集成测试、fixture 与 golden path
+```
 
-- `docs/`：架构原则、资产规范、接口约定
-- `src/`：适配器 runtime 会打包或回调的正式实现；当前按 `commands/`、`phases/`、`execution/`、`shared/` 划分
-- `core/`：模板、通用分类、共享诊断能力
-- `scenarios/`：跨中间件的标准场景定义
-- `domains/`：按具体中间件划分的专属资产
-- `interfaces/`：给 Claude Code、Codex、Cursor 等适配器消费的接口定义
-- `plugins/`：厂商适配器源实现，例如 `plugins/claude/`、`plugins/cursor/`
-- `tools/`：薄入口、校验、生成、导入和回放工具
-- `tests/`：fixture、回放、打分和离线验证代码
+## 文档入口
 
-结构原则如下：
+- [docs/README.md](docs/README.md)：文档地图和权威分层
+- [docs/concepts/architecture-overview.md](docs/concepts/architecture-overview.md)：整体架构图和第 4 段展开图
+- [docs/concepts/triage-workflow.md](docs/concepts/triage-workflow.md)：5 段流程解释
+- [docs/specs/plugin-runtime.spec.md](docs/specs/plugin-runtime.spec.md)：插件运行时合同
+- [docs/project/implementation-status.md](docs/project/implementation-status.md)：实现进展
 
-- 需要被多个入口复用、或者需要被适配器 runtime 打包或回调的正式实现，优先放 `src/`
-- `src/` 只放运行时实现，不放测试、回放、校验、生成、导入或讨论类工程内容
-- `tools/` 负责命令入口和工程脚本，不再长期承载膨胀的核心实现
-- 不再保留历史兼容导入层；共享实现统一直接从 `src/` 导入
-- `scenarios/` 只定义场景，不存产品专属 runbook
-- `domains/<product>/` 只存具体中间件资产
-- runbook 只存一份，物理上按组件组织，逻辑上按场景检索
-- `interfaces/` 放跨适配器接口定义，`plugins/<agent>/` 放对应适配器源实现
-- 源码仓库自己的 `.cursor/` 不承载 Midstack 插件安装投影；安装投影应写入目标 Cursor 项目的 `.cursor/`
-- 主仓库中的脚本是资产源文件，适配器需要通过明确的映射和执行合同调用
-- Claude 适配器安装后运行的是打包进插件 payload 的运行时；Cursor 适配器当前仍通过 workspace `engine_root` 调用源仓库入口
+## 设计边界
 
-## 插件使用方式
-
-当前插件对外保持 3 个面向用户的主入口（另有工程自检命令 `/<plugin_name>:validate`）：
-
-- `/<plugin_name>:start`
-  启动一轮排障，完成输入收集、环境确认和 `ready / blocked` 判断
-- `/<plugin_name>:analyse`
-  跑完正式分析主路径，执行信号治理、推理验证，并直接产出结论和报告
-- `/<plugin_name>:review`
-  对插件排障效果做评价、打分和反馈，服务于后续优化
-
-## 当前支持范围
-
-本节为状态摘要，完整的已实现 / 未实现清单见[实现进展](docs/project/implementation-status.md)。
-
-- 第一版正式支持 `MongoDB`
-- 当前 MongoDB 领域样例覆盖：
-  - `replica-inconsistency`
-  - `connection-failure`
-  - `resource-exhaustion`
-  - `latency-spike`
-  - `data-hotspot`
-  - `kubernetes-runtime`（运行时异常）
-- MongoDB 第 3 段 MVP 脚本已覆盖：
-  - Pod、StatefulSet、Service、Node 采集
-  - Kubernetes Events 采集
-  - mongos shard map 采集
-  - replica set `rs.status()` 采集
-  - 当前日志和 previous 日志采集
-  - 日志 highlights
-  - signal bundle 汇总
-- `Pulsar` 当前只作为领域样例和结构验证样例
-- 已形成排障主流程、插件使用方式和结构化记录的规范基线
-- 已形成 MongoDB fixture replay 与本地评分闭环，用于减少只依赖人工反馈的优化滞后
-- 已形成 MongoDB Kubernetes runtime 故障 fixtures，可在未知场景线索下回归验证通用 K8s runtime 分类能力
-- MongoDB analyse runner 已能基于场景匹配已有 runbook、command、skill 作为知识沉淀候选
-- 更多中间件、脚本能力和知识资产将持续补充
+- 不承担监控告警系统职责
+- 不承担中间件控制面职责
+- 默认不执行高风险生产变更
+- 不将能力绑定于单一 Agent 平台
 
 ## 本地校验
 
-校验 MongoDB 脚本资产、插件接口示例和知识资产 metadata：
-
 ```bash
 python3 tools/validators/validate-repo.py
-```
-
-只校验 MongoDB 资产合同：
-
-```bash
-python3 tools/validators/validate-mongodb-scripts.py
-```
-
-使用真实 K8s 环境做 MongoDB 远程采集验证时，配置文件应放在 `.local/` 下，避免敏感信息进入仓库：
-
-```bash
-PYTHONPATH=src python3 -m execution.remote.executor --config .local/test-envs/mongodb-k8s.yaml
-```
-
-运行 MongoDB fixture replay 和本地评分：
-
-```bash
-python3 tools/replay/mongodb-freeze-fixture.py --remote-run-dir .local/remote-runs/<incident_id> --fixture-dir .local/fixtures/mongodb/<case_id> --case-id <case_id> --scenario baseline
 python3 tools/replay/mongodb-replay.py --run-analyse
 python3 tools/replay/mongodb-score.py --run-analyse --min-level medium
-python3 tools/replay/mongodb-score-summary.py --score-root .local/scores/mongodb
 ```
 
-验证 Cursor Agent CLI 插件集成：
+适配器安装自检与 `/midstack:validate` 见 [plugins/claude/README.md](plugins/claude/README.md)、[plugins/cursor/README.md](plugins/cursor/README.md)。
 
-```bash
-python3 plugins/cursor/test-agent-cli.py
-python3 plugins/cursor/test-sandbox.py
-python3 tools/validators/validate-repo.py
-```
+## 开源协议
 
-安装到一个目标 Cursor 工作区：
-
-```bash
-python3 plugins/cursor/plugin-install.py --upgrade --workspace-init /home/stephen/AI/<target-project>
-python3 plugins/cursor/plugin-install.py --check-workspace /home/stephen/AI/<target-project>
-```
-
-## 文档导航
-
-完整文档地图与权威分层规则见 [docs/README.md](docs/README.md)。常用入口：
-
-- 概念与架构：
-  - [架构设计](docs/concepts/architecture.md)
-  - [排障流程概览](docs/concepts/triage-workflow.md)
-  - [信号治理模式](docs/concepts/signal-governance.md)
-- 规范（唯一事实源）：
-  - [排障流程规范](docs/specs/triage-workflow.spec.md)
-  - [插件使用规范](docs/specs/plugin-usage.spec.md)
-  - [插件运行时规范](docs/specs/plugin-runtime.spec.md)
-  - [Analyse MVP 规范](docs/specs/analyse-mvp.spec.md)
-  - [单次排障记录规范](docs/specs/incident-record.spec.md)
-  - [增量合并规范](docs/specs/incident-patch-merge.spec.md)
-  - [跨资产引用规范](docs/specs/asset-reference.spec.md)
-  - [Runbook 规范](docs/specs/runbook.spec.md)
-  - [Command 规范](docs/specs/command.spec.md)
-  - [Skill 规范](docs/specs/skill.spec.md)
-- 项目管理：
-  - [实施计划](docs/project/implementation-plan.md)
-  - [实现进展](docs/project/implementation-status.md)
-  - [TODO](docs/project/todo.md)
-- 变更治理：
-  - [文档地图与变更流程](docs/README.md)
-  - [变更提案入口](docs/proposals/README.md)
-- 分析与参考：
-  - [领域记录对照](docs/analysis/domain-record-comparison.md)
-  - [外部参考资料](docs/references.md)
-  - [汇报材料](docs/presentation.md)
-- 历史决策（已归档，非权威）：
-  - [排障流程讨论](docs/decisions/triage-workflow-discussion.md)
-  - [讨论归档](docs/decisions/discussions-archive.md)
-- 共性底座：
-  - [模型目录](core/models/README.md)
-  - [模板目录](core/templates/README.md)
-  - [分类目录](core/taxonomies/README.md)
-- 工具与测试：
-  - [Cursor 集成](plugins/cursor/README.md)
-  - [资产校验工具](tools/validators/README.md)
-  - [远程执行实现](src/execution/remote/README.md)
-  - [Replay 工具](tools/replay/README.md)
-  - [Phase 4 规则分析器](src/phases/phase4/rules/README.md)
-  - [Golden path 测试](tests/golden-paths/README.md)
-  - [测试闭环目录](tests/README.md)
+本项目使用 [Apache License 2.0](LICENSE) 开源。
+项目源头与再分发说明见 [NOTICE](NOTICE)。

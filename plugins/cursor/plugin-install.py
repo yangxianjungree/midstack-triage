@@ -15,6 +15,10 @@ LOCAL_PLUGIN_DIR = Path.home() / ".cursor" / "plugins" / "local" / PLUGIN_NAME
 MANIFEST_PATH = PLUGIN_DIR / ".cursor-plugin" / "plugin.json"
 WORKSPACE_STATE_NAME = "midstack-triage.workspace.json"
 INSTALL_MODE = "agent-cli"
+LICENSE_FILES = [
+    "LICENSE",
+    "NOTICE",
+]
 REQUIRED_COMMANDS = [
     "midstack:start.md",
     "midstack:analyse.md",
@@ -57,6 +61,10 @@ def plugin_version() -> str:
 
 def engine_root_path() -> Path:
     return PLUGIN_DIR.resolve().parents[1]
+
+
+def license_source(name: str) -> Path:
+    return engine_root_path() / name
 
 
 def workspace_state_path(target_root: Path) -> Path:
@@ -196,11 +204,20 @@ def check_manifest() -> List[str]:
     manifest = load_json(MANIFEST_PATH)
     if manifest.get("name") != PLUGIN_NAME:
         errors.append("manifest name must be %s" % PLUGIN_NAME)
+    if manifest.get("license") != "Apache-2.0":
+        errors.append("manifest license must be Apache-2.0")
     for name in REQUIRED_COMMANDS:
         if not plugin_command_source(name).exists():
             errors.append("missing command file: commands/%s" % name)
     if not plugin_rule_source().exists():
         errors.append("missing rule file: rules/%s" % LEGACY_RULE)
+    for name in LICENSE_FILES:
+        path = PLUGIN_DIR / name
+        source = license_source(name)
+        if not path.exists():
+            errors.append("missing license projection: %s" % path.relative_to(PLUGIN_DIR))
+        elif source.exists() and path.read_text(encoding="utf-8") != source.read_text(encoding="utf-8"):
+            errors.append("license projection drifted from root: %s" % path.relative_to(PLUGIN_DIR))
     return errors
 
 

@@ -69,6 +69,10 @@ RUNTIME_COPY_DIRS = [
     ("core", "runtime/core"),
     ("interfaces", "runtime/interfaces"),
 ]
+LICENSE_FILES = [
+    "LICENSE",
+    "NOTICE",
+]
 
 
 def now_iso() -> str:
@@ -178,6 +182,8 @@ def copy_plugin_source(target_plugin_dir: Path) -> None:
     target_plugin_dir.parent.mkdir(parents=True, exist_ok=True)
     ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache")
     shutil.copytree(PLUGIN_DIR, target_plugin_dir, ignore=ignore)
+    for name in LICENSE_FILES:
+        shutil.copy2(ENGINE_ROOT / name, target_plugin_dir / name)
 
 
 def copy_runtime_tree(source: Path, target: Path) -> None:
@@ -218,7 +224,7 @@ def write_marketplace_manifest(workspace: Path) -> None:
                 "source": "./plugins/%s" % PLUGIN_NAME,
                 "description": "MongoDB middleware incident triage with Midstack local runtime.",
                 "version": plugin_version(),
-                "license": "MIT",
+                "license": "Apache-2.0",
                 "keywords": ["mongodb", "triage", "incident", "middleware"],
             }
         ],

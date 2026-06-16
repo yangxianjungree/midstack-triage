@@ -1,6 +1,6 @@
 ---
 status: authoritative
-last_updated: 2026-06-14
+last_updated: 2026-06-16
 supersedes: none
 superseded_by: none
 ---
@@ -35,7 +35,7 @@ superseded_by: none
 | **L3 项目状态** | `docs/project/` | 时效性内容，允许滞后但须标 `last_updated` |
 | **L4 历史档案** | `docs/decisions/` | 冻结，可能过时，**不作为依据** |
 
-根 `README.md` 是仓库门户：其「稳定结论」「当前支持范围」等内容是 L1/L3 的**摘要**，与 L1 冲突时以 L1 为准。
+根 `README.md` 是仓库门户：其架构、流程、快速体验与当前落地情况是 L1/L3 的**摘要**，与 L1 冲突时以 L1 为准。
 
 ### L1 内部分工（L1 之间冲突时谁说了算）
 
@@ -148,4 +148,5 @@ superseded_by: none
 ### 历史决策（decisions/，已归档·非权威）
 
 - [排障流程讨论](decisions/triage-workflow-discussion.md)
+- [旧根 README 归档](decisions/legacy-readme-2026-06-16.md)
 - [讨论归档](decisions/discussions-archive.md)

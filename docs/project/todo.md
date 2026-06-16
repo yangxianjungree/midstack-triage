@@ -1,6 +1,6 @@
 ---
 status: draft
-last_updated: 2026-06-10
+last_updated: 2026-06-16
 supersedes: none
 superseded_by: none
 ---
@@ -85,7 +85,15 @@ superseded_by: none
 - 明确日志、记录文件和输出中的敏感信息处理策略
 - 实现 operator+CRD 场景下从 Kubernetes Secret 读取 MongoDB 认证信息
 
-### 6. 扩展到其他中间件
+### 6. Fixture 生命周期与脱敏治理
+
+- 将 `tests/fixtures/` 拆分为 `active` / `legacy`，默认 replay 和 score gate 只扫描 active fixture
+- 为历史 fixture 增加状态和版本元信息，例如 `status`、`schema_version`、`last_verified_with`
+- 将 raw/private/sensitive fixture 目录加入 `.gitignore`，禁止未脱敏现场样本入库
+- 扩展 fixture hygiene validator，阻断明文凭据、疑似真实 IP、客户名、未脱敏日志和私钥/token
+- 迁移或修复 `kubernetes-readiness-failure-sample`，避免历史期望继续阻断默认 validator
+
+### 7. 扩展到其他中间件
 
 - Redis
 - Elasticsearch

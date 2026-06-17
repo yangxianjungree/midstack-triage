@@ -91,6 +91,33 @@ def test_enrich_skill_runtime_context_records_missing_scripts(tmp_path):
     assert "mongodb.collect.dns.coredns" in skill_check["missing_or_failed"]
 
 
+def test_resolve_skill_runtime_returns_pure_context(tmp_path):
+    output_dir = tmp_path / "incident"
+    write_yaml(
+        output_dir / "collection_report.yaml",
+        {
+            "collection_actions": [],
+            "successful_items": [{"item": "remote-executor/mongodb.collect.pods.state"}],
+            "failed_items": [],
+            "blank_items": [],
+            "evidence_gaps": [],
+        },
+    )
+    collection_report = yaml.safe_load((output_dir / "collection_report.yaml").read_text(encoding="utf-8"))
+
+    runtime = phase3_collection.resolve_skill_runtime(
+        {"middleware": "mongodb", "scenario": "kubernetes-runtime"},
+        output_dir,
+        collection_report,
+    )
+
+    assert runtime["skills"][0]["id"] == "mongodb-triage-kubernetes-runtime-failure"
+    assert "mongodb.collect.pods.state" in runtime["required_scripts"]
+    assert "mongodb.collect.dns.coredns" in runtime["missing_or_failed"]
+    assert "mongodb.collect.pods.state" in runtime["script_statuses"]
+    assert "skill_evidence_check" not in collection_report
+
+
 def test_directed_recollection_prefers_dns_path_and_skill_pool(tmp_path):
     output_dir = tmp_path / "incident"
     write_yaml(

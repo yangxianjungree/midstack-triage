@@ -11,7 +11,7 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 PLUGIN_NAME = "midstack"
@@ -76,6 +76,10 @@ LICENSE_FILES = [
 ]
 
 
+# -----------------------------------------------------------------------------
+# Common file and process helpers
+
+
 def now_iso() -> str:
     return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
 
@@ -127,6 +131,10 @@ def require_json_output(cmd: List[str], cwd: Path) -> Dict[str, Any]:
     return data
 
 
+# -----------------------------------------------------------------------------
+# Path helpers and source validation
+
+
 def plugin_version() -> str:
     return str(load_json(MANIFEST_PATH).get("version") or "0.0.0")
 
@@ -175,6 +183,10 @@ def validate_source_layout() -> None:
 def validate_source() -> None:
     validate_source_layout()
     require_ok(["claude", "plugin", "validate", str(PLUGIN_DIR)], ENGINE_ROOT)
+
+
+# -----------------------------------------------------------------------------
+# Marketplace build and runtime staging
 
 
 def copy_plugin_source(target_plugin_dir: Path) -> None:
@@ -251,6 +263,10 @@ def build_marketplace(workspace: Path) -> Path:
     return marketplace_dir
 
 
+# -----------------------------------------------------------------------------
+# Workspace state and legacy cleanup
+
+
 def write_workspace_state(workspace: Path) -> None:
     state = {
         "plugin_name": PLUGIN_NAME,
@@ -314,6 +330,10 @@ def purge_project_state(workspace: Path) -> None:
     raise SystemExit(proc.returncode)
 
 
+# -----------------------------------------------------------------------------
+# Claude plugin registration
+
+
 def uninstall_legacy_plugins(workspace: Path) -> List[str]:
     removed: List[str] = []
     for plugin_id in LEGACY_PLUGIN_IDS:
@@ -371,6 +391,10 @@ def installed_plugin_record(plugin_id: str, workspace: Path) -> Dict[str, Any]:
         if Path(str(item.get("projectPath") or "")).resolve() == workspace.resolve():
             return item
     return {}
+
+
+# -----------------------------------------------------------------------------
+# Installed runtime checks
 
 
 def run_installed_runtime_smoke(wrapper_path: Path, workspace: Path) -> List[str]:
@@ -481,9 +505,8 @@ def run_installed_runtime_smoke(wrapper_path: Path, workspace: Path) -> List[str
     return errors
 
 
-def check_install(workspace: Path) -> List[str]:
+def check_workspace_state(workspace: Path) -> List[str]:
     errors: List[str] = []
-    plugin_id = "%s@%s" % (PLUGIN_NAME, MARKETPLACE_NAME)
     state_path = workspace / ".claude" / WORKSPACE_STATE
     if not state_path.exists():
         errors.append("missing workspace state: .claude/%s" % WORKSPACE_STATE)
@@ -497,11 +520,19 @@ def check_install(workspace: Path) -> List[str]:
         expected_marketplace_dir = workspace_marketplace_dir(workspace)
         if Path(str(state.get("marketplace_dir") or "")).resolve() != expected_marketplace_dir.resolve():
             errors.append("workspace marketplace_dir is stale")
+    return errors
 
+
+def check_source_plugin_validation() -> List[str]:
+    errors: List[str] = []
     validate = run(["claude", "plugin", "validate", str(PLUGIN_DIR)], ENGINE_ROOT)
     if validate.returncode != 0:
         errors.append("source plugin validation failed")
+    return errors
 
+
+def check_claude_inventory(workspace: Path, plugin_id: str) -> List[str]:
+    errors: List[str] = []
     listing = run(["claude", "plugin", "list"], workspace)
     if listing.returncode != 0:
         errors.append("claude plugin list failed")
@@ -526,21 +557,32 @@ def check_install(workspace: Path) -> List[str]:
             errors.append("legacy plugin namespace leaked into Claude slash commands")
         if "midstack:" in details.stdout:
             errors.append("command names must remain short command ids under plugin name midstack")
+    return errors
 
+
+def resolve_installed_plugin_path(plugin_id: str, workspace: Path, errors: List[str]) -> Optional[Path]:
     record = installed_plugin_record(plugin_id, workspace)
     if not record:
         errors.append("installed plugin metadata is missing from ~/.claude/plugins/installed_plugins.json")
-        return errors
+        return None
 
     install_path = Path(str(record.get("installPath") or ""))
     if not install_path.exists():
         errors.append("installed plugin path does not exist: %s" % install_path)
-        return errors
+        return None
+    return install_path
 
+
+def check_installed_runtime_markers(install_path: Path) -> List[str]:
+    errors: List[str] = []
     for marker in RUNTIME_MARKER_FILES:
         if not install_path.joinpath(marker).exists():
             errors.append("installed plugin is missing bundled runtime file: %s" % marker)
+    return errors
 
+
+def check_installed_command_contracts(install_path: Path) -> List[str]:
+    errors: List[str] = []
     for command_name in EXPECTED_COMMANDS:
         command_path = install_path / "commands" / ("%s.md" % command_name)
         if not command_path.exists():
@@ -551,7 +593,11 @@ def check_install(workspace: Path) -> List[str]:
             errors.append("installed command does not use CLAUDE_PLUGIN_ROOT: %s" % command_path.name)
         if "midstack-triage.workspace.json" in text or "engine_root" in text:
             errors.append("installed command still depends on workspace engine_root state: %s" % command_path.name)
+    return errors
 
+
+def check_installed_selfcheck(install_path: Path, workspace: Path) -> List[str]:
+    errors: List[str] = []
     selfcheck_path = install_path / "runtime" / "bin" / "selfcheck.py"
     if not selfcheck_path.exists():
         errors.append("installed plugin selfcheck entrypoint is missing: %s" % selfcheck_path)
@@ -569,10 +615,11 @@ def check_install(workspace: Path) -> List[str]:
                 errors.append("installed plugin selfcheck reports an unexpected source repo dependency")
             for item in selfcheck_payload.get("errors") or []:
                 errors.append("installed plugin selfcheck: %s" % item)
+    return errors
 
-    wrapper_path = install_path / "runtime" / "bin" / "midstack-local.py"
-    errors.extend(run_installed_runtime_smoke(wrapper_path, workspace))
 
+def check_marketplace_registration(workspace: Path) -> List[str]:
+    errors: List[str] = []
     marketplace_info = run(["claude", "plugin", "marketplace", "list"], workspace)
     if marketplace_info.returncode != 0:
         errors.append("claude plugin marketplace list failed")
@@ -582,8 +629,34 @@ def check_install(workspace: Path) -> List[str]:
             errors.append("workspace marketplace is not rooted under sandbox: %s" % expected_dir)
         if str(ENGINE_ROOT / ".local" / "claude-marketplace") in marketplace_info.stdout:
             errors.append("legacy repo-local marketplace is still configured for this workspace")
+    return errors
+
+
+def check_install(workspace: Path) -> List[str]:
+    errors: List[str] = []
+    plugin_id = "%s@%s" % (PLUGIN_NAME, MARKETPLACE_NAME)
+
+    errors.extend(check_workspace_state(workspace))
+    errors.extend(check_source_plugin_validation())
+    errors.extend(check_claude_inventory(workspace, plugin_id))
+
+    install_path = resolve_installed_plugin_path(plugin_id, workspace, errors)
+    if install_path is None:
+        return errors
+
+    errors.extend(check_installed_runtime_markers(install_path))
+    errors.extend(check_installed_command_contracts(install_path))
+    errors.extend(check_installed_selfcheck(install_path, workspace))
+
+    wrapper_path = install_path / "runtime" / "bin" / "midstack-local.py"
+    errors.extend(run_installed_runtime_smoke(wrapper_path, workspace))
+    errors.extend(check_marketplace_registration(workspace))
 
     return errors
+
+
+# -----------------------------------------------------------------------------
+# CLI entrypoints
 
 
 def parse_args() -> argparse.Namespace:
@@ -592,10 +665,10 @@ def parse_args() -> argparse.Namespace:
 
     for name in ["build-marketplace", "check"]:
         cmd = sub.add_parser(name)
-        cmd.add_argument("--workspace", required=True, help="Target Claude workspace, e.g. /home/stephen/AI/midstack-sandbox")
+        cmd.add_argument("--workspace", required=True, help="Target Claude workspace, e.g. ../midstack-sandbox")
 
     install = sub.add_parser("install")
-    install.add_argument("--workspace", required=True, help="Target Claude workspace, e.g. /home/stephen/AI/midstack-sandbox")
+    install.add_argument("--workspace", required=True, help="Target Claude workspace, e.g. ../midstack-sandbox")
     install.add_argument(
         "--keep-project-state",
         action="store_true",

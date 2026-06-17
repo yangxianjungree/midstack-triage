@@ -7,8 +7,8 @@ from typing import Any, Dict
 
 import yaml
 
-from .multitrack.l1_mapper import L1TemplateMapper
 from .multitrack.lead_orchestrator import LeadOrchestrator
+from .planner import plan_initial_hypotheses
 from .renderer import format_analysis_output
 
 
@@ -22,19 +22,7 @@ def run_phase4_analysis(incident_dir: Path) -> Dict[str, Any]:
     with signal_bundle_path.open("r", encoding="utf-8") as fh:
         signal_bundle = yaml.safe_load(fh) or {}
 
-    mapper = L1TemplateMapper()
-    abnormal_signals = signal_bundle.get("abnormal_signals") or []
-    if abnormal_signals:
-        primary_signal = abnormal_signals[0] if isinstance(abnormal_signals[0], dict) else {}
-        symptom = str(primary_signal.get("detail") or "")
-    else:
-        symptom = "未知故障"
-
-    l1_output = {
-        "primary_symptom": symptom,
-        "affected_component": signal_bundle.get("middleware", "mongodb"),
-    }
-    hypotheses = mapper.map_from_l1_output(l1_output)
+    hypotheses = plan_initial_hypotheses(signal_bundle)
     result = LeadOrchestrator(incident_dir, hypotheses).run()
 
     analysis = format_analysis_output(result, signal_bundle)

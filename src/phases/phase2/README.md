@@ -6,6 +6,8 @@
 
 - `inventory.py`
   MongoDB 对象发现、拓扑判断、namespace 选择、认证 hint 提取。
+- `objects.py`
+  Kubernetes 对象归一化、MongoDB role hint 和 deployment architecture hint 的纯函数。
 
 规则：
 

@@ -6,6 +6,8 @@ Read `.cursor/midstack-triage.workspace.json` for `runtime_root`.
 
 Cursor validation runs against the workspace-local bundled runtime. It must not `cd` into the Midstack source repository.
 
+This is a maintenance-only check, not part of the user triage path.
+
 ```bash
 python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/validate-repo.py" \
   --skip-cursor \

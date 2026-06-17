@@ -6,20 +6,20 @@ argument-hint: <customer clue with host and credentials>
 Use the current workspace as the incident output root. The plugin runtime is
 packaged under `${CLAUDE_PLUGIN_ROOT}`.
 
-First action: run the Bash command below after parsing `$ARGUMENTS`. Do not
-inspect the environment yourself before this command.
+First hop: run the installed Midstack runtime wrapper below after parsing
+`$ARGUMENTS`. Do not implement triage directly in the slash command before the
+runtime command returns.
 
-Hard boundary:
+Command boundary:
 
 - Do not claim the incident was started until the Bash command returns and
   `adapter-output.yaml` has been read.
-- Do not run `mongosh`, `mongo`, `mysql`, `psql`, or any database client.
-- Do not run `pip`, `pip3`, `apt`, `yum`, or install local packages.
-- Do not run raw `ssh`.
-- Do not run raw `sshpass`.
-- Do not run raw `scp`.
-- Do not run raw `kubectl`.
-- Do not run raw `grep` or `find`.
+- The first shell command must call `${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py`.
+- Do not call repository source-tree `tools/plugin/midstack-local.py`.
+- Do not run ad-hoc SSH, sshpass, scp, kubectl, database clients, package
+  installers, or filesystem searches from the slash command layer.
+- Remote execution tools are runtime implementation details; the Midstack
+  runtime may use SSH/sshpass/scp/kubectl internally.
 - Do not run `/midstack:analyse` from this command.
 - If the Bash command fails or times out, report that `start` failed and stop.
 

@@ -6,6 +6,22 @@ Read `.cursor/midstack-triage.workspace.json` for `runtime_root`. Set `MIDSTACK_
 
 Cursor runs Midstack from the workspace-local bundled runtime. Use `runtime_root` from workspace state and do not `cd` into the Midstack source repository.
 
+First hop: run the workspace-local Midstack runtime wrapper below. Do not
+implement triage directly in the slash command before the runtime command
+returns.
+
+Command boundary:
+
+- The first shell command must call `<workspace>/.cursor/midstack-triage-runtime/bin/midstack-local.py`.
+- Do not call repository source-tree `tools/plugin/midstack-local.py`.
+- Do not run ad-hoc SSH, sshpass, scp, kubectl, database clients, or package
+  installers from the slash command layer.
+- Remote execution tools are runtime implementation details; the Midstack
+  runtime may use SSH/sshpass/scp/kubectl internally.
+- Do not create or edit `analysis.yaml` before `midstack-local.py analyse` succeeds.
+- If `analyse` returns `blocked`, summarize `blocking_items` and stop.
+- Do not print passwords or tokens in the user-facing response; redact credentials in summaries.
+
 If the user just ran `/midstack:start` and does not provide an incident directory, run `analyse` without `--incident-dir` (uses `.local/incidents/.current-incident`).
 
 If the user provides an incident directory, pass `--incident-dir <path>` relative to the workspace or absolute.

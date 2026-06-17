@@ -9,12 +9,14 @@ When the user asks to triage MongoDB or middleware incidents in this workspace:
 - Use **shell** to run `midstack-local.py` from `runtime_root` in `.cursor/midstack-triage.workspace.json`.
 - Treat Cursor as installed workspace runtime mode: use `runtime_root` and do not `cd` into the Midstack source repository.
 - Export `MIDSTACK_TRIAGE_WORKSPACE` to the absolute workspace path before every Midstack command.
+- The first shell command for `/midstack:start`, `/midstack:analyse`, and `/midstack:review` must call the workspace-local runtime wrapper under `runtime_root`.
+- Do not call repository source-tree `tools/plugin/midstack-local.py`.
+- Do not implement triage directly in the rule or slash command layer; remote execution tools are runtime implementation details.
 - For `/midstack:start`, run `midstack-local.py start` after extracting middleware, IPs, username/password, optional port, and customer clue.
+- After `/midstack:start`, if the result is ready, state exactly `next run /midstack:analyse`; if blocked, summarize blocking items.
 - For `/midstack:analyse`, run `midstack-local.py analyse` (or `--input-dir` / `--remote-run-dir` / `--remote-config` when appropriate).
 - For `/midstack:review`, run `midstack-local.py review`.
 - After analyse succeeds, read `agent-reasoning-task.md`, update `analysis.yaml` and `report.md`, then run `midstack-local.py finalize-analysis`.
 - Treat DNS probe `blocked` as an evidence gap and DNS probe `failed` as mechanism evidence only when the failed check contains DNS-layer error text.
-
-For `/midstack:start`, do not run `mongosh`, `mongo`, `mysql`, `psql`, `pip`, `pip3`, `apt`, `yum`, raw `ssh`, raw `sshpass`, raw `scp`, raw `kubectl`, raw `grep`, or raw `find`. The `start` subcommand owns remote validation.
 
 Do not expose passwords or tokens in chat output; show credentials only as redacted values when needed.

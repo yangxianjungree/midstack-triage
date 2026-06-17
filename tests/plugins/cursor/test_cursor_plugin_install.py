@@ -5,10 +5,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from install_contracts import (
+    assert_analyse_command_runtime_first_contract,
     assert_cursor_files_use_workspace_runtime,
     assert_no_common_source_checkout_contract,
+    assert_review_and_validate_not_main_path,
     assert_slash_command_surface_doc,
-    assert_start_command_blocks_agent_first_hop_tools,
+    assert_start_command_ready_next_step,
+    assert_start_command_uses_runtime_first_hop,
 )
 
 
@@ -25,7 +28,10 @@ def test_command_contracts_use_agent_cli_shell():
     files = list((PLUGIN_DIR / "commands").glob("midstack:*.md")) + [PLUGIN_DIR / "rules" / "midstack-triage.mdc"]
     assert_no_common_source_checkout_contract(files)
     assert_cursor_files_use_workspace_runtime(files)
-    assert_start_command_blocks_agent_first_hop_tools(PLUGIN_DIR / "commands" / "midstack:start.md")
+    assert_analyse_command_runtime_first_contract(PLUGIN_DIR / "commands" / "midstack:analyse.md")
+    assert_start_command_uses_runtime_first_hop(PLUGIN_DIR / "commands" / "midstack:start.md")
+    assert_start_command_ready_next_step(PLUGIN_DIR / "commands" / "midstack:start.md")
+    assert_review_and_validate_not_main_path((PLUGIN_DIR / "commands").glob("midstack:*.md"))
 
 
 def test_slash_command_surface_documents_phase_mapping():

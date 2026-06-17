@@ -38,6 +38,8 @@ superseded_by: none
 
 当前命令行为合同在适配器之间保持一致。不同适配器可以选择不同安装位置，但安装态都必须执行随插件或 workspace 分发的 runtime payload，不得回调开发者本机源码 checkout。
 
+命令面的 first hop 必须进入安装态 runtime wrapper，不能由 Agent 在 slash 命令层自行实现排障。`sshpass`、`ssh`、`scp`、`kubectl` 等远程执行工具属于 runtime 实现细节；当前控制面到执行面的 SSH/scp 通道仍以 `sshpass` 作为本地依赖，并通过 `missing_sshpass` 返回 blocked。
+
 1. plugin-local bundled runtime mode
    - 代表：Claude
    - 运行时位于已安装插件 payload 内

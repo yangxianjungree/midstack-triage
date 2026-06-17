@@ -6,23 +6,20 @@ Read `.cursor/midstack-triage.workspace.json` for `runtime_root`. Set `MIDSTACK_
 
 Cursor runs Midstack from the workspace-local bundled runtime. Use `runtime_root` from workspace state and do not `cd` into the Midstack source repository.
 
-Hard boundary: `/midstack:start` only creates or recovers an incident record. It must not run analysis.
+Command boundary: `/midstack:start` only creates or recovers an incident record. It must not run analysis.
 
 Do not inspect plugin source files, repository code, or existing `.local/incidents` before running `start`.
 
-Do not run `mongosh`, `mongo`, `mysql`, `psql`, or any database client.
+First hop: run the workspace-local Midstack runtime wrapper below after parsing
+the user's arguments.
 
-Do not run `pip`, `pip3`, `apt`, `yum`, or install local packages.
+The first shell command must call `<workspace>/.cursor/midstack-triage-runtime/bin/midstack-local.py`.
 
-Do not run raw `ssh`.
+Do not call repository source-tree `tools/plugin/midstack-local.py`.
 
-Do not run raw `sshpass`.
+Do not run ad-hoc SSH, sshpass, scp, kubectl, database clients, package installers, or filesystem searches from the slash command layer.
 
-Do not run raw `scp`.
-
-Do not run raw `kubectl`.
-
-Do not run raw `grep` or `find` for `/midstack:start`; `start` owns remote validation and incident creation.
+Remote execution tools are runtime implementation details; the Midstack runtime may use SSH/sshpass/scp/kubectl internally.
 
 Do not print passwords or tokens in the user-facing response; redact them if credentials must be mentioned.
 
@@ -62,6 +59,6 @@ python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/midstack-loc
 
 After `start`, report whether the incident is `ready` or `blocked` from `adapter-output.yaml`.
 
-If `ready`, give the incident directory and suggest `/midstack:analyse`.
+If `ready`, state exactly `next run /midstack:analyse`.
 
 If `blocked`, summarize blocking items. If multiple MongoDB namespaces were detected, list candidates and ask the user to choose one.

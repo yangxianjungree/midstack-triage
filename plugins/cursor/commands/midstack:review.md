@@ -6,6 +6,9 @@ Read `.cursor/midstack-triage.workspace.json` for `runtime_root`. Set `MIDSTACK_
 
 Cursor runs Midstack from the workspace-local bundled runtime. Use `runtime_root` from workspace state and do not `cd` into the Midstack source repository.
 
+This is a quality-feedback step, not part of the `/midstack:start -> /midstack:analyse`
+main path.
+
 If the user did not provide `incident_dir`, omit `--incident-dir` so `review` uses the current incident marker under `.local/incidents/`.
 
 ```bash

@@ -90,7 +90,6 @@ def assert_command_contracts() -> None:
     forbidden_tokens = [
         "engine_root",
         "source-checkout",
-        "source checkout",
         "cd \"/abs/path/to/midstack-triage\"",
         "/abs/path/to/midstack-triage/tests/fixtures",
         "python3 tools/plugin/midstack-local.py",

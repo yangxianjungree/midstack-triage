@@ -31,7 +31,8 @@ Claude 和 Cursor 的安装目录不同，但必须满足同一组合同：
 - 安装态 runtime 自包含，不依赖源码 checkout、源码 `tools/plugin/midstack-local.py` 或某个开发者机器路径。
 - incident 输出只进入目标 workspace 的 `.local/incidents/`。
 - workspace state 不允许回退到历史 `engine_root` 字段。
-- slash command / rules 只能调用安装态 runtime wrapper，不应引导 Agent 直接跑 `mongosh`、`pip install`、裸 `ssh` 或裸 `kubectl`。
+- slash command / rules 的 first hop 必须进入安装态 runtime wrapper，不应在命令面自行实现排障。
+- `sshpass`、`ssh`、`scp`、`kubectl` 是控制面到执行面的 runtime 实现细节；禁止的是 Agent 绕过 runtime 直接编排这些工具。
 - 新增或修改 agent 适配器时，必须同步 `plugins/README.md`、对应 `plugins/<agent>/README.md` 和本文档门禁。
 
 公共合同测试放在 `tests/plugins/install_contracts.py`。Claude/Cursor 适配器测试应复用这里的 helper，不要各自复制禁止 token、runtime wrapper、首跳工具约束。
@@ -94,9 +95,10 @@ claude -p "/midstack:start <host clue with credentials>" --allowedTools "Bash(py
 claude -p "/midstack:analyse" --allowedTools "Bash(python3 *)"
 ```
 
-验收重点：
+- 验收重点：
 
-- 不运行 `mongosh`、`pip install`、raw `ssh`、raw `kubectl`
+- first hop 使用 `${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py`
+- 不调用源码 checkout 的 `tools/plugin/midstack-local.py`
 - incident 输出在 sandbox workspace `.local/incidents/`
 - 不写入 `.claude/marketplaces/.../runtime/.local/incidents/`
 - 用户摘要不回显密码或 token
@@ -153,6 +155,8 @@ Cursor slash smoke 建议在 Cursor 里验证：
 - 命令直接调用源码 `tools/plugin/midstack-local.py`
 - Claude incident 写入 `.claude/marketplaces/.../runtime/.local/`
 - Cursor smoke 在源码仓库 cwd 下通过，但 sandbox 中失败
-- Agent 在 `/midstack:start` 里自行执行 `mongosh`、`pip install`、raw `ssh` 或 raw `kubectl`
+- Agent 在 `/midstack:start` 里自行执行 `mongosh`、`pip install`、raw `ssh`、raw `sshpass` 或 raw `kubectl`
+
+- Agent 在 `/midstack:start` 里绕过 runtime 自行执行排障动作
 
 出现以上任一情况，应先修安装态合同和门禁，再讨论 analyse 排障效果本身。

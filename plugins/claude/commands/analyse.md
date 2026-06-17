@@ -6,13 +6,17 @@ argument-hint: [incident-id-or-path]
 Use the current workspace as the incident output root. The plugin runtime is
 packaged under `${CLAUDE_PLUGIN_ROOT}`.
 
-First action: run the Bash command below. Do not inspect the environment,
-install packages, or connect to MongoDB directly before the runtime command.
+First hop: run the installed Midstack runtime wrapper below. Do not implement
+triage directly in the slash command before the runtime command returns.
 
-Hard boundary:
+Command boundary:
 
-- Do not run `mongosh`, `mongo`, `pip`, `pip3`, `apt`, `yum`, raw `ssh`, or raw
-  `kubectl`.
+- The first shell command must call `${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py`.
+- Do not call repository source-tree `tools/plugin/midstack-local.py`.
+- Do not run ad-hoc SSH, sshpass, scp, kubectl, database clients, or package
+  installers from the slash command layer.
+- Remote execution tools are runtime implementation details; the Midstack
+  runtime may use SSH/sshpass/scp/kubectl internally.
 - Do not create or edit `analysis.yaml` before `midstack-local.py analyse`
   succeeds.
 - If `analyse` returns `blocked`, summarize `blocking_items` and stop.

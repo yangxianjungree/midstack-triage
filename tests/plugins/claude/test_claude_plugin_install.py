@@ -9,10 +9,13 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from install_contracts import (
+    assert_analyse_command_runtime_first_contract,
     assert_claude_commands_use_bundled_runtime,
     assert_no_common_source_checkout_contract,
+    assert_review_and_validate_not_main_path,
     assert_slash_command_surface_doc,
-    assert_start_command_blocks_agent_first_hop_tools,
+    assert_start_command_ready_next_step,
+    assert_start_command_uses_runtime_first_hop,
 )
 
 
@@ -163,7 +166,7 @@ def test_claude_start_command_contract_forces_bundled_runtime_first():
     text = path.read_text(encoding="utf-8")
 
     required = [
-        "First action",
+        "First hop",
         "Bash",
         "${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py",
         "Do not claim the incident was started",
@@ -171,7 +174,8 @@ def test_claude_start_command_contract_forces_bundled_runtime_first():
     ]
     for token in required:
         assert token in text
-    assert_start_command_blocks_agent_first_hop_tools(path)
+    assert_start_command_uses_runtime_first_hop(path)
+    assert_start_command_ready_next_step(path)
 
 
 def test_slash_command_surface_documents_phase_mapping():
@@ -182,6 +186,8 @@ def test_claude_command_contracts_do_not_depend_on_source_checkout():
     command_dir = ROOT / "plugins" / "claude" / "commands"
     assert_no_common_source_checkout_contract(command_dir.glob("*.md"))
     assert_claude_commands_use_bundled_runtime(command_dir)
+    assert_analyse_command_runtime_first_contract(command_dir / "analyse.md")
+    assert_review_and_validate_not_main_path(command_dir.glob("*.md"))
     for path in command_dir.glob("*.md"):
         text = path.read_text(encoding="utf-8")
         if path.name in ("start.md", "analyse.md"):

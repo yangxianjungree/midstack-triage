@@ -11,17 +11,29 @@ COMMON_FORBIDDEN_TOKENS = [
 ]
 
 
-START_COMMAND_FORBIDDEN_ACTIONS = [
-    "run raw `ssh`",
-    "run raw `sshpass`",
-    "run raw `kubectl`",
-    "run `mongosh`",
-    "run `pip",
+START_COMMAND_FIRST_HOP_TOKENS = [
+    "First hop",
+    "first shell command must call",
+    "midstack-local.py",
+    "Do not call repository source-tree `tools/plugin/midstack-local.py`",
+    "runtime implementation details",
+]
+
+
+ANALYSE_COMMAND_CONTRACT_TOKENS = [
+    *START_COMMAND_FIRST_HOP_TOKENS,
+    "Do not create or edit `analysis.yaml` before",
+    "If `analyse` returns `blocked`, summarize `blocking_items` and stop",
+    "Do not print passwords or tokens",
 ]
 
 
 def read_texts(paths: Iterable[Path]) -> List[tuple[Path, str]]:
     return [(path, path.read_text(encoding="utf-8")) for path in sorted(paths)]
+
+
+def normalize_space(text: str) -> str:
+    return " ".join(text.split())
 
 
 def assert_no_common_source_checkout_contract(paths: Iterable[Path]) -> None:
@@ -60,11 +72,38 @@ def assert_cursor_files_use_workspace_runtime(paths: Iterable[Path]) -> None:
         raise AssertionError("; ".join(errors))
 
 
-def assert_start_command_blocks_agent_first_hop_tools(path: Path) -> None:
+def assert_start_command_uses_runtime_first_hop(path: Path) -> None:
     text = path.read_text(encoding="utf-8")
-    errors = [token for token in START_COMMAND_FORBIDDEN_ACTIONS if token not in text]
+    errors = [token for token in START_COMMAND_FIRST_HOP_TOKENS if token not in text]
     if errors:
-        raise AssertionError("%s is missing first-hop tool guardrails: %s" % (path, ", ".join(errors)))
+        raise AssertionError("%s is missing runtime first-hop contract tokens: %s" % (path, ", ".join(errors)))
+
+
+def assert_start_command_ready_next_step(path: Path) -> None:
+    text = path.read_text(encoding="utf-8")
+    if "next run /midstack:analyse" not in text:
+        raise AssertionError("%s must state the exact ready follow-up: next run /midstack:analyse" % path)
+
+
+def assert_analyse_command_runtime_first_contract(path: Path) -> None:
+    text = path.read_text(encoding="utf-8")
+    errors = [token for token in ANALYSE_COMMAND_CONTRACT_TOKENS if token not in text]
+    if errors:
+        raise AssertionError("%s is missing analyse runtime-first contract tokens: %s" % (path, ", ".join(errors)))
+
+
+def assert_review_and_validate_not_main_path(paths: Iterable[Path]) -> None:
+    errors: List[str] = []
+    for path, text in read_texts(paths):
+        normalized = normalize_space(text.replace("`", ""))
+        if path.name.endswith("review.md") or path.name.endswith("validate.md"):
+            if (
+                "not part of the /midstack:start -> /midstack:analyse main path" not in normalized
+                and "not part of the user triage path" not in normalized
+            ):
+                errors.append("%s must state review/validate is not part of the main user triage path" % path.name)
+    if errors:
+        raise AssertionError("; ".join(errors))
 
 
 def assert_slash_command_surface_doc(path: Path) -> None:

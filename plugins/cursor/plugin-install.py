@@ -65,6 +65,10 @@ RUNTIME_FORBIDDEN_TEXT = [
 ]
 
 
+# -----------------------------------------------------------------------------
+# Common file helpers
+
+
 def now_iso() -> str:
     return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
 
@@ -82,6 +86,10 @@ def write_json(path: Path, payload: Dict[str, Any]) -> None:
     with path.open("w", encoding="utf-8") as fh:
         json.dump(payload, fh, indent=2, sort_keys=False)
         fh.write("\n")
+
+
+# -----------------------------------------------------------------------------
+# Path helpers
 
 
 def plugin_version() -> str:
@@ -112,6 +120,10 @@ def plugin_command_source(name: str) -> Path:
 
 def plugin_rule_source() -> Path:
     return PLUGIN_DIR / "rules" / LEGACY_RULE
+
+
+# -----------------------------------------------------------------------------
+# Filesystem projection helpers
 
 
 def remove_path(path: Path) -> None:
@@ -158,39 +170,39 @@ def remove_legacy_command_names(command_dir: Path, target_root: Path) -> List[st
     return removed
 
 
+# -----------------------------------------------------------------------------
+# Workspace runtime staging
+
+
+def write_runtime_wrapper(path: Path, tool_relpath: str) -> None:
+    path.write_text(
+        "#!/usr/bin/env python3\n\n"
+        "import os\n"
+        "import runpy\n"
+        "import sys\n"
+        "from pathlib import Path\n\n"
+        "RUNTIME_ROOT = Path(__file__).resolve().parents[1]\n"
+        "os.environ.setdefault(\"MIDSTACK_TRIAGE_RUNTIME_ROOT\", str(RUNTIME_ROOT))\n"
+        "sys.path.insert(0, str(RUNTIME_ROOT / \"src\"))\n"
+        "runpy.run_path(str(RUNTIME_ROOT / \"%s\"), run_name=\"__main__\")\n" % tool_relpath,
+        encoding="utf-8",
+    )
+
+
+def write_runtime_wrappers(bin_dir: Path) -> None:
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    write_runtime_wrapper(bin_dir / "midstack-local.py", "tools/plugin/midstack-local.py")
+    write_runtime_wrapper(bin_dir / "validate-repo.py", "tools/validators/validate-repo.py")
+    for path in sorted(bin_dir.glob("*.py")):
+        path.chmod(0o755)
+
+
 def stage_workspace_runtime(target_root: Path) -> Path:
     runtime_dir = workspace_runtime_dir(target_root)
     runtime_dir.mkdir(parents=True, exist_ok=True)
     for source_rel, target_rel in RUNTIME_COPY_DIRS:
         copy_tree(source_root_path() / source_rel, runtime_dir / target_rel)
-    bin_dir = runtime_dir / "bin"
-    bin_dir.mkdir(parents=True, exist_ok=True)
-    (bin_dir / "midstack-local.py").write_text(
-        "#!/usr/bin/env python3\n\n"
-        "import os\n"
-        "import runpy\n"
-        "import sys\n"
-        "from pathlib import Path\n\n"
-        "RUNTIME_ROOT = Path(__file__).resolve().parents[1]\n"
-        "os.environ.setdefault(\"MIDSTACK_TRIAGE_RUNTIME_ROOT\", str(RUNTIME_ROOT))\n"
-        "sys.path.insert(0, str(RUNTIME_ROOT / \"src\"))\n"
-        "runpy.run_path(str(RUNTIME_ROOT / \"tools\" / \"plugin\" / \"midstack-local.py\"), run_name=\"__main__\")\n",
-        encoding="utf-8",
-    )
-    (bin_dir / "validate-repo.py").write_text(
-        "#!/usr/bin/env python3\n\n"
-        "import os\n"
-        "import runpy\n"
-        "import sys\n"
-        "from pathlib import Path\n\n"
-        "RUNTIME_ROOT = Path(__file__).resolve().parents[1]\n"
-        "os.environ.setdefault(\"MIDSTACK_TRIAGE_RUNTIME_ROOT\", str(RUNTIME_ROOT))\n"
-        "sys.path.insert(0, str(RUNTIME_ROOT / \"src\"))\n"
-        "runpy.run_path(str(RUNTIME_ROOT / \"tools\" / \"validators\" / \"validate-repo.py\"), run_name=\"__main__\")\n",
-        encoding="utf-8",
-    )
-    for path in sorted(bin_dir.glob("*.py")):
-        path.chmod(0o755)
+    write_runtime_wrappers(runtime_dir / "bin")
     return runtime_dir
 
 
@@ -214,6 +226,10 @@ def validate_workspace_runtime(target_root: Path) -> List[str]:
                 errors.append("workspace runtime file contains deprecated Cursor source dependency text: %s" % relpath)
                 break
     return errors
+
+
+# -----------------------------------------------------------------------------
+# Workspace command and rule projection
 
 
 def project_workspace_slash_commands(target_root: Path) -> List[str]:
@@ -258,6 +274,10 @@ def check_projected_files(target_root: Path) -> List[str]:
     elif rule_path.read_text(encoding="utf-8") != expected_rule.read_text(encoding="utf-8"):
         errors.append("rule projection drift: .cursor/rules/%s" % LEGACY_RULE)
     return errors
+
+
+# -----------------------------------------------------------------------------
+# Workspace migration and checks
 
 
 def migrate_workspace(target_root: Path) -> Dict[str, Any]:
@@ -336,10 +356,8 @@ def check_manifest() -> List[str]:
     return errors
 
 
-def check_workspace(target_root: Path) -> List[str]:
+def check_workspace_state(target_root: Path) -> List[str]:
     errors: List[str] = []
-    errors.extend(check_projected_files(target_root))
-    errors.extend(validate_workspace_runtime(target_root))
     state_path = workspace_state_path(target_root)
     if not state_path.exists():
         errors.append("missing workspace state: .cursor/%s" % WORKSPACE_STATE_NAME)
@@ -363,6 +381,18 @@ def check_workspace(target_root: Path) -> List[str]:
             % (state.get("plugin_version"), current_version)
         )
     return errors
+
+
+def check_workspace(target_root: Path) -> List[str]:
+    errors: List[str] = []
+    errors.extend(check_projected_files(target_root))
+    errors.extend(validate_workspace_runtime(target_root))
+    errors.extend(check_workspace_state(target_root))
+    return errors
+
+
+# -----------------------------------------------------------------------------
+# Local plugin link
 
 
 def link_plugin() -> Tuple[bool, str]:
@@ -397,6 +427,10 @@ def check_link() -> List[str]:
     elif str(load_json(linked_manifest).get("version") or "") != plugin_version():
         errors.append("linked plugin manifest version drifted from source")
     return errors
+
+
+# -----------------------------------------------------------------------------
+# CLI entrypoints
 
 
 def parse_args() -> argparse.Namespace:

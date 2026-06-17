@@ -6,7 +6,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from shared.workspace import load_yaml, now_iso, write_yaml
+from shared.workspace import load_yaml
+from .report_gaps import record_recollection_skill_pool_miss
 
 SCRIPT_LOG_SINK_DISCOVER = "mongodb.collect.logs.discover_sink"
 SCRIPT_LOG_FILE_TAIL = "mongodb.collect.logs.file_tail"
@@ -235,15 +236,6 @@ def filter_recollection_scripts_by_skill_pool(selected: List[str], skill_pool: O
     if filtered:
         return filtered, False
     return selected, bool(selected)
-
-
-def record_recollection_skill_pool_miss(output_dir: Path) -> None:
-    collection_report = load_yaml(output_dir / "collection_report.yaml")
-    collection_report.setdefault("warnings", []).append(
-        "directed recollection fell back to legacy script selection because matched skill pool did not cover triggered playbooks (gap_type=skill_pool_miss)"
-    )
-    collection_report["updated_at"] = now_iso()
-    write_yaml(output_dir / "collection_report.yaml", collection_report)
 
 
 def directed_recollection_script_ids(output_dir: Path, skill_pool: Optional[set[str]] = None) -> List[str]:

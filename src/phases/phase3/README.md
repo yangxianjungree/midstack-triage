@@ -5,7 +5,13 @@
 当前边界：
 
 - `collection.py`
-  remote run 导入、场景路由、skill runtime 富化、定向补采触发、采集报告治理。
+  Phase 3 control-plane 编排入口：导入 remote run、调用场景路由、富化 skill runtime、触发定向补采。
+- `remote_run.py`
+  remote executor 输出目录契约、脚本输出合并、remote-executor 结果写入采集报告。
+- `recollection.py`
+  基于已有证据选择定向补采脚本，不负责启动远程执行。
+- `report_gaps.py`
+  采集报告 evidence gap 的归一化、收口和补采缺口记录。
 
 规则：
 

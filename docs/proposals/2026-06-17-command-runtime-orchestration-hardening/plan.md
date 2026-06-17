@@ -1,5 +1,5 @@
 ---
-status: draft
+status: completed
 last_updated: 2026-06-17
 supersedes: none
 superseded_by: none
@@ -26,6 +26,33 @@ related:
 - `Phase 1` 和 `Phase 2` 先做边界评审，不优先进入实现。
 - 实现顺序采用 `Phase 3 -> Phase 4 -> analyse 命令层减薄 -> Phase 3-5 回归门禁`。
 - `Phase 5` 暂不单独拆更细 proposal，先保留在这份 plan 里。
+
+## Implementation Summary
+
+本轮结构治理已完成，范围保持在控制面编排、Phase 3-5 边界和对应回归门禁内，未改 slash command 面、插件安装部署、远程 transport，也未调优 analyse 根因判断质量。
+
+已完成提交：
+
+- `997fbd9` `refactor: isolate phase3 analyse control flow`
+- `7db656a` `refactor: split phase3 remote-run reconstruction`
+- `0a7ee4d` `refactor: isolate phase3 recollection selection`
+- `104dd8c` `refactor: split phase3 skill runtime context`
+- `f31e60e` `refactor: split phase4 analysis renderer`
+- `1b01786` `refactor: split phase4 hypothesis planning`
+- `fffb5b1` `refactor: isolate analyse completion output`
+- `408351b` `refactor: isolate phase5 review block assembly`
+- `a2f5d1f` `refactor: isolate phase5 finalize output assembly`
+
+本轮验证：
+
+- `tests/tools/plugin/test_midstack_analyse.py`
+- `tests/phases/phase3/test_collection.py`
+- `tests/phases/phase4/test_renderer.py`
+- `tests/phases/phase4/test_planner.py`
+- `tests/phases/phase4/multitrack/unit`
+- `tests/phases/phase5/test_finalize_and_review.py`
+
+最后一次横向回归结果：`55 passed, 1 skipped`。
 
 ## Success Criteria
 
@@ -89,9 +116,11 @@ related:
 
 ## Proposed Slices
 
-当前先处于“待评审”状态。以下切片按 5 个 phase 组织，目的是先让你评审控制面边界，而不是直接进入实现。
+以下切片按 5 个 phase 组织。Phase 1/2 本轮只做边界确认；Phase 3-5 已完成第一轮结构治理。
 
 ### Slice 1. Phase 1 启动边界
+
+状态：边界确认，本轮未实现重构。
 
 目标：
 
@@ -110,6 +139,8 @@ related:
 
 ### Slice 2. Phase 2 盘点边界
 
+状态：边界确认，本轮未实现重构。
+
 目标：
 
 - 复核 namespace、对象、拓扑、auth hint 的控制面边界。
@@ -126,6 +157,8 @@ related:
 
 ### Slice 3. Phase 3 采集治理边界
 
+状态：已完成第一轮结构治理。
+
 目标：
 
 - 将 remote-run 载入、incident 重建、directed recollection、collection report 归一化拆成清晰函数边界。
@@ -141,7 +174,16 @@ related:
 - Phase 3 是否应该继续由 `analyse.py` 直接调度，还是抽成更显式的 orchestration helper。
 - directed recollection 是否已经侵入了命令层收口逻辑。
 
+完成结果：
+
+- `analyse.py` 抽出 Phase 3 输入准备和上下文准备 helper。
+- `collection.py` 抽出 remote-run 脚本输出合并 helper。
+- directed recollection 的脚本选择、skill pool 过滤、fallback warning 已拆开。
+- skill runtime 的纯计算和文件落盘已拆开。
+
 ### Slice 4. Phase 4 推理边界
+
+状态：已完成第一轮结构治理。
 
 目标：
 
@@ -158,7 +200,15 @@ related:
 
 - rules fallback、multitrack orchestration、analysis renderer 三者是否应该进一步分层。
 
+完成结果：
+
+- `reasoning.py` 保留 Phase 4 facade。
+- `planner.py` 承担 L1 输入构造和初始假设规划。
+- `renderer.py` 承担 Phase 4 analysis 输出格式化。
+
 ### Slice 5. Phase 5 收口边界
+
+状态：已完成第一轮结构治理。
 
 目标：
 
@@ -176,9 +226,16 @@ related:
 
 - `analysis.yaml`、`report.md`、`agent-reasoning-task.md`、review 输出的职责是否过于耦合。
 
+完成结果：
+
+- `analyse.py` 抽出 completed 输出收口 helper。
+- `review.py` 抽出 `build_review_block`。
+- `finalize.py` 抽出 `build_finalize_adapter_output`。
+- Phase 5 测试覆盖 review block 和 finalize adapter-output 合同。
+
 ## Implementation Order
 
-评审通过后，再按以下顺序进入实现：
+本轮实际按以下顺序实现：
 
 1. 先做 Phase 3，因为 `analyse.py` 当前最大复杂度来自 Phase 3 编排。
 2. 再做 Phase 4，收紧 reasoning facade。
@@ -207,8 +264,10 @@ Never:
 - 把 slash command 面当成控制面实现。
 - 让 Phase 3 / Phase 4 的职责边界继续模糊化。
 
-## Open Questions
+## Remaining Follow-ups
 
-1. `src/commands/analyse.py` 的 helper 是放在同文件内，还是抽成同级内部模块更清晰？
-2. Phase 3 的重构是否需要先提炼“remote-run 重建”单独 helper，再拆 directed recollection？
-3. Phase 4 的 `analysis.yaml` 格式化应不应该与 reasoning 输出分离成独立 renderer？
+1. `src/commands/analyse.py` 仍有 400 行级别；本轮先保持同文件 helper，后续如继续膨胀，可拆 `src/commands/analyse_runtime.py` 或 `src/commands/analyse_outputs.py`。
+2. `src/phases/phase3/collection.py` 仍有 700 行级别；本轮已拆清主要函数边界，后续可按 remote-run、recollection、skill-runtime 进一步拆文件。
+3. Phase 4 renderer 已独立，但 `analysis.yaml` 当前仍会被 rules fallback 覆盖；这属于推理质量和输出策略问题，本轮不处理。
+4. Phase 5 review scoring 仍集中在一个文件；本轮只拆 block assembly，后续如评分规则继续增长，可拆 `scoring.py`。
+5. 本轮没有改 Phase 1/2 代码。若后续 start 命令继续变重，再单独开 Phase 1/2 proposal。

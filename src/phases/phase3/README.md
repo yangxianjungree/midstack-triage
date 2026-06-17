@@ -16,6 +16,8 @@
   基于已有证据选择定向补采脚本，不负责启动远程执行。
 - `report_gaps.py`
   采集报告 evidence gap 的归一化、收口和补采缺口记录。
+- `scenario_routing.py`
+  基于 Phase 3 证据和用户线索推断或补全 incident scenario。
 - `skill_runtime.py`
   根据 middleware/scenario 匹配 skill、检查脚本证据完整性，并写回 runtime 上下文。
 

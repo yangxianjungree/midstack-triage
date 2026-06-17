@@ -1,5 +1,5 @@
 ---
-status: draft
+status: completed
 last_updated: 2026-06-17
 supersedes: none
 superseded_by: none
@@ -277,5 +277,26 @@ Never:
 ## Decisions
 
 1. Slice 2/3 第一轮不拆新 Python 包，先在现有 `plugin-install.py` 内按职责分组；如果文件仍然过大，再单独立拆包 proposal。
-2. Slice 4 先抽公共测试 helper 或 validator 片段，不直接新增统一命令；等 Claude/Cursor 检查项稳定后再决定是否提供 `tools/validators/validate-installed-adapters.py`。
+2. Slice 4 先抽公共测试 helper；Slice 5 在检查项稳定后提供 `tools/validators/validate-installed-adapters.py` 作为本地安装态回归收口命令。
 3. 固定 sandbox 采用当前仓库的兄弟目录 `../midstack-sandbox`；旧 sandbox 不再作为回归目标。
+
+## Completion Record
+
+完成提交：
+
+- `2597d6d docs: define plugin install deployment contracts`
+- `b21122a refactor: organize claude plugin installer checks`
+- `606df57 refactor: organize cursor plugin installer`
+- `3fcf499 test: align plugin install contract checks`
+- `ff49022 test: add installed adapter regression validator`
+
+最终验证：
+
+```bash
+python3 -m pytest tests/plugins/claude tests/plugins/cursor -q
+python3 tools/validators/validate-repo.py
+python3 tools/validators/validate-installed-adapters.py
+git diff --check
+```
+
+结果：通过。`validate-repo.py` 仍会对 fixture 中的私网 IP 发出已知 warning；该治理已作为 fixture 敏感信息债务单独处理，不阻塞本轮安装部署整改。

@@ -1,5 +1,5 @@
 ---
-status: draft
+status: completed
 last_updated: 2026-06-17
 supersedes: none
 superseded_by: none
@@ -100,11 +100,12 @@ Slash 命令与 5 阶段流程对应关系：
 | Phase 5 收口 | finalize、review、report、score | `/midstack:analyse`、`/midstack:review` | analyse 产出结论和报告；review 只做质量反馈 |
 | 维护者检查 | 安装态 runtime 与资产自检 | `/midstack:validate` | 不属于用户排障 5 阶段主路径 |
 
-公共禁止项：
+公共执行合同：
 
 - 命令面不得引用源码 checkout、个人绝对路径或历史 `engine_root`。
-- `start` 之前不得让 Agent 读取插件源码、扫描 incident、跑数据库客户端、安装依赖、裸 SSH 或裸 kubectl。
-- `analyse` 之前不得让 Agent 自行连接 MongoDB、安装依赖或绕开 runtime 采集。
+- `/midstack:start`、`/midstack:analyse`、`/midstack:review` 的 first hop 必须进入安装态 runtime wrapper。
+- 命令面只解析参数、调用 wrapper、读取 wrapper 产物并总结；不得在 slash command 层自行实现排障。
+- `sshpass`、`ssh`、`scp`、`kubectl` 等控制面到执行面的工具属于 runtime 实现细节，不作为 slash 命令禁令来表达。
 - 用户可见输出不得回显密码、token 或完整凭据。
 - `review` 不得被描述为 `start -> analyse` 主路径的一环。
 
@@ -117,6 +118,8 @@ Slash 命令与 5 阶段流程对应关系：
 ## Proposed Slices
 
 ### Slice 1. 命令合同文档固化
+
+状态：已完成，提交 `698b48f`。
 
 目标：
 
@@ -140,6 +143,8 @@ rg -n 'start -> analyse -> review|start.*analyse.*review|engine_root|/home/steph
 
 ### Slice 2. 公共命令合同测试增强
 
+状态：已完成，提交 `e73e426`。
+
 目标：
 
 - 把 start/analyse/review/validate 的公共语义加入 `tests/plugins/install_contracts.py`。
@@ -160,6 +165,13 @@ git diff --check
 ```
 
 ### Slice 3. Claude/Cursor 命令文案对齐
+
+状态：已完成，提交 `23fbe7c`。
+
+补充决策：
+
+- 命令合同从“禁止底层工具”改为“first hop 必须进入安装态 runtime wrapper”。
+- `sshpass` 是 runtime 内部合法依赖，不再作为 slash command 层禁令表达。
 
 目标：
 
@@ -183,6 +195,8 @@ git diff --check
 
 ### Slice 4. CLI dispatcher 参数合同校验
 
+状态：已完成，提交 `a0a1f98`。
+
 目标：
 
 - 建立 slash command 文档与 `src/commands/plugin_cli.py` 子命令/关键参数的一致性测试。
@@ -204,6 +218,8 @@ git diff --check
 ```
 
 ### Slice 5. 安装态命令回归收口
+
+状态：已完成，提交 `d293006`。
 
 目标：
 
@@ -255,6 +271,25 @@ Never:
 
 ## Open Questions
 
-1. 是否需要把 Claude/Cursor command markdown 进一步模板化，还是继续保持两套手写文档加公共测试？
-2. Cursor `analyse` 文档中的 Agent-led 报告指导是否应该保留在命令面，还是后续迁入控制面编排模块的任务说明文件？
-3. `/midstack:validate` 是否继续暴露给普通用户，还是在文档上明确标为维护者命令但保留入口？
+1. Claude/Cursor command markdown 暂不模板化，继续保持两套手写文档加公共测试。
+2. Cursor `analyse` 文档中的 Agent-led 报告指导暂时保留，后续迁入控制面编排模块；技术债见 `TD-M2-001`。
+3. `/midstack:validate` 继续暴露，但文档明确标为维护者检查，不属于用户排障主路径。
+
+## Completion Verification
+
+已通过：
+
+```bash
+python3 -m pytest tests/plugins/claude tests/plugins/cursor -q
+python3 plugins/cursor/test-agent-cli.py
+python3 tools/validators/validate-installed-adapters.py
+git diff --check
+```
+
+最近完成提交：
+
+- `698b48f docs: define slash command surface`
+- `e73e426 test: strengthen slash command surface contracts`
+- `23fbe7c test: harden slash command first-hop contract`
+- `a0a1f98 test: bind slash docs to cli arguments`
+- `d293006 docs: tighten installed adapter gates`

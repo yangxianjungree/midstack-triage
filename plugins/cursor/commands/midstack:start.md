@@ -10,7 +10,19 @@ Hard boundary: `/midstack:start` only creates or recovers an incident record. It
 
 Do not inspect plugin source files, repository code, or existing `.local/incidents` before running `start`.
 
-Do not run raw `ssh`, `sshpass`, `kubectl`, `grep`, or `find` for `/midstack:start`; `start` owns remote validation and incident creation.
+Do not run `mongosh`, `mongo`, `mysql`, `psql`, or any database client.
+
+Do not run `pip`, `pip3`, `apt`, `yum`, or install local packages.
+
+Do not run raw `ssh`.
+
+Do not run raw `sshpass`.
+
+Do not run raw `scp`.
+
+Do not run raw `kubectl`.
+
+Do not run raw `grep` or `find` for `/midstack:start`; `start` owns remote validation and incident creation.
 
 Do not print passwords or tokens in the user-facing response; redact them if credentials must be mentioned.
 

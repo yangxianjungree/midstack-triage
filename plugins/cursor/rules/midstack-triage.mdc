@@ -15,6 +15,6 @@ When the user asks to triage MongoDB or middleware incidents in this workspace:
 - After analyse succeeds, read `agent-reasoning-task.md`, update `analysis.yaml` and `report.md`, then run `midstack-local.py finalize-analysis`.
 - Treat DNS probe `blocked` as an evidence gap and DNS probe `failed` as mechanism evidence only when the failed check contains DNS-layer error text.
 
-For `/midstack:start`, do not run raw `ssh`, `sshpass`, `kubectl`, `grep`, or `find`. The `start` subcommand owns remote validation.
+For `/midstack:start`, do not run `mongosh`, `mongo`, `mysql`, `psql`, `pip`, `pip3`, `apt`, `yum`, raw `ssh`, raw `sshpass`, raw `scp`, raw `kubectl`, raw `grep`, or raw `find`. The `start` subcommand owns remote validation.
 
 Do not expose passwords or tokens in chat output; show credentials only as redacted values when needed.

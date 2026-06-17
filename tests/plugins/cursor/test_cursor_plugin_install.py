@@ -3,6 +3,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from install_contracts import (
+    assert_cursor_files_use_workspace_runtime,
+    assert_no_common_source_checkout_contract,
+    assert_start_command_blocks_agent_first_hop_tools,
+)
+
 
 ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_DIR = ROOT / "plugins" / "cursor"
@@ -14,6 +21,10 @@ def test_command_contracts_use_agent_cli_shell():
     from cli_smoke import assert_command_contracts
 
     assert_command_contracts()
+    files = list((PLUGIN_DIR / "commands").glob("midstack:*.md")) + [PLUGIN_DIR / "rules" / "midstack-triage.mdc"]
+    assert_no_common_source_checkout_contract(files)
+    assert_cursor_files_use_workspace_runtime(files)
+    assert_start_command_blocks_agent_first_hop_tools(PLUGIN_DIR / "commands" / "midstack:start.md")
 
 
 def test_plugin_manifest_check_passes():

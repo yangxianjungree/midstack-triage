@@ -34,6 +34,8 @@ Claude 和 Cursor 的安装目录不同，但必须满足同一组合同：
 - slash command / rules 只能调用安装态 runtime wrapper，不应引导 Agent 直接跑 `mongosh`、`pip install`、裸 `ssh` 或裸 `kubectl`。
 - 新增或修改 agent 适配器时，必须同步 `plugins/README.md`、对应 `plugins/<agent>/README.md` 和本文档门禁。
 
+公共合同测试放在 `tests/plugins/install_contracts.py`。Claude/Cursor 适配器测试应复用这里的 helper，不要各自复制禁止 token、runtime wrapper、首跳工具约束。
+
 ## 仓库工程门禁
 
 常规提交前至少运行：

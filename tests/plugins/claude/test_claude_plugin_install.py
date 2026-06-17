@@ -7,6 +7,13 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from install_contracts import (
+    assert_claude_commands_use_bundled_runtime,
+    assert_no_common_source_checkout_contract,
+    assert_start_command_blocks_agent_first_hop_tools,
+)
+
 
 ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_INSTALL_PATH = ROOT / "plugins" / "claude" / "plugin-install.py"
@@ -151,7 +158,8 @@ def test_runtime_markers_do_not_include_removed_remote_shims():
 
 
 def test_claude_start_command_contract_forces_bundled_runtime_first():
-    text = (ROOT / "plugins" / "claude" / "commands" / "start.md").read_text(encoding="utf-8")
+    path = ROOT / "plugins" / "claude" / "commands" / "start.md"
+    text = path.read_text(encoding="utf-8")
 
     required = [
         "First action",
@@ -159,28 +167,22 @@ def test_claude_start_command_contract_forces_bundled_runtime_first():
         "${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py",
         "Do not claim the incident was started",
         "adapter-output.yaml",
-        "Do not run `mongosh`",
-        "Do not run `pip",
-        "Do not run raw `ssh`",
-        "Do not run raw `kubectl`",
     ]
     for token in required:
         assert token in text
+    assert_start_command_blocks_agent_first_hop_tools(path)
 
 
 def test_claude_command_contracts_do_not_depend_on_source_checkout():
     command_dir = ROOT / "plugins" / "claude" / "commands"
+    assert_no_common_source_checkout_contract(command_dir.glob("*.md"))
+    assert_claude_commands_use_bundled_runtime(command_dir)
     for path in command_dir.glob("*.md"):
         text = path.read_text(encoding="utf-8")
-        assert "${CLAUDE_PLUGIN_ROOT}" in text
-        if path.name != "validate.md":
-            assert "resolve-workspace.py" in text
-            assert 'MIDSTACK_TRIAGE_WORKSPACE="$(pwd)"' not in text
         if path.name in ("start.md", "analyse.md"):
             assert "Do not print passwords or tokens" in text
-        assert "engine_root" not in text
-        assert "cd /home/stephen/AI/midstack-triage" not in text
-        assert "tools/plugin/midstack-local.py" not in text
+        if path.name != "validate.md":
+            assert 'MIDSTACK_TRIAGE_WORKSPACE="$(pwd)"' not in text
 
 
 def test_resolve_workspace_uses_installed_plugin_project_path(tmp_path, monkeypatch):

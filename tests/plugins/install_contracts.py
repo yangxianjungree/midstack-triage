@@ -65,3 +65,22 @@ def assert_start_command_blocks_agent_first_hop_tools(path: Path) -> None:
     errors = [token for token in START_COMMAND_FORBIDDEN_ACTIONS if token not in text]
     if errors:
         raise AssertionError("%s is missing first-hop tool guardrails: %s" % (path, ", ".join(errors)))
+
+
+def assert_slash_command_surface_doc(path: Path) -> None:
+    text = path.read_text(encoding="utf-8")
+    required_tokens = [
+        "Slash Command Surface",
+        "/midstack:start",
+        "/midstack:analyse",
+        "/midstack:review",
+        "/midstack:validate",
+        "Phase 1",
+        "Phase 2",
+        "Phase 3",
+        "Phase 4",
+        "Phase 5",
+    ]
+    errors = [token for token in required_tokens if token not in text]
+    if errors:
+        raise AssertionError("%s is missing slash surface tokens: %s" % (path, ", ".join(errors)))

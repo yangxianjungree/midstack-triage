@@ -18,8 +18,11 @@ superseded_by: none
 
 | 命令 | 主要阶段 | 命令语义 | 备注 |
 | --- | --- | --- | --- |
-| `/midstack:start` | Phase 1 / 2 | 创建或恢复 incident，完成最小输入收集、远端接入校验和基础盘点 | 成功后应提示 `next run /midstack:analyse` |
-| `/midstack:analyse` | Phase 3 / 4 / 5 | 进行采集治理、推理验证、结论输出和报告收口 | 成功后产出 `analysis.yaml`、`report.md` 等 |
+| `/midstack:start` | Phase 1 | 创建或恢复 incident，完成最小输入收集 | 成功后应提示 `next run /midstack:analyse` |
+| `/midstack:start` | Phase 2 | 完成远端接入校验和基础盘点 | 继续在 start 阶段内完成 |
+| `/midstack:analyse` | Phase 3 | 进行采集治理 | 进入控制面后触发采集或读取已有 remote run |
+| `/midstack:analyse` | Phase 4 | 进行推理验证 | 形成多轨推理和规则回退判断 |
+| `/midstack:analyse` | Phase 5 | 结论输出和报告收口 | 成功后产出 `analysis.yaml`、`report.md` 等 |
 | `/midstack:review` | Phase 5 | 对已有分析做质量评分和反馈 | 不属于用户排障主路径的必跑步骤 |
 | `/midstack:validate` | 维护者检查 | 校验安装态 runtime、资产和门禁 | 不是用户排障路径 |
 

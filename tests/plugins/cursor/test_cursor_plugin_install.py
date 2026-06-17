@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from install_contracts import (
     assert_cursor_files_use_workspace_runtime,
     assert_no_common_source_checkout_contract,
+    assert_slash_command_surface_doc,
     assert_start_command_blocks_agent_first_hop_tools,
 )
 
@@ -25,6 +26,10 @@ def test_command_contracts_use_agent_cli_shell():
     assert_no_common_source_checkout_contract(files)
     assert_cursor_files_use_workspace_runtime(files)
     assert_start_command_blocks_agent_first_hop_tools(PLUGIN_DIR / "commands" / "midstack:start.md")
+
+
+def test_slash_command_surface_documents_phase_mapping():
+    assert_slash_command_surface_doc(ROOT / "docs" / "project" / "slash-command-surface.md")
 
 
 def test_plugin_manifest_check_passes():

@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from install_contracts import (
     assert_claude_commands_use_bundled_runtime,
     assert_no_common_source_checkout_contract,
+    assert_slash_command_surface_doc,
     assert_start_command_blocks_agent_first_hop_tools,
 )
 
@@ -171,6 +172,10 @@ def test_claude_start_command_contract_forces_bundled_runtime_first():
     for token in required:
         assert token in text
     assert_start_command_blocks_agent_first_hop_tools(path)
+
+
+def test_slash_command_surface_documents_phase_mapping():
+    assert_slash_command_surface_doc(ROOT / "docs" / "project" / "slash-command-surface.md")
 
 
 def test_claude_command_contracts_do_not_depend_on_source_checkout():

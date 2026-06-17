@@ -28,6 +28,30 @@ from shared.workspace import (
 )
 
 
+def build_finalize_adapter_output(incident_dir: Path, input_data, analysis):
+    incident_id = str(input_data.get("incident_id") or incident_dir.name)
+    middleware = str(input_data.get("middleware") or "mongodb")
+    output = adapter_output("analyse", incident_id, middleware, "completed", analysis_summary_text(analysis), incident_dir)
+    output["user_message"] = output["summary"]
+    add_record_ref_if_exists(output, incident_dir, "analysis", "analysis.yaml", "finalized analysis result")
+    rules_fallback_file = find_analysis_rules_fallback_file(incident_dir)
+    if rules_fallback_file is not None:
+        output["record_refs"].append(
+            {
+                "name": "analysis_rules_fallback",
+                "path": str(rules_fallback_file),
+                "description": "rules fallback analysis before Agent reasoning refinement",
+            }
+        )
+    add_record_ref_if_exists(output, incident_dir, "agent_reasoning_task", AGENT_REASONING_TASK_FILENAME, "phase-4/5 Agent reasoning task and output contract")
+    add_record_ref_if_exists(output, incident_dir, "report", "report.md", "finalized human-readable report")
+    add_record_ref_if_exists(output, incident_dir, "collection_report", "collection_report.yaml", "stage-3 collection summary")
+    output["next_actions"] = analysis_next_action_texts(analysis)
+    if analysis_matches_rules_fallback(analysis, incident_dir):
+        output["warnings"].append("analysis.yaml still matches the rules fallback analysis; no additional Agent reasoning was detected.")
+    return output
+
+
 def finalize_analysis(args, normalize_collection_report_gaps) -> int:
     output_root = path_from_arg(args.output_root)
     if args.incident_dir:
@@ -100,26 +124,7 @@ def finalize_analysis(args, normalize_collection_report_gaps) -> int:
         analysis["updated_at"] = now_iso()
         write_yaml(analysis_file, analysis)
     write_report(incident_dir, input_data, analysis)
-    incident_id = str(input_data.get("incident_id") or incident_dir.name)
-    middleware = str(input_data.get("middleware") or "mongodb")
-    output = adapter_output("analyse", incident_id, middleware, "completed", analysis_summary_text(analysis), incident_dir)
-    output["user_message"] = output["summary"]
-    add_record_ref_if_exists(output, incident_dir, "analysis", "analysis.yaml", "finalized analysis result")
-    rules_fallback_file = find_analysis_rules_fallback_file(incident_dir)
-    if rules_fallback_file is not None:
-        output["record_refs"].append(
-            {
-                "name": "analysis_rules_fallback",
-                "path": str(rules_fallback_file),
-                "description": "rules fallback analysis before Agent reasoning refinement",
-            }
-        )
-    add_record_ref_if_exists(output, incident_dir, "agent_reasoning_task", AGENT_REASONING_TASK_FILENAME, "phase-4/5 Agent reasoning task and output contract")
-    add_record_ref_if_exists(output, incident_dir, "report", "report.md", "finalized human-readable report")
-    add_record_ref_if_exists(output, incident_dir, "collection_report", "collection_report.yaml", "stage-3 collection summary")
-    output["next_actions"] = analysis_next_action_texts(analysis)
-    if analysis_matches_rules_fallback(analysis, incident_dir):
-        output["warnings"].append("analysis.yaml still matches the rules fallback analysis; no additional Agent reasoning was detected.")
+    output = build_finalize_adapter_output(incident_dir, input_data, analysis)
 
     update_incident_meta(incident_dir, {"status": "analysed", "current_command": "analyse"})
     write_current_incident(output_root, incident_dir)

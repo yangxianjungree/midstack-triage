@@ -69,6 +69,58 @@ def test_finalize_analysis_writes_adapter_output_and_report(tmp_path):
     assert meta["status"] == "analysed"
 
 
+def test_finalize_analysis_completed_output_includes_expected_refs(tmp_path):
+    incident_dir = tmp_path / "incident"
+    write_yaml(
+        incident_dir / "input.yaml",
+        {
+            "incident_id": "demo-incident",
+            "middleware": "mongodb",
+            "namespace": "psmdb-test",
+            "customer_clue": "mongo down",
+        },
+    )
+    write_yaml(
+        incident_dir / "analysis.yaml",
+        {
+            "conclusion_summary": {
+                "statement": "MongoDB pod restart loop detected",
+                "confidence": "medium",
+                "deepest_supported_level": "impact",
+                "primary_cause_category": "kubernetes-runtime",
+                "impact_scope": "shard0",
+                "evidence": ["pod crashloop observed"],
+            },
+            "hypotheses": [],
+            "next_actions": [{"action": "check pod events"}],
+        },
+    )
+    (incident_dir / "report.md").write_text("# draft\n", encoding="utf-8")
+    write_yaml(incident_dir / "collection_report.yaml", {"evidence_gaps": []})
+    write_yaml(incident_dir / "signal_bundle.yaml", {"abnormal_signals": []})
+    write_yaml(
+        incident_dir / "meta.yaml",
+        {
+            "incident_id": "demo-incident",
+            "middleware": "mongodb",
+            "status": "analysing",
+            "current_command": "analyse",
+        },
+    )
+
+    args = SimpleNamespace(output_root=str(tmp_path), incident_dir=str(incident_dir))
+    rc = finalize_analysis(args, lambda report: None)
+
+    assert rc == 0
+    adapter = yaml.safe_load((incident_dir / "adapter-output.yaml").read_text(encoding="utf-8"))
+    record_ref_names = {item["name"] for item in adapter["record_refs"]}
+    assert "analysis" in record_ref_names
+    assert "report" in record_ref_names
+    assert "analysis_rules_fallback" not in record_ref_names
+    assert adapter["status"] == "completed"
+    assert adapter["next_actions"] == ["check pod events"]
+
+
 def test_build_review_block_scores_supported_analysis():
     review = build_review_block(
         {

@@ -143,6 +143,85 @@ def _prepare_phase3_context(
     return input_data, skill_runtime
 
 
+def _write_completed_analysis_output(
+    output_root: Path,
+    incident_dir: Path | None,
+    incident_mode: bool,
+    previous_incident_status: str,
+    output_dir: Path,
+    incident_id: str,
+    middleware: str,
+    input_data: Dict[str, Any],
+    skill_runtime: Dict[str, Any],
+    analysis_file: Path,
+    normalize_collection_report_gaps,
+    run_phase4_analysis,
+) -> int:
+    try:
+        phase4_result = run_phase4_analysis(output_dir)
+        print("Phase 4 reasoning completed: %d rounds" % phase4_result["total_rounds"], file=sys.stderr)
+    except Exception as exc:
+        print("Phase 4 warning: %s (falling back to rules analysis)" % exc, file=sys.stderr)
+    try:
+        analysis = generate_rule_analysis(middleware, output_dir)
+        write_yaml(analysis_file, analysis)
+    except Exception as exc:
+        _restore_incident_status(incident_mode, incident_dir, previous_incident_status)
+        output = adapter_output("analyse", incident_id, middleware, "failed", "local analyse failed", output_dir)
+        output["warnings"].append(str(exc))
+        write_yaml(output_dir / "adapter-output.yaml", output)
+        print("ERROR: %s" % exc, file=sys.stderr)
+        return 1
+
+    output = adapter_output("analyse", incident_id, middleware, "completed", "local analyse completed", output_dir)
+    output["record_refs"].append({"name": "analysis", "path": str(analysis_file), "description": "generated analysis result"})
+    analysis = load_yaml(analysis_file)
+    collection_report = load_yaml(output_dir / "collection_report.yaml") if (output_dir / "collection_report.yaml").exists() else {}
+    signal_bundle = load_yaml(output_dir / "signal_bundle.yaml") if (output_dir / "signal_bundle.yaml").exists() else {}
+    if collection_report:
+        normalize_collection_report_gaps(collection_report)
+        write_yaml(output_dir / "collection_report.yaml", collection_report)
+    if apply_analysis_guardrails(analysis, collection_report, signal_bundle):
+        analysis["updated_at"] = now_iso()
+        write_yaml(analysis_file, analysis)
+    rules_fallback_file = write_analysis_rules_fallback(output_dir, analysis)
+    report_file = write_report(output_dir, input_data, analysis)
+    task_file = write_agent_reasoning_task(
+        output_dir,
+        input_data,
+        analysis_file,
+        rules_fallback_file,
+        report_file,
+        matched_skills=skill_runtime.get("skills") if skill_runtime else None,
+    )
+    output["record_refs"].append(
+        {
+            "name": "analysis_rules_fallback",
+            "path": str(rules_fallback_file),
+            "description": "rules fallback analysis before Agent reasoning refinement",
+        }
+    )
+    output["record_refs"].append(
+        {
+            "name": "agent_reasoning_task",
+            "path": str(task_file),
+            "description": "phase-4/5 Agent reasoning task and output contract",
+        }
+    )
+    output["record_refs"].append({"name": "report", "path": str(report_file), "description": "generated human-readable report"})
+    output["warnings"].append("analysis.yaml is currently seeded from the rules fallback analysis; Agent reasoning should refine analysis.yaml and report.md.")
+    output["next_actions"] = [
+        "read agent-reasoning-task.md and update analysis.yaml with Agent-led multi-hypothesis reasoning, gap classification, and conclusion ceiling",
+        "refresh report.md so it matches the final analysis.yaml conclusion",
+    ]
+    if incident_mode and incident_dir is not None:
+        update_incident_meta(incident_dir, {"status": "analysed", "current_command": "analyse"})
+        write_current_incident(output_root, incident_dir)
+    write_yaml(output_dir / "adapter-output.yaml", output)
+    print(str(analysis_file))
+    return 0
+
+
 def run(
     args,
     *,
@@ -333,67 +412,17 @@ def run(
         write_yaml(output_dir / "adapter-output.yaml", output)
         print("ERROR: %s" % summary, file=sys.stderr)
         return 1
-
-    try:
-        phase4_result = run_phase4_analysis(output_dir)
-        print("Phase 4 reasoning completed: %d rounds" % phase4_result["total_rounds"], file=sys.stderr)
-    except Exception as exc:
-        print("Phase 4 warning: %s (falling back to rules analysis)" % exc, file=sys.stderr)
-    try:
-        analysis = generate_rule_analysis(middleware, output_dir)
-        write_yaml(analysis_file, analysis)
-    except Exception as exc:
-        _restore_incident_status(incident_mode, incident_dir, previous_incident_status)
-        output = adapter_output("analyse", incident_id, middleware, "failed", "local analyse failed", output_dir)
-        output["warnings"].append(str(exc))
-        write_yaml(output_dir / "adapter-output.yaml", output)
-        print("ERROR: %s" % exc, file=sys.stderr)
-        return 1
-
-    output = adapter_output("analyse", incident_id, middleware, "completed", "local analyse completed", output_dir)
-    output["record_refs"].append({"name": "analysis", "path": str(analysis_file), "description": "generated analysis result"})
-    analysis = load_yaml(analysis_file)
-    collection_report = load_yaml(output_dir / "collection_report.yaml") if (output_dir / "collection_report.yaml").exists() else {}
-    signal_bundle = load_yaml(output_dir / "signal_bundle.yaml") if (output_dir / "signal_bundle.yaml").exists() else {}
-    if collection_report:
-        normalize_collection_report_gaps(collection_report)
-        write_yaml(output_dir / "collection_report.yaml", collection_report)
-    if apply_analysis_guardrails(analysis, collection_report, signal_bundle):
-        analysis["updated_at"] = now_iso()
-        write_yaml(analysis_file, analysis)
-    rules_fallback_file = write_analysis_rules_fallback(output_dir, analysis)
-    report_file = write_report(output_dir, input_data, analysis)
-    task_file = write_agent_reasoning_task(
+    return _write_completed_analysis_output(
+        output_root,
+        incident_dir,
+        incident_mode,
+        previous_incident_status,
         output_dir,
+        incident_id,
+        middleware,
         input_data,
+        skill_runtime,
         analysis_file,
-        rules_fallback_file,
-        report_file,
-        matched_skills=skill_runtime.get("skills") if skill_runtime else None,
+        normalize_collection_report_gaps,
+        run_phase4_analysis,
     )
-    output["record_refs"].append(
-        {
-            "name": "analysis_rules_fallback",
-            "path": str(rules_fallback_file),
-            "description": "rules fallback analysis before Agent reasoning refinement",
-        }
-    )
-    output["record_refs"].append(
-        {
-            "name": "agent_reasoning_task",
-            "path": str(task_file),
-            "description": "phase-4/5 Agent reasoning task and output contract",
-        }
-    )
-    output["record_refs"].append({"name": "report", "path": str(report_file), "description": "generated human-readable report"})
-    output["warnings"].append("analysis.yaml is currently seeded from the rules fallback analysis; Agent reasoning should refine analysis.yaml and report.md.")
-    output["next_actions"] = [
-        "read agent-reasoning-task.md and update analysis.yaml with Agent-led multi-hypothesis reasoning, gap classification, and conclusion ceiling",
-        "refresh report.md so it matches the final analysis.yaml conclusion",
-    ]
-    if incident_mode and incident_dir is not None:
-        update_incident_meta(incident_dir, {"status": "analysed", "current_command": "analyse"})
-        write_current_incident(output_root, incident_dir)
-    write_yaml(output_dir / "adapter-output.yaml", output)
-    print(str(analysis_file))
-    return 0

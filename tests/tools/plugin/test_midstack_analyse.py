@@ -15,6 +15,38 @@ FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "active" / "mongodb" / "kubernetes-
 
 
 class MidstackAnalyseTest(unittest.TestCase):
+    def test_analyse_input_dir_completed_writes_expected_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "mongodb-incident"
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "tools" / "plugin" / "midstack-local.py"),
+                    "analyse",
+                    "--input-dir",
+                    str(FIXTURE_ROOT),
+                    "--output-dir",
+                    str(output_dir),
+                ],
+                cwd=str(ROOT),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
+
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            adapter = yaml.safe_load((output_dir / "adapter-output.yaml").read_text(encoding="utf-8"))
+            record_ref_names = {item["name"] for item in adapter["record_refs"]}
+            self.assertEqual(adapter["status"], "completed")
+            self.assertIn("analysis", record_ref_names)
+            self.assertIn("analysis_rules_fallback", record_ref_names)
+            self.assertIn("agent_reasoning_task", record_ref_names)
+            self.assertIn("report", record_ref_names)
+            self.assertTrue((output_dir / "analysis.yaml").exists())
+            self.assertTrue((output_dir / "analysis.rules-fallback.yaml").exists())
+            self.assertTrue((output_dir / "agent-reasoning-task.md").exists())
+            self.assertTrue((output_dir / "report.md").exists())
+
     def test_analyse_remote_run_blocked_writes_adapter_output(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)

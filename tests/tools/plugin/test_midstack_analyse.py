@@ -15,6 +15,109 @@ FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "active" / "mongodb" / "kubernetes-
 
 
 class MidstackAnalyseTest(unittest.TestCase):
+    def test_analyse_remote_run_blocked_writes_adapter_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            remote_run_dir = workspace / "remote-runs" / "mongodb-blocked-run"
+            remote_run_dir.mkdir(parents=True, exist_ok=True)
+            (remote_run_dir / "remote-executor-run.yaml").write_text(
+                yaml.safe_dump(
+                    {
+                        "incident_id": "mongodb-blocked-run",
+                        "middleware": "mongodb",
+                        "status": "blocked",
+                        "error": {
+                            "code": "missing_sshpass",
+                            "message": "sshpass is required for password-based SSH access",
+                        },
+                    },
+                    sort_keys=False,
+                    allow_unicode=False,
+                ),
+                encoding="utf-8",
+            )
+            output_dir = workspace / "incident"
+            env = dict(os.environ)
+            env["MIDSTACK_TRIAGE_WORKSPACE"] = str(workspace)
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "tools" / "plugin" / "midstack-local.py"),
+                    "analyse",
+                    "--remote-run-dir",
+                    str(remote_run_dir),
+                    "--output-dir",
+                    str(output_dir),
+                ],
+                cwd=str(ROOT),
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
+
+            self.assertEqual(proc.returncode, 0)
+            adapter = yaml.safe_load((output_dir / "adapter-output.yaml").read_text(encoding="utf-8"))
+            self.assertEqual(adapter["status"], "blocked")
+            self.assertEqual(adapter["summary"], "remote signal collection is blocked")
+            self.assertEqual(adapter["blocking_items"][0]["code"], "missing_sshpass")
+            self.assertIn("install sshpass locally", adapter["blocking_items"][0]["required_user_action"])
+            self.assertTrue((output_dir / "remote-executor-run.yaml").exists())
+            self.assertFalse((output_dir / "analysis.yaml").exists())
+
+    def test_analyse_remote_run_failed_writes_adapter_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            remote_run_dir = workspace / "remote-runs" / "mongodb-failed-run"
+            remote_run_dir.mkdir(parents=True, exist_ok=True)
+            (remote_run_dir / "remote-executor-run.yaml").write_text(
+                yaml.safe_dump(
+                    {
+                        "incident_id": "mongodb-failed-run",
+                        "middleware": "mongodb",
+                        "status": "failed",
+                        "error": {
+                            "code": "ssh_unreachable",
+                            "message": "ssh connection timed out",
+                        },
+                    },
+                    sort_keys=False,
+                    allow_unicode=False,
+                ),
+                encoding="utf-8",
+            )
+            output_dir = workspace / "incident"
+            env = dict(os.environ)
+            env["MIDSTACK_TRIAGE_WORKSPACE"] = str(workspace)
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "tools" / "plugin" / "midstack-local.py"),
+                    "analyse",
+                    "--remote-run-dir",
+                    str(remote_run_dir),
+                    "--output-dir",
+                    str(output_dir),
+                ],
+                cwd=str(ROOT),
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
+
+            self.assertEqual(proc.returncode, 1)
+            self.assertIn("ssh connection timed out", proc.stderr)
+            adapter = yaml.safe_load((output_dir / "adapter-output.yaml").read_text(encoding="utf-8"))
+            self.assertEqual(adapter["status"], "failed")
+            self.assertEqual(adapter["summary"], "remote signal collection failed")
+            self.assertIn("ssh connection timed out", adapter["warnings"])
+            self.assertIn("fix remote SSH connectivity", adapter["next_actions"][0])
+            self.assertTrue((output_dir / "remote-executor-run.yaml").exists())
+            self.assertFalse((output_dir / "analysis.yaml").exists())
+
     def test_analyse_fails_for_unknown_middleware(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output_dir = Path(tmp) / "redis-incident"

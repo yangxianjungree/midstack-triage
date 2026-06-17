@@ -23,7 +23,6 @@ from shared.workspace import (
     write_yaml,
 )
 from shared.analysis_runtime import (
-    ANALYSIS_RULES_FALLBACK_FILENAME,
     apply_analysis_guardrails,
     write_analysis_rules_fallback,
     write_agent_reasoning_task,
@@ -32,6 +31,116 @@ from shared.analysis_runtime import (
 
 
 ANALYSABLE_STATUSES = ("ready", "analysed")
+
+
+def _restore_incident_status(incident_mode: bool, incident_dir: Path | None, previous_incident_status: str) -> None:
+    if incident_mode and incident_dir is not None and previous_incident_status:
+        update_incident_meta(incident_dir, {"status": previous_incident_status, "current_command": "analyse"})
+
+
+def _write_remote_executor_blocked_output(
+    output_dir: Path,
+    incident_id: str,
+    middleware: str,
+    error_code: str,
+    error_message: str,
+    remote_executor_required_user_action,
+    remote_executor_next_actions,
+) -> int:
+    output = adapter_output("analyse", incident_id, middleware, "blocked", "remote signal collection is blocked", output_dir)
+    output["blocking_items"] = [
+        {
+            "code": error_code or "remote_executor_blocked",
+            "message": error_message,
+            "required_user_action": remote_executor_required_user_action(error_code),
+        }
+    ]
+    output["next_actions"] = remote_executor_next_actions(error_code)
+    add_record_ref_if_exists(output, output_dir, "collection_report", "collection_report.yaml", "stage-3 collection summary")
+    add_record_ref_if_exists(output, output_dir, "remote_executor_run", "remote-executor-run.yaml", "remote executor batch result")
+    write_yaml(output_dir / "adapter-output.yaml", output)
+    print(str(output_dir))
+    return 0
+
+
+def _write_remote_executor_failed_output(
+    output_dir: Path,
+    incident_id: str,
+    middleware: str,
+    error_code: str,
+    error_message: str,
+    remote_executor_next_actions,
+) -> int:
+    output = adapter_output("analyse", incident_id, middleware, "failed", "remote signal collection failed", output_dir)
+    output["warnings"].append(error_message)
+    output["next_actions"] = remote_executor_next_actions(error_code)
+    add_record_ref_if_exists(output, output_dir, "collection_report", "collection_report.yaml", "stage-3 collection summary")
+    add_record_ref_if_exists(output, output_dir, "remote_executor_run", "remote-executor-run.yaml", "remote executor batch result")
+    write_yaml(output_dir / "adapter-output.yaml", output)
+    print("ERROR: %s" % error_message, file=sys.stderr)
+    return 1
+
+
+def _prepare_analysis_inputs(
+    args,
+    output_dir: Path,
+    incident_mode: bool,
+    run_remote_collection,
+    load_remote_executor_run_result,
+    build_incident_from_remote_run,
+) -> Dict[str, Any]:
+    if args.remote_config:
+        remote_run_dir = run_remote_collection(args, output_dir)
+        remote_run_result = load_remote_executor_run_result(remote_run_dir)
+        build_incident_from_remote_run(remote_run_dir, output_dir, args, preserve_existing_input=incident_mode)
+        return remote_run_result
+    if args.remote_run_dir:
+        remote_run_dir = resolve_path(args.remote_run_dir)
+        remote_run_result = load_remote_executor_run_result(remote_run_dir)
+        build_incident_from_remote_run(remote_run_dir, output_dir, args)
+        return remote_run_result
+    input_dir = resolve_path(args.input_dir)
+    for filename in ("input.yaml", "structured_record.yaml", "signal_bundle.yaml", "collection_report.yaml", "expected_analysis.yaml"):
+        copy_if_exists(input_dir, output_dir, filename)
+    return {}
+
+
+def _prepare_phase3_context(
+    args,
+    output_dir: Path,
+    input_data: Dict[str, Any],
+    remote_run_result: Dict[str, Any],
+    apply_scenario_routing_if_needed,
+    enrich_skill_runtime_context,
+    run_directed_recollection_if_needed,
+) -> tuple[Dict[str, Any], Dict[str, Any]]:
+    if (output_dir / "signal_bundle.yaml").exists():
+        input_data = apply_scenario_routing_if_needed(output_dir, args)
+    skill_runtime: Dict[str, Any] = {}
+    if (output_dir / "signal_bundle.yaml").exists():
+        skill_runtime = enrich_skill_runtime_context(output_dir, input_data)
+        input_data = load_yaml(output_dir / "input.yaml")
+    skill_pool = skill_runtime.get("skill_pool") or set()
+    if remote_run_result:
+        try:
+            run_directed_recollection_if_needed(args, output_dir, skill_pool=skill_pool or None)
+            if skill_runtime:
+                enrich_skill_runtime_context(output_dir, input_data)
+                input_data = load_yaml(output_dir / "input.yaml")
+        except Exception as exc:
+            collection_report = load_yaml(output_dir / "collection_report.yaml")
+            collection_report.setdefault("evidence_gaps", []).append(
+                {
+                    "gap": "directed recollection failed: %s" % exc,
+                    "gap_type": "critical_gap",
+                    "related_stage": "directed_recollection",
+                    "why_important": "The first directed recollection loop could not close a critical evidence gap.",
+                    "recommended_action": "inspect directed-recollection logs and rerun the read-only playbook manually",
+                }
+            )
+            collection_report["updated_at"] = now_iso()
+            write_yaml(output_dir / "collection_report.yaml", collection_report)
+    return input_data, skill_runtime
 
 
 def run(
@@ -148,18 +257,14 @@ def run(
     try:
         if incident_mode and incident_dir is not None:
             update_incident_meta(incident_dir, {"status": "analysing", "current_command": "analyse"})
-        if args.remote_config:
-            remote_run_dir = run_remote_collection(args, output_dir)
-            remote_run_result = load_remote_executor_run_result(remote_run_dir)
-            build_incident_from_remote_run(remote_run_dir, output_dir, args, preserve_existing_input=incident_mode)
-        elif args.remote_run_dir:
-            remote_run_dir = resolve_path(args.remote_run_dir)
-            remote_run_result = load_remote_executor_run_result(remote_run_dir)
-            build_incident_from_remote_run(remote_run_dir, output_dir, args)
-        else:
-            input_dir = resolve_path(args.input_dir)
-            for filename in ("input.yaml", "structured_record.yaml", "signal_bundle.yaml", "collection_report.yaml", "expected_analysis.yaml"):
-                copy_if_exists(input_dir, output_dir, filename)
+        remote_run_result = _prepare_analysis_inputs(
+            args,
+            output_dir,
+            incident_mode,
+            run_remote_collection,
+            load_remote_executor_run_result,
+            build_incident_from_remote_run,
+        )
     except Exception as exc:
         if incident_mode and incident_dir is not None and previous_incident_status:
             update_incident_meta(incident_dir, {"status": previous_incident_status, "current_command": "analyse"})
@@ -172,66 +277,43 @@ def run(
         return 1
 
     input_data = load_yaml(output_dir / "input.yaml")
-    if (output_dir / "signal_bundle.yaml").exists():
-        input_data = apply_scenario_routing_if_needed(output_dir, args)
-    skill_runtime: Dict[str, Any] = {}
-    if (output_dir / "signal_bundle.yaml").exists():
-        skill_runtime = enrich_skill_runtime_context(output_dir, input_data)
-        input_data = load_yaml(output_dir / "input.yaml")
     incident_id = str(input_data.get("incident_id") or output_dir.name)
     middleware = str(input_data.get("middleware") or "mongodb")
-    skill_pool = skill_runtime.get("skill_pool") or set()
     if remote_run_result:
         run_status = str(remote_run_result.get("status") or "")
         run_error = remote_run_result.get("error") or {}
         error_code = str(run_error.get("code") or "")
         error_message = str(run_error.get("message") or "remote executor did not complete successfully")
         if run_status == "blocked":
-            if incident_mode and incident_dir is not None and previous_incident_status:
-                update_incident_meta(incident_dir, {"status": previous_incident_status, "current_command": "analyse"})
-            output = adapter_output("analyse", incident_id, middleware, "blocked", "remote signal collection is blocked", output_dir)
-            output["blocking_items"] = [
-                {
-                    "code": error_code or "remote_executor_blocked",
-                    "message": error_message,
-                    "required_user_action": remote_executor_required_user_action(error_code),
-                }
-            ]
-            output["next_actions"] = remote_executor_next_actions(error_code)
-            add_record_ref_if_exists(output, output_dir, "collection_report", "collection_report.yaml", "stage-3 collection summary")
-            add_record_ref_if_exists(output, output_dir, "remote_executor_run", "remote-executor-run.yaml", "remote executor batch result")
-            write_yaml(output_dir / "adapter-output.yaml", output)
-            print(str(output_dir))
-            return 0
-        if run_status == "failed":
-            if incident_mode and incident_dir is not None and previous_incident_status:
-                update_incident_meta(incident_dir, {"status": previous_incident_status, "current_command": "analyse"})
-            output = adapter_output("analyse", incident_id, middleware, "failed", "remote signal collection failed", output_dir)
-            output["warnings"].append(error_message)
-            output["next_actions"] = remote_executor_next_actions(error_code)
-            add_record_ref_if_exists(output, output_dir, "collection_report", "collection_report.yaml", "stage-3 collection summary")
-            add_record_ref_if_exists(output, output_dir, "remote_executor_run", "remote-executor-run.yaml", "remote executor batch result")
-            write_yaml(output_dir / "adapter-output.yaml", output)
-            print("ERROR: %s" % error_message, file=sys.stderr)
-            return 1
-        try:
-            run_directed_recollection_if_needed(args, output_dir, skill_pool=skill_pool or None)
-            if skill_runtime:
-                enrich_skill_runtime_context(output_dir, input_data)
-                input_data = load_yaml(output_dir / "input.yaml")
-        except Exception as exc:
-            collection_report = load_yaml(output_dir / "collection_report.yaml")
-            collection_report.setdefault("evidence_gaps", []).append(
-                {
-                    "gap": "directed recollection failed: %s" % exc,
-                    "gap_type": "critical_gap",
-                    "related_stage": "directed_recollection",
-                    "why_important": "The first directed recollection loop could not close a critical evidence gap.",
-                    "recommended_action": "inspect directed-recollection logs and rerun the read-only playbook manually",
-                }
+            _restore_incident_status(incident_mode, incident_dir, previous_incident_status)
+            return _write_remote_executor_blocked_output(
+                output_dir,
+                incident_id,
+                middleware,
+                error_code,
+                error_message,
+                remote_executor_required_user_action,
+                remote_executor_next_actions,
             )
-            collection_report["updated_at"] = now_iso()
-            write_yaml(output_dir / "collection_report.yaml", collection_report)
+        if run_status == "failed":
+            _restore_incident_status(incident_mode, incident_dir, previous_incident_status)
+            return _write_remote_executor_failed_output(
+                output_dir,
+                incident_id,
+                middleware,
+                error_code,
+                error_message,
+                remote_executor_next_actions,
+            )
+    input_data, skill_runtime = _prepare_phase3_context(
+        args,
+        output_dir,
+        input_data,
+        remote_run_result,
+        apply_scenario_routing_if_needed,
+        enrich_skill_runtime_context,
+        run_directed_recollection_if_needed,
+    )
 
     analysis_file = output_dir / "analysis.yaml"
     supported = supported_middlewares()
@@ -261,8 +343,7 @@ def run(
         analysis = generate_rule_analysis(middleware, output_dir)
         write_yaml(analysis_file, analysis)
     except Exception as exc:
-        if incident_mode and incident_dir is not None and previous_incident_status:
-            update_incident_meta(incident_dir, {"status": previous_incident_status, "current_command": "analyse"})
+        _restore_incident_status(incident_mode, incident_dir, previous_incident_status)
         output = adapter_output("analyse", incident_id, middleware, "failed", "local analyse failed", output_dir)
         output["warnings"].append(str(exc))
         write_yaml(output_dir / "adapter-output.yaml", output)

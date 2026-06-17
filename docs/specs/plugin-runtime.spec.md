@@ -14,6 +14,7 @@ superseded_by: none
 - [插件使用规范](plugin-usage.spec.md)
 - [单次排障记录规范](incident-record.spec.md)
 - [排障流程规范](triage-workflow.spec.md)
+- [Slash 命令面说明](../project/slash-command-surface.md)
 - [讨论归档](../decisions/discussions-archive.md)
 
 > 本文件是插件**命令行为**（参数、状态机、目标记录选择、运行时合同）的唯一权威定义。其他文档与本文件冲突时，以本文件为准；其他文档应引用本文件，不另行复述行为规则。
@@ -56,9 +57,21 @@ superseded_by: none
 
 | 命令 | 对应流程 | 主要职责 |
 |---|---|---|
-| `/<plugin_name>:start` | 第 1、2 段 | 启动排障、收集最小输入、判断 `ready / blocked`、完成基础环境确认 |
-| `/<plugin_name>:analyse` | 第 3、4、5 段 | 执行信号治理、推理验证、输出结论和知识沉淀候选 |
-| `/<plugin_name>:review` | 插件反馈闭环 | 对插件当前排障表现做评分、原因说明和改进建议 |
+| `/<plugin_name>:start` | 第 1、2 段 | 启动排障、收集最小输入、判断 `ready / blocked`、完成基础环境确认和对象盘点 |
+| `/<plugin_name>:analyse` | 第 3、4、5 段 | 执行信号治理、推理验证、输出结论、报告和知识沉淀候选 |
+| `/<plugin_name>:review` | 第 5 段质量反馈 | 对已有分析做五维评分、原因说明和改进建议；不属于 `start -> analyse` 主路径的必跑步骤 |
+| `/<plugin_name>:validate` | 维护者检查 | 校验安装态 runtime、资产和适配器门禁；不属于用户排障主路径 |
+
+### 2.1 Slash 命令与 5 阶段对应关系
+
+| 5 阶段 | 阶段职责 | Slash 入口 | 说明 |
+| --- | --- | --- | --- |
+| Phase 1 启动 | 建立 incident、解析线索、远端接入校验 | `/<plugin_name>:start` | Agent 只抽取参数并调用 runtime；不自行排障 |
+| Phase 2 盘点 | namespace、对象、拓扑、auth hint | `/<plugin_name>:start` | 由 start runtime 内部完成，ready 后提示 analyse |
+| Phase 3 采集治理 | remote run、fixture、recollection 输入治理 | `/<plugin_name>:analyse` | analyse 进入控制面后触发采集或读取已有 remote run |
+| Phase 4 推理 | rules fallback、多轨推理、reasoning board | `/<plugin_name>:analyse` | analyse 内部阶段，不应由 slash command 直接实现 |
+| Phase 5 收口 | finalize、review、report、score | `/<plugin_name>:analyse`、`/<plugin_name>:review` | analyse 产出结论和报告；review 只做质量反馈 |
+| 维护者检查 | 安装态 runtime 与资产自检 | `/<plugin_name>:validate` | 不属于用户排障 5 阶段主路径 |
 
 ## 3. `incident_id` 规则
 

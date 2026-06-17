@@ -38,6 +38,8 @@ Claude 和 Cursor 的安装目录不同，但必须满足同一组合同：
 
 本地维护者的安装态回归收口脚本是 `tools/validators/validate-installed-adapters.py`。它只串起现有 installer、check 和 smoke 命令，不是新的 runtime 入口。
 
+slash 命令与 5 阶段对应关系见 [Slash 命令面说明](slash-command-surface.md)。
+
 ## 仓库工程门禁
 
 常规提交前至少运行：

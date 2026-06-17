@@ -16,7 +16,7 @@ superseded_by: none
 说明：
 
 - `/<plugin_name>` 表示插件名称前缀占位
-- 实际命令形态应为 `/<plugin_name>:start`、`/<plugin_name>:analyse`、`/<plugin_name>:review`
+- 实际命令形态应为 `/<plugin_name>:start`、`/<plugin_name>:analyse`、`/<plugin_name>:review`、`/<plugin_name>:validate`
 - 当前 Claude 与 Cursor 适配器都使用 `/midstack` 作为命令前缀
 
 当前对外保留 3 个面向用户的主命令：
@@ -44,6 +44,9 @@ superseded_by: none
 | `/<plugin_name>:start` | 第 1 段 `受理与启动` + 第 2 段 `环境确认与对象盘点` | 收集最小输入、保存原始线索、验证环境可达性、判定 `ready / blocked`、完成基础环境和对象确认 | `ready / blocked` 状态、最小接入信息、前置环境确认结果 |
 | `/<plugin_name>:analyse` | 第 3 段 `信号采集与治理` + 第 4 段 `推理诊断与深入验证` + 第 5 段 `结论整合与知识沉淀` | 采集和治理信号、生成并验证多条假设、形成阶段性结论、生成知识沉淀候选 | `structured_record`、`signal_bundle`、`collection_report`、阶段性结论、知识沉淀候选 |
 | `/<plugin_name>:review` | 不直接对应用户排障主路径，属于插件反馈闭环 | 对插件当前排障表现做评价、打分、反馈，服务于开发者、DBA 和维护者持续优化插件能力 | 质量评分、评分原因、改进建议 |
+| `/<plugin_name>:validate` | 维护者检查，不属于用户排障主路径 | 校验安装态 runtime、资产、replay、score gate 和适配器自检 | pass/fail 状态和可行动失败项 |
+
+slash 命令与 5 阶段流程的简明说明见 [Slash 命令面说明](../project/slash-command-surface.md)；命令行为的权威定义见 [插件运行时规范](plugin-runtime.spec.md)。
 
 ### 结论
 

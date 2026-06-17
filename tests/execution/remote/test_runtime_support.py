@@ -22,3 +22,13 @@ def test_runtime_root_env_overrides_repo_root(monkeypatch):
 
     monkeypatch.delenv("MIDSTACK_TRIAGE_RUNTIME_ROOT", raising=False)
     importlib.reload(module)
+
+
+def test_source_checkout_root_points_to_repo_root(monkeypatch):
+    monkeypatch.delenv("MIDSTACK_TRIAGE_RUNTIME_ROOT", raising=False)
+    module = importlib.import_module("execution.remote.runtime_support")
+    module = importlib.reload(module)
+
+    assert module.ROOT == ROOT
+    assert module.DEFAULT_MANIFEST == ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml"
+    assert module.DEFAULT_RUNTIME_MAP == ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml"

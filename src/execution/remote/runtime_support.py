@@ -12,7 +12,7 @@ import yaml
 
 
 RUNTIME_ROOT = Path(os.environ.get("MIDSTACK_TRIAGE_RUNTIME_ROOT", "")).expanduser().resolve() if os.environ.get("MIDSTACK_TRIAGE_RUNTIME_ROOT") else None
-ROOT = RUNTIME_ROOT if RUNTIME_ROOT else Path(__file__).resolve().parents[4]
+ROOT = RUNTIME_ROOT if RUNTIME_ROOT else Path(__file__).resolve().parents[3]
 DEFAULT_LOCAL_OUTPUT = ROOT / ".local" / "remote-runs"
 DEFAULT_REMOTE_ROOT = "/tmp/midstack-triage"
 DEFAULT_RUNTIME_MAP = ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml"

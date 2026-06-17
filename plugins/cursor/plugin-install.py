@@ -4,6 +4,7 @@
 
 import argparse
 import json
+import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,7 +15,8 @@ PLUGIN_NAME = "midstack-triage"
 LOCAL_PLUGIN_DIR = Path.home() / ".cursor" / "plugins" / "local" / PLUGIN_NAME
 MANIFEST_PATH = PLUGIN_DIR / ".cursor-plugin" / "plugin.json"
 WORKSPACE_STATE_NAME = "midstack-triage.workspace.json"
-INSTALL_MODE = "agent-cli"
+INSTALL_MODE = "agent-cli-bundled-runtime"
+WORKSPACE_RUNTIME_DIR = "midstack-triage-runtime"
 LICENSE_FILES = [
     "LICENSE",
     "NOTICE",
@@ -32,6 +34,35 @@ LEGACY_COMMANDS = [
     "midstack-validate.md",
 ]
 LEGACY_RULE = "midstack-triage.mdc"
+RUNTIME_COPY_DIRS = [
+    ("tools/plugin", "tools/plugin"),
+    ("tools/support", "tools/support"),
+    ("tools/validators", "tools/validators"),
+    ("src", "src"),
+    ("domains", "domains"),
+    ("scenarios", "scenarios"),
+    ("core", "core"),
+    ("interfaces", "interfaces"),
+]
+RUNTIME_MARKER_FILES = [
+    "bin/midstack-local.py",
+    "bin/validate-repo.py",
+    "tools/plugin/midstack-local.py",
+    "tools/support/common.py",
+    "src/commands/plugin_cli.py",
+    "src/execution/remote/runtime_support.py",
+    "src/phases/phase4/rules/mongodb.py",
+    "src/shared/skill_resolver.py",
+    "domains/mongodb/scripts/manifest.yaml",
+    "interfaces/plugin/script-runtime-map.example.yaml",
+]
+RUNTIME_FORBIDDEN_TEXT = [
+    "Cursor source-checkout",
+    "workspace `engine_root`",
+    "workspace state `engine_root`",
+    "engine_root` 调用",
+    "source-checkout adapter",
+]
 
 
 def now_iso() -> str:
@@ -59,16 +90,20 @@ def plugin_version() -> str:
     return str(load_json(MANIFEST_PATH).get("version") or "0.0.0")
 
 
-def engine_root_path() -> Path:
+def source_root_path() -> Path:
     return PLUGIN_DIR.resolve().parents[1]
 
 
 def license_source(name: str) -> Path:
-    return engine_root_path() / name
+    return source_root_path() / name
 
 
 def workspace_state_path(target_root: Path) -> Path:
     return target_root / ".cursor" / WORKSPACE_STATE_NAME
+
+
+def workspace_runtime_dir(target_root: Path) -> Path:
+    return target_root / ".cursor" / WORKSPACE_RUNTIME_DIR
 
 
 def plugin_command_source(name: str) -> Path:
@@ -100,6 +135,19 @@ def ensure_symlink(link: Path, target: Path) -> None:
     link.symlink_to(resolved_target)
 
 
+def copy_tree(source: Path, target: Path) -> None:
+    if target.exists():
+        remove_path(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache")
+    shutil.copytree(source, target, ignore=ignore)
+
+
+def copy_file(source: Path, target: Path) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, target)
+
+
 def remove_legacy_command_names(command_dir: Path, target_root: Path) -> List[str]:
     removed: List[str] = []
     for name in LEGACY_COMMANDS:
@@ -110,39 +158,105 @@ def remove_legacy_command_names(command_dir: Path, target_root: Path) -> List[st
     return removed
 
 
+def stage_workspace_runtime(target_root: Path) -> Path:
+    runtime_dir = workspace_runtime_dir(target_root)
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    for source_rel, target_rel in RUNTIME_COPY_DIRS:
+        copy_tree(source_root_path() / source_rel, runtime_dir / target_rel)
+    bin_dir = runtime_dir / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    (bin_dir / "midstack-local.py").write_text(
+        "#!/usr/bin/env python3\n\n"
+        "import os\n"
+        "import runpy\n"
+        "import sys\n"
+        "from pathlib import Path\n\n"
+        "RUNTIME_ROOT = Path(__file__).resolve().parents[1]\n"
+        "os.environ.setdefault(\"MIDSTACK_TRIAGE_RUNTIME_ROOT\", str(RUNTIME_ROOT))\n"
+        "sys.path.insert(0, str(RUNTIME_ROOT / \"src\"))\n"
+        "runpy.run_path(str(RUNTIME_ROOT / \"tools\" / \"plugin\" / \"midstack-local.py\"), run_name=\"__main__\")\n",
+        encoding="utf-8",
+    )
+    (bin_dir / "validate-repo.py").write_text(
+        "#!/usr/bin/env python3\n\n"
+        "import os\n"
+        "import runpy\n"
+        "import sys\n"
+        "from pathlib import Path\n\n"
+        "RUNTIME_ROOT = Path(__file__).resolve().parents[1]\n"
+        "os.environ.setdefault(\"MIDSTACK_TRIAGE_RUNTIME_ROOT\", str(RUNTIME_ROOT))\n"
+        "sys.path.insert(0, str(RUNTIME_ROOT / \"src\"))\n"
+        "runpy.run_path(str(RUNTIME_ROOT / \"tools\" / \"validators\" / \"validate-repo.py\"), run_name=\"__main__\")\n",
+        encoding="utf-8",
+    )
+    for path in sorted(bin_dir.glob("*.py")):
+        path.chmod(0o755)
+    return runtime_dir
+
+
+def validate_workspace_runtime(target_root: Path) -> List[str]:
+    errors: List[str] = []
+    runtime_dir = workspace_runtime_dir(target_root)
+    for marker in RUNTIME_MARKER_FILES:
+        if not runtime_dir.joinpath(marker).exists():
+            errors.append("missing workspace runtime file: .cursor/%s/%s" % (WORKSPACE_RUNTIME_DIR, marker))
+    for relpath in [
+        "tools/plugin/README.md",
+        "tools/validators/README.md",
+        "tools/validators/validate-repo.py",
+    ]:
+        path = runtime_dir / relpath
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        for token in RUNTIME_FORBIDDEN_TEXT:
+            if token in text:
+                errors.append("workspace runtime file contains deprecated Cursor source dependency text: %s" % relpath)
+                break
+    return errors
+
+
 def project_workspace_slash_commands(target_root: Path) -> List[str]:
     projected: List[str] = []
     command_dir = target_root / ".cursor" / "commands"
     projected.extend(remove_legacy_command_names(command_dir, target_root))
     for name in REQUIRED_COMMANDS:
-        link = command_dir / name
-        ensure_symlink(link, plugin_command_source(name))
-        projected.append(str(link.relative_to(target_root)))
-    rule_link = target_root / ".cursor" / "rules" / LEGACY_RULE
-    ensure_symlink(rule_link, plugin_rule_source())
-    projected.append(str(rule_link.relative_to(target_root)))
+        target = command_dir / name
+        if target.exists() or target.is_symlink():
+            remove_path(target)
+        copy_file(plugin_command_source(name), target)
+        projected.append(str(target.relative_to(target_root)))
+    rule_target = target_root / ".cursor" / "rules" / LEGACY_RULE
+    if rule_target.exists() or rule_target.is_symlink():
+        remove_path(rule_target)
+    copy_file(plugin_rule_source(), rule_target)
+    projected.append(str(rule_target.relative_to(target_root)))
     return projected
 
 
-def check_projected_symlinks(target_root: Path) -> List[str]:
+def check_projected_files(target_root: Path) -> List[str]:
     errors: List[str] = []
     command_dir = target_root / ".cursor" / "commands"
     for name in LEGACY_COMMANDS:
         if (command_dir / name).exists():
             errors.append("legacy command name still present: .cursor/commands/%s" % name)
     for name in REQUIRED_COMMANDS:
-        link = command_dir / name
+        path = command_dir / name
         expected = plugin_command_source(name)
-        if not link.is_symlink():
-            errors.append("command must be a symlink to plugin: .cursor/commands/%s" % name)
-        elif link.resolve() != expected.resolve():
-            errors.append("command symlink drift: .cursor/commands/%s" % name)
-    rule_link = target_root / ".cursor" / "rules" / LEGACY_RULE
+        if path.is_symlink():
+            errors.append("command must be copied into workspace, not symlinked: .cursor/commands/%s" % name)
+        elif not path.exists():
+            errors.append("missing projected command: .cursor/commands/%s" % name)
+        elif path.read_text(encoding="utf-8") != expected.read_text(encoding="utf-8"):
+            errors.append("command projection drift: .cursor/commands/%s" % name)
+    rule_path = target_root / ".cursor" / "rules" / LEGACY_RULE
     expected_rule = plugin_rule_source()
-    if not rule_link.is_symlink():
-        errors.append("rule must be a symlink to plugin: .cursor/rules/%s" % LEGACY_RULE)
-    elif rule_link.resolve() != expected_rule.resolve():
-        errors.append("rule symlink drift: .cursor/rules/%s" % LEGACY_RULE)
+    if rule_path.is_symlink():
+        errors.append("rule must be copied into workspace, not symlinked: .cursor/rules/%s" % LEGACY_RULE)
+    elif not rule_path.exists():
+        errors.append("missing projected rule: .cursor/rules/%s" % LEGACY_RULE)
+    elif rule_path.read_text(encoding="utf-8") != expected_rule.read_text(encoding="utf-8"):
+        errors.append("rule projection drift: .cursor/rules/%s" % LEGACY_RULE)
     return errors
 
 
@@ -152,13 +266,14 @@ def migrate_workspace(target_root: Path) -> Dict[str, Any]:
     if agents_md.exists():
         agents_md.unlink()
 
+    runtime_dir = stage_workspace_runtime(target_root)
     projected = project_workspace_slash_commands(target_root)
     init_workspace(target_root)
     state = {
         "install_mode": INSTALL_MODE,
         "plugin_name": PLUGIN_NAME,
         "plugin_version": plugin_version(),
-        "engine_root": str(engine_root_path()),
+        "runtime_root": str(runtime_dir),
         "last_migrated_at": now_iso(),
         "projected_slash_commands": [p for p in projected if p.startswith(".cursor/commands/")],
     }
@@ -173,14 +288,14 @@ def init_workspace(target_root: Path) -> None:
         "# Midstack Cursor Workspace\n\n"
         "Open this folder in Cursor or run Agent CLI from here.\n\n"
         "## Slash commands\n\n"
-        "`.cursor/commands/midstack:*.md` are symlinks to the plugin — use `/midstack:start`, `/midstack:analyse`, etc.\n\n"
+        "`.cursor/commands/midstack:*.md` are workspace-local command files — use `/midstack:start`, `/midstack:analyse`, etc.\n\n"
         "```bash\n"
         "cd %s\n"
         "agent --workspace .\n"
         "```\n\n"
         "- Install or upgrade:\n"
         "  `python3 %s/plugin-install.py --upgrade --workspace-init .`\n"
-        "- `engine_root`: `.cursor/midstack-triage.workspace.json`\n"
+        "- `runtime_root`: `.cursor/midstack-triage.workspace.json`\n"
         "- Incident outputs: `.local/incidents/`\n"
         % (target_root.resolve(), PLUGIN_DIR.resolve()),
         encoding="utf-8",
@@ -223,7 +338,8 @@ def check_manifest() -> List[str]:
 
 def check_workspace(target_root: Path) -> List[str]:
     errors: List[str] = []
-    errors.extend(check_projected_symlinks(target_root))
+    errors.extend(check_projected_files(target_root))
+    errors.extend(validate_workspace_runtime(target_root))
     state_path = workspace_state_path(target_root)
     if not state_path.exists():
         errors.append("missing workspace state: .cursor/%s" % WORKSPACE_STATE_NAME)
@@ -233,11 +349,13 @@ def check_workspace(target_root: Path) -> List[str]:
         errors.append("workspace install_mode must be %s" % INSTALL_MODE)
     if state.get("plugin_name") != PLUGIN_NAME:
         errors.append("workspace plugin_name mismatch")
-    engine_root = str(state.get("engine_root") or "")
-    if not engine_root or not Path(engine_root).exists():
-        errors.append("workspace engine_root is missing or does not exist")
-    elif Path(engine_root).resolve() != engine_root_path().resolve():
-        errors.append("workspace engine_root does not match linked plugin engine")
+    if "engine_root" in state:
+        errors.append("workspace state must not contain deprecated field: engine_root")
+    runtime_root = str(state.get("runtime_root") or "")
+    if not runtime_root or not Path(runtime_root).exists():
+        errors.append("workspace runtime_root is missing or does not exist")
+    elif Path(runtime_root).resolve() != workspace_runtime_dir(target_root).resolve():
+        errors.append("workspace runtime_root does not match workspace runtime")
     current_version = plugin_version()
     if str(state.get("plugin_version") or "") != current_version:
         errors.append(
@@ -288,7 +406,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--workspace-init",
         metavar="DIR",
-        help="Symlink plugin slash commands/rules into workspace .cursor/ and write workspace state.",
+        help="Copy slash commands/rules and bundled runtime into workspace .cursor/, then write workspace state.",
     )
     parser.add_argument(
         "--upgrade",
@@ -301,7 +419,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--check-workspace",
         metavar="DIR",
-        help="Verify workspace slash-command symlinks and plugin version.",
+        help="Verify workspace slash-command projections, bundled runtime, and plugin version.",
     )
     return parser.parse_args()
 
@@ -361,7 +479,7 @@ def main() -> int:
         print(str(workspace))
         projected = state.get("projected_slash_commands") or []
         if projected:
-            print("ok: slash commands linked:")
+            print("ok: slash commands projected:")
             for item in projected:
                 print("  - %s" % item)
         print("ok: workspace state updated to plugin version %s" % state.get("plugin_version"))
@@ -373,7 +491,7 @@ def main() -> int:
             for item in workspace_errors:
                 print("  - %s" % item, file=sys.stderr)
             return 1
-        print("ok: workspace valid for agent-cli mode (version %s)" % plugin_version())
+        print("ok: workspace valid for agent-cli bundled-runtime mode (version %s)" % plugin_version())
 
     return 0
 

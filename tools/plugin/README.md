@@ -15,7 +15,7 @@
 - `tools/plugin/midstack-local.py`
   只负责启动 `src/commands/plugin_cli.py`、返回退出码。
 - Claude 插件安装后的真实运行入口在 `plugins/claude/runtime/bin/`
-- Cursor 适配器通过 workspace `engine_root` 调用这个本地入口
+- Cursor 插件安装后的真实运行入口在 workspace `.cursor/midstack-triage-runtime/bin/`
 - 新的共享逻辑不要继续写回 `tools/plugin/`
 
 ## Usage
@@ -32,6 +32,8 @@ python3 tools/plugin/midstack-local.py start \
   --port 22 \
   --namespace psmdb-test
 ```
+
+安装态 Cursor/Claude 插件不会直接从源码仓库执行上述路径；这些命令是源码仓库内的维护者调试入口。
 
 `start` 会执行最小环境校验：
 

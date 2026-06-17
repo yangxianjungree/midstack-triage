@@ -2,9 +2,9 @@
 
 Use **Agent CLI + shell** only.
 
-Read `.cursor/midstack-triage.workspace.json` for `engine_root`. Set `MIDSTACK_TRIAGE_WORKSPACE` to the absolute workspace path.
+Read `.cursor/midstack-triage.workspace.json` for `runtime_root`. Set `MIDSTACK_TRIAGE_WORKSPACE` to the absolute workspace path.
 
-Cursor runs Midstack in source-checkout mode. Use `engine_root` from workspace state and do not assume a bundled plugin runtime like Claude.
+Cursor runs Midstack from the workspace-local bundled runtime. Use `runtime_root` from workspace state and do not `cd` into the Midstack source repository.
 
 If the user just ran `/midstack:start` and does not provide an incident directory, run `analyse` without `--incident-dir` (uses `.local/incidents/.current-incident`).
 
@@ -16,7 +16,7 @@ Current incident after `/midstack:start`:
 
 ```bash
 export MIDSTACK_TRIAGE_WORKSPACE="/abs/path/to/workspace"
-cd "/abs/path/to/midstack-triage" && python3 tools/plugin/midstack-local.py analyse \
+python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/midstack-local.py" analyse \
   --output-root .local/incidents
 ```
 
@@ -24,25 +24,18 @@ Explicit incident directory:
 
 ```bash
 export MIDSTACK_TRIAGE_WORKSPACE="/abs/path/to/workspace"
-cd "/abs/path/to/midstack-triage" && python3 tools/plugin/midstack-local.py analyse \
+python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/midstack-local.py" analyse \
   --incident-dir .local/incidents/<incident-id> \
   --output-root .local/incidents
 ```
 
-Fixture replay:
-
-```bash
-export MIDSTACK_TRIAGE_WORKSPACE="/abs/path/to/workspace"
-cd "/abs/path/to/midstack-triage" && python3 tools/plugin/midstack-local.py analyse \
-  --input-dir tests/fixtures/active/mongodb/connection-failure-sample \
-  --output-dir .local/incidents/cursor-connection-failure
-```
+Maintainer fixture replay is not part of normal installed workspace use. Run it from the Midstack source repository test suite, not from this Cursor command.
 
 Remote run directory:
 
 ```bash
 export MIDSTACK_TRIAGE_WORKSPACE="/abs/path/to/workspace"
-cd "/abs/path/to/midstack-triage" && python3 tools/plugin/midstack-local.py analyse \
+python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/midstack-local.py" analyse \
   --remote-run-dir .local/remote-runs/<run-id> \
   --output-root .local/incidents
 ```
@@ -51,7 +44,7 @@ Local remote config:
 
 ```bash
 export MIDSTACK_TRIAGE_WORKSPACE="/abs/path/to/workspace"
-cd "/abs/path/to/midstack-triage" && python3 tools/plugin/midstack-local.py analyse \
+python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/midstack-local.py" analyse \
   --remote-config .local/test-envs/mongodb-k8s.yaml \
   --remote-output-dir .local/remote-runs \
   --output-root .local/incidents
@@ -72,7 +65,7 @@ Finalize:
 
 ```bash
 export MIDSTACK_TRIAGE_WORKSPACE="/abs/path/to/workspace"
-cd "/abs/path/to/midstack-triage" && python3 tools/plugin/midstack-local.py finalize-analysis \
+python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/midstack-local.py" finalize-analysis \
   --output-root .local/incidents
 ```
 
@@ -80,4 +73,4 @@ Or `--incident-dir .local/incidents/<incident-id>`.
 
 Then summarize conclusion, confidence, supported level, evidence gaps, and output paths.
 
-Default fixture smoke (when user did not specify a case): use the fixture command above, then run `/midstack:review` for the same incident directory.
+For normal incident triage, do not run fixture replay. Use the current incident from `/midstack:start` or an explicit incident directory.

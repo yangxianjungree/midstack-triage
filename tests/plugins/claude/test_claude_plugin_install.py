@@ -309,6 +309,90 @@ def test_uninstall_legacy_plugins_uses_local_scope(tmp_path, monkeypatch):
     ]
 
 
+def test_install_plugin_enables_local_plugin_after_update(tmp_path, monkeypatch):
+    module = load_claude_plugin_install()
+    workspace = (tmp_path / "sandbox").resolve()
+    plugin_id = "%s@%s" % (module.PLUGIN_NAME, module.MARKETPLACE_NAME)
+    calls = []
+
+    class Proc:
+        def __init__(self, returncode, stdout="", stderr=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def fake_run(cmd, cwd):
+        calls.append((cmd, cwd))
+        return Proc(0)
+
+    monkeypatch.setattr(module, "run", fake_run)
+
+    module.install_plugin(workspace)
+
+    assert calls == [
+        (["claude", "plugin", "update", plugin_id, "--scope", "local"], workspace),
+        (["claude", "plugin", "enable", plugin_id, "--scope", "local"], workspace),
+    ]
+
+
+def test_install_plugin_enables_local_plugin_after_install(tmp_path, monkeypatch):
+    module = load_claude_plugin_install()
+    workspace = (tmp_path / "sandbox").resolve()
+    plugin_id = "%s@%s" % (module.PLUGIN_NAME, module.MARKETPLACE_NAME)
+    calls = []
+
+    class Proc:
+        def __init__(self, returncode, stdout="", stderr=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def fake_run(cmd, cwd):
+        calls.append((cmd, cwd))
+        if cmd[:3] == ["claude", "plugin", "update"]:
+            return Proc(1)
+        return Proc(0)
+
+    monkeypatch.setattr(module, "run", fake_run)
+    monkeypatch.setattr(module, "require_ok", lambda cmd, cwd: calls.append((cmd, cwd)) or Proc(0))
+
+    module.install_plugin(workspace)
+
+    assert calls == [
+        (["claude", "plugin", "update", plugin_id, "--scope", "local"], workspace),
+        (["claude", "plugin", "install", plugin_id, "--scope", "local"], workspace),
+        (["claude", "plugin", "enable", plugin_id, "--scope", "local"], workspace),
+    ]
+
+
+def test_install_plugin_treats_already_enabled_as_success(tmp_path, monkeypatch):
+    module = load_claude_plugin_install()
+    workspace = (tmp_path / "sandbox").resolve()
+    plugin_id = "%s@%s" % (module.PLUGIN_NAME, module.MARKETPLACE_NAME)
+    calls = []
+
+    class Proc:
+        def __init__(self, returncode, stdout="", stderr=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def fake_run(cmd, cwd):
+        calls.append((cmd, cwd))
+        if cmd[:3] == ["claude", "plugin", "enable"]:
+            return Proc(1, stderr='Plugin "%s" is already enabled at local scope' % plugin_id)
+        return Proc(0)
+
+    monkeypatch.setattr(module, "run", fake_run)
+
+    module.install_plugin(workspace)
+
+    assert calls == [
+        (["claude", "plugin", "update", plugin_id, "--scope", "local"], workspace),
+        (["claude", "plugin", "enable", plugin_id, "--scope", "local"], workspace),
+    ]
+
+
 def test_purge_project_state_ignores_missing_claude_state(tmp_path, monkeypatch):
     module = load_claude_plugin_install()
     workspace = (tmp_path / "sandbox").resolve()

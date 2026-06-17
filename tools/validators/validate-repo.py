@@ -17,7 +17,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the repository validation suite.")
     parser.add_argument("--skip-replay", action="store_true", help="Skip fixture replay.")
     parser.add_argument("--skip-score", action="store_true", help="Skip replay score gate.")
-    parser.add_argument("--skip-cursor", action="store_true", help="Skip Cursor source-checkout adapter smoke check.")
+    parser.add_argument("--skip-cursor", action="store_true", help="Skip Cursor workspace runtime adapter smoke check.")
     parser.add_argument("--score-min-level", choices=["low", "medium", "high"], default="medium")
     parser.add_argument("--format", choices=["text", "json"], default="text")
     return parser.parse_args()

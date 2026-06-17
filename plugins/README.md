@@ -33,8 +33,10 @@ plugins/
   `${CLAUDE_PLUGIN_ROOT}` and must not assume the source repository checkout is
   available from the sandbox.
 - `plugins/cursor/` is the Cursor adapter source. It installs Cursor command
-  and rule projections only; runtime execution still goes through the source
-  repository checkout referenced by workspace `engine_root`.
+  and rule projections plus a workspace-local runtime payload under
+  `.cursor/midstack-triage-runtime/`. Installed Cursor commands read
+  `runtime_root` from workspace state and must not depend on the source
+  repository checkout.
 - Shared runtime code stays in project-level source directories such as
   `src/` for reusable implementation, `tools/` for thin entrypoints and
   validators, plus `domains/`, `core/`, and `scenarios/` for knowledge/runtime
@@ -82,7 +84,7 @@ must stay limited to runtime implementation modules.
 ## Source Vs Projection
 
 Plugin source belongs in this repository. Target workspaces such as
-`/home/stephen/AI/midstack-cursor-sandbox` are consumers.
+`/home/stephen/AI/midstack-sandbox` are consumers.
 
 Target workspaces may contain runtime state:
 
@@ -90,6 +92,7 @@ Target workspaces may contain runtime state:
 .claude/midstack-triage.workspace.json
 .claude/marketplaces/midstack-triage-local/
 .cursor/midstack-triage.workspace.json
+.cursor/midstack-triage-runtime/
 .local/incidents/
 ```
 
@@ -130,12 +133,17 @@ Never:
 - Put repository-only assumptions into Claude commands, such as `cd
   "$ENGINE_ROOT"` or reading `engine_root` from workspace state. Claude plugin
   commands must be able to run from the installed plugin payload alone.
+- Put repository-only assumptions into Cursor commands or rules, such as `cd
+  "$ENGINE_ROOT"`, reading `engine_root`, or calling source
+  `tools/plugin/midstack-local.py`. Cursor commands must use the installed
+  workspace runtime payload.
 
-Self-contained means "runtime payload bundled into the installed plugin", not
-"no host or remote prerequisites". A correct Claude plugin install must run
-without a source-repo checkout in the sandbox, but live triage still requires
-host tools such as `python3` and `sshpass`, plus the remote Kubernetes/MongoDB
-environment that the incident collection flow targets.
+Self-contained means "runtime payload bundled into the installed plugin or
+workspace projection", not "no host or remote prerequisites". A correct
+Claude/Cursor install must run without a source-repo checkout in the sandbox,
+but live triage still requires host tools such as `python3` and `sshpass`, plus
+the remote Kubernetes/MongoDB environment that the incident collection flow
+targets.
 
 ## Current Commands
 
@@ -143,8 +151,8 @@ Claude:
 
 ```bash
 claude plugin validate plugins/claude
-python3 plugins/claude/plugin-install.py install --workspace /home/stephen/AI/midstack-cursor-sandbox
-python3 plugins/claude/plugin-install.py check --workspace /home/stephen/AI/midstack-cursor-sandbox
+python3 plugins/claude/plugin-install.py install --workspace /home/stephen/AI/midstack-sandbox
+python3 plugins/claude/plugin-install.py check --workspace /home/stephen/AI/midstack-sandbox
 ```
 
 `plugins/claude/plugin-install.py install` purges Claude's saved project state
@@ -159,6 +167,6 @@ when you explicitly want to preserve transcript/history state.
 Cursor:
 
 ```bash
-python3 plugins/cursor/plugin-install.py --upgrade --workspace-init /home/stephen/AI/midstack-cursor-sandbox
-python3 plugins/cursor/plugin-install.py --check-workspace /home/stephen/AI/midstack-cursor-sandbox
+python3 plugins/cursor/plugin-install.py --upgrade --workspace-init /home/stephen/AI/midstack-sandbox
+python3 plugins/cursor/plugin-install.py --check-workspace /home/stephen/AI/midstack-sandbox
 ```

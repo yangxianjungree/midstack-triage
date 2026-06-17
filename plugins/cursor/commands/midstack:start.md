@@ -2,9 +2,9 @@
 
 Use **Agent CLI + shell** only.
 
-Read `.cursor/midstack-triage.workspace.json` for `engine_root`. Set `MIDSTACK_TRIAGE_WORKSPACE` to the absolute workspace path.
+Read `.cursor/midstack-triage.workspace.json` for `runtime_root`. Set `MIDSTACK_TRIAGE_WORKSPACE` to the absolute workspace path.
 
-Cursor runs Midstack in source-checkout mode. Use `engine_root` from workspace state and do not assume a bundled plugin runtime like Claude.
+Cursor runs Midstack from the workspace-local bundled runtime. Use `runtime_root` from workspace state and do not `cd` into the Midstack source repository.
 
 Hard boundary: `/midstack:start` only creates or recovers an incident record. It must not run analysis.
 
@@ -38,7 +38,7 @@ Example shell (replace paths and secrets):
 
 ```bash
 export MIDSTACK_TRIAGE_WORKSPACE="/abs/path/to/workspace"
-cd "/abs/path/to/midstack-triage" && python3 tools/plugin/midstack-local.py start \
+python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/midstack-local.py" start \
   --middleware mongodb \
   --customer-clue "我的192.168.154.251环境的一个mongo节点有问题" \
   --environment-ip 192.168.154.251 \

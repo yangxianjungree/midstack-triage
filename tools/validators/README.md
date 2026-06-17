@@ -41,7 +41,7 @@ python3 tools/validators/validate-repo.py
 - MongoDB replay score gate，默认要求所有评分维度至少达到 `medium`
 - Fixture hygiene 检查，防止运行产物和敏感材料写回 `tests/fixtures/` 或 `tests/golden-paths/fixtures/`
 - Kubernetes runtime 通用分类检查，防止故障分类点对点实现
-- Cursor source-checkout adapter 冒烟回归 (`plugins/cursor/test-agent-cli.py`)
+- Cursor workspace-local runtime adapter 冒烟回归 (`plugins/cursor/test-agent-cli.py`)
 
 可跳过 replay 或 score：
 

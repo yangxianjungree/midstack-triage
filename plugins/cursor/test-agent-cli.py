@@ -8,9 +8,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cli_smoke import (
     assert_command_contracts,
+    assert_current_incident_blocked_without_traceback,
     assert_incident_outputs,
     check_manifest,
     check_workspace,
+    run_cli_analyse_current_incident,
     run_cli_analyse_fixture,
     run_cli_review,
     upgrade_workspace,
@@ -19,6 +21,7 @@ from cli_smoke import (
 
 ROOT = Path(__file__).resolve().parents[2]
 INCIDENT_RELPATH = ".local/incidents/cursor-agent-cli-test"
+CURRENT_INCIDENT_RELPATH = ".local/incidents/cursor-agent-current-incident-test"
 
 
 def main() -> int:
@@ -44,6 +47,13 @@ def main() -> int:
             raise AssertionError(review.stderr.strip() or review.stdout.strip())
 
         assert_incident_outputs(workspace, INCIDENT_RELPATH, require_review=True)
+
+        current_analyse = run_cli_analyse_current_incident(
+            workspace,
+            incident_relpath=CURRENT_INCIDENT_RELPATH,
+        )
+        assert_current_incident_blocked_without_traceback(workspace, CURRENT_INCIDENT_RELPATH, current_analyse)
+
         print("ok: cursor agent-cli smoke test passed")
         return 0
     finally:

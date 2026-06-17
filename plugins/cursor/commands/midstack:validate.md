@@ -2,14 +2,14 @@
 
 Maintainer check. Use **Agent CLI + shell** only.
 
-Read `.cursor/midstack-triage.workspace.json` for `engine_root`.
+Read `.cursor/midstack-triage.workspace.json` for `runtime_root`.
 
-Cursor validation runs against the source checkout. It does not use a bundled plugin runtime payload.
+Cursor validation runs against the workspace-local bundled runtime. It must not `cd` into the Midstack source repository.
 
 ```bash
-cd "/abs/path/to/midstack-triage" && python3 tools/validators/validate-repo.py \
+python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/validate-repo.py" \
   --skip-cursor \
   --score-min-level medium
 ```
 
-Report whether assets, replay, and score gate passed. If maintainers also need Cursor adapter smoke, run `python3 plugins/cursor/test-agent-cli.py` or `validate-repo.py` without `--skip-cursor`.
+Report whether assets, replay, and score gate passed. If maintainers also need Cursor adapter smoke, run it from the Midstack source repository outside the user workflow.

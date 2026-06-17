@@ -29,7 +29,7 @@ def test_plugin_manifest_check_passes():
     assert (PLUGIN_DIR / "NOTICE").read_text(encoding="utf-8") == (ROOT / "NOTICE").read_text(encoding="utf-8")
 
 
-def test_workspace_init_links_slash_commands(tmp_path):
+def test_workspace_init_projects_slash_commands_and_runtime(tmp_path):
     cursor = tmp_path / ".cursor"
     commands = cursor / "commands"
     rules = cursor / "rules"
@@ -47,17 +47,31 @@ def test_workspace_init_links_slash_commands(tmp_path):
     )
     assert migrate.returncode == 0, migrate.stderr or migrate.stdout
 
-    start_link = commands / "midstack:start.md"
-    rule_link = rules / "midstack-triage.mdc"
-    assert start_link.is_symlink()
-    assert rule_link.is_symlink()
-    assert start_link.resolve() == (PLUGIN_DIR / "commands" / "midstack:start.md").resolve()
-    assert rule_link.resolve() == (PLUGIN_DIR / "rules" / "midstack-triage.mdc").resolve()
-    assert "midstack-local.py" in start_link.read_text(encoding="utf-8")
+    start_command = commands / "midstack:start.md"
+    rule_file = rules / "midstack-triage.mdc"
+    assert start_command.exists()
+    assert rule_file.exists()
+    assert not start_command.is_symlink()
+    assert not rule_file.is_symlink()
+    assert start_command.read_text(encoding="utf-8") == (PLUGIN_DIR / "commands" / "midstack:start.md").read_text(
+        encoding="utf-8"
+    )
+    assert rule_file.read_text(encoding="utf-8") == (PLUGIN_DIR / "rules" / "midstack-triage.mdc").read_text(
+        encoding="utf-8"
+    )
+    assert "midstack-triage-runtime/bin/midstack-local.py" in start_command.read_text(encoding="utf-8")
+    assert "engine_root" not in start_command.read_text(encoding="utf-8")
+    assert "source-checkout" not in rule_file.read_text(encoding="utf-8")
 
     state = json.loads((cursor / "midstack-triage.workspace.json").read_text(encoding="utf-8"))
-    assert state["install_mode"] == "agent-cli"
-    assert Path(state["engine_root"]).exists()
+    assert state["install_mode"] == "agent-cli-bundled-runtime"
+    assert "engine_root" not in state
+    runtime_root = Path(state["runtime_root"])
+    assert runtime_root == cursor / "midstack-triage-runtime"
+    assert (runtime_root / "bin" / "midstack-local.py").exists()
+    assert (runtime_root / "bin" / "validate-repo.py").exists()
+    assert (runtime_root / "domains" / "mongodb" / "scripts" / "manifest.yaml").exists()
+    assert (runtime_root / "src" / "commands" / "plugin_cli.py").exists()
     assert not (tmp_path / "AGENTS.md").exists()
 
     check = subprocess.run(

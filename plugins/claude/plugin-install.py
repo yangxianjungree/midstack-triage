@@ -344,10 +344,16 @@ def ensure_marketplace(workspace: Path) -> None:
 def install_plugin(workspace: Path) -> None:
     plugin_id = "%s@%s" % (PLUGIN_NAME, MARKETPLACE_NAME)
     update = run(["claude", "plugin", "update", plugin_id, "--scope", "local"], workspace)
-    if update.returncode == 0:
-        return
-
-    require_ok(["claude", "plugin", "install", plugin_id, "--scope", "local"], workspace)
+    if update.returncode != 0:
+        require_ok(["claude", "plugin", "install", plugin_id, "--scope", "local"], workspace)
+    enable = run(["claude", "plugin", "enable", plugin_id, "--scope", "local"], workspace)
+    combined = "\n".join(part for part in [enable.stdout, enable.stderr] if part)
+    if enable.returncode != 0 and "already enabled" not in combined:
+        if enable.stdout:
+            print(enable.stdout, file=sys.stderr)
+        if enable.stderr:
+            print(enable.stderr, file=sys.stderr)
+        raise SystemExit(enable.returncode)
 
 
 def installed_plugin_record(plugin_id: str, workspace: Path) -> Dict[str, Any]:
@@ -585,10 +591,10 @@ def parse_args() -> argparse.Namespace:
 
     for name in ["build-marketplace", "check"]:
         cmd = sub.add_parser(name)
-        cmd.add_argument("--workspace", required=True, help="Target Claude workspace, e.g. /home/stephen/AI/midstack-cursor-sandbox")
+        cmd.add_argument("--workspace", required=True, help="Target Claude workspace, e.g. /home/stephen/AI/midstack-sandbox")
 
     install = sub.add_parser("install")
-    install.add_argument("--workspace", required=True, help="Target Claude workspace, e.g. /home/stephen/AI/midstack-cursor-sandbox")
+    install.add_argument("--workspace", required=True, help="Target Claude workspace, e.g. /home/stephen/AI/midstack-sandbox")
     install.add_argument(
         "--keep-project-state",
         action="store_true",

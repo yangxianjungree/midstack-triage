@@ -16,7 +16,7 @@ skills.
 
 ```bash
 python3 plugins/claude/plugin-install.py install \
-  --workspace /home/stephen/AI/midstack-cursor-sandbox
+  --workspace /home/stephen/AI/midstack-sandbox
 ```
 
 This command:
@@ -50,13 +50,13 @@ metadata, so use it only when command-surface changes are not involved.
 
 ```bash
 python3 plugins/claude/plugin-install.py check \
-  --workspace /home/stephen/AI/midstack-cursor-sandbox
+  --workspace /home/stephen/AI/midstack-sandbox
 ```
 
 Then from the sandbox:
 
 ```bash
-cd /home/stephen/AI/midstack-cursor-sandbox
+cd /home/stephen/AI/midstack-sandbox
 claude plugin list
 ```
 
@@ -136,6 +136,6 @@ runtime and local host dependencies from the installed plugin itself.
 For one-off development without installing through the marketplace:
 
 ```bash
-cd /home/stephen/AI/midstack-cursor-sandbox
+cd /home/stephen/AI/midstack-sandbox
 claude --plugin-dir /home/stephen/AI/midstack-triage/plugins/claude
 ```

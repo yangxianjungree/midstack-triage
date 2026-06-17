@@ -204,7 +204,7 @@ superseded_by: none
 - 本地 CLI `analyse` 已支持通过 `.local` remote config 调用远程执行入口执行真实只读采集后继续分析
 - 本地 CLI `review` 已能基于 `analysis.yaml` 生成五维评分和改进建议
 - 已补充 `plugins/cursor/` Cursor 集成源实现、`/midstack:*` 命令和自动化适配器冒烟回归
-- 已补充 Cursor 固定 sandbox 测试入口 `/home/stephen/AI/midstack-cursor-sandbox`
+- 已补充 Cursor 固定 sandbox 测试入口 `/home/stephen/AI/midstack-sandbox`
 - 已补充 Kubernetes runtime 通用信号 taxonomy 和 `runtime-classification` validator，防止故障分类点对点实现
 - 已补充 MongoDB Kubernetes scheduling 故障 fixture，并验证未知场景下可归因为 `kubernetes-scheduling`
 

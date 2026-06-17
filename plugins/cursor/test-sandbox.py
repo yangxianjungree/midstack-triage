@@ -5,9 +5,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cli_smoke import (
+    assert_current_incident_blocked_without_traceback,
     assert_incident_outputs,
     check_manifest,
     check_workspace,
+    run_cli_analyse_current_incident,
     run_cli_analyse_fixture,
     run_cli_review,
     run_plugin_install,
@@ -16,8 +18,9 @@ from cli_smoke import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_SANDBOX = Path("/home/stephen/AI/midstack-cursor-sandbox")
+DEFAULT_SANDBOX = Path("/home/stephen/AI/midstack-sandbox")
 INCIDENT_RELPATH = ".local/incidents/cursor-sandbox-k8s-runtime-test"
+CURRENT_INCIDENT_RELPATH = ".local/incidents/cursor-sandbox-current-incident-test"
 FIXTURE = "tests/fixtures/active/mongodb/kubernetes-scheduling-failure-sample"
 
 
@@ -55,6 +58,16 @@ def main() -> int:
             require_review=True,
             text_token="kubernetes-scheduling",
         )
+    except AssertionError as exc:
+        print("ERROR: %s" % exc, file=sys.stderr)
+        return 1
+
+    current_analyse = run_cli_analyse_current_incident(
+        sandbox,
+        incident_relpath=CURRENT_INCIDENT_RELPATH,
+    )
+    try:
+        assert_current_incident_blocked_without_traceback(sandbox, CURRENT_INCIDENT_RELPATH, current_analyse)
     except AssertionError as exc:
         print("ERROR: %s" % exc, file=sys.stderr)
         return 1

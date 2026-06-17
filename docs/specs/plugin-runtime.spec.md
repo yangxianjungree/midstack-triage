@@ -35,21 +35,22 @@ superseded_by: none
 
 ### 当前适配器运行时分发模式
 
-当前命令行为合同在适配器之间保持一致，但运行时分发方式分两种：
+当前命令行为合同在适配器之间保持一致。不同适配器可以选择不同安装位置，但安装态都必须执行随插件或 workspace 分发的 runtime payload，不得回调开发者本机源码 checkout。
 
-1. bundled runtime mode
+1. plugin-local bundled runtime mode
    - 代表：Claude
    - 运行时位于已安装插件 payload 内
    - 命令通过插件内部 wrapper 进入 bundled `src/`、`domains/`、`core/`、`interfaces/`
    - sandbox 不依赖单独的源仓库 checkout
 
-2. source-checkout mode
-   - 代表：当前 Cursor
-   - 工作区通过状态文件中的 `engine_root` 回调源仓库入口
-   - `tools/plugin/midstack-local.py` 作为本地 CLI 适配层进入同一套 `src/` runtime
-   - 工作区本身不承载 runtime 实现文件，只投影命令和规则
+2. workspace-local runtime mode
+   - 代表：Cursor
+   - 运行时位于目标 workspace 的 `.cursor/midstack-triage-runtime/`
+   - 工作区通过状态文件中的 `runtime_root` 定位 runtime payload
+   - 命令通过 workspace-local wrapper 进入 bundled `src/`、`domains/`、`core/`、`interfaces/`
+   - workspace 不依赖单独的源仓库 checkout
 
-两种模式都必须复用同一套正式 runtime 实现与 incident 合同；差异只允许出现在适配器入口、安装方式和运行时分发方式。
+两种模式都必须复用同一套正式 runtime 实现与 incident 合同；差异只允许出现在适配器入口、安装位置和运行时分发方式。
 
 ## 2. 命令与流程映射
 
@@ -261,7 +262,7 @@ superseded_by: none
 - 运行时执行必须通过稳定的 `script_id` 和 `script-runtime-map` 完成解析
 - 适配器不应直接根据源码目录字符串拼接出执行路径
 - bundled runtime mode 不应直接依赖主仓库源码路径
-- source-checkout mode 可以从 `engine_root` 读取资产源文件，但执行路径仍应通过运行时映射与 staged runtime 路径表达
+- workspace-local runtime mode 不应从 `engine_root` 或源码 checkout 读取资产源文件
 
 当前建议流程：
 
@@ -390,7 +391,7 @@ domains/mongodb/scripts/
 - `runtime_path`
   - 表示运行时视图中的相对路径
   - 在 Claude bundled runtime mode 下，对应插件 payload 内相对路径
-  - 在 Cursor source-checkout mode 下，对应 staged runtime 使用的相对路径
+  - 在 Cursor workspace-local runtime mode 下，对应 `.cursor/midstack-triage-runtime/` 内相对路径
   - 不允许写主仓库源码路径
 - `runtime`
   - 表示运行方式，例如 `shell`、`python`

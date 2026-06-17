@@ -132,6 +132,7 @@ superseded_by: none
 
 - [实施计划](project/implementation-plan.md)
 - [实现进展](project/implementation-status.md)
+- [测试与安装门禁](project/testing-and-install-gates.md)
 - [TODO](project/todo.md)
 - [Phase 4 集成说明](project/phase4-multitrack-integration.md)
 

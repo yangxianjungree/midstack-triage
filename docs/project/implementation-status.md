@@ -16,7 +16,7 @@ superseded_by: none
 - MongoDB MVP 第一批 11 个第 3 段脚本已完成合同级实现，并已通过真实 K8s 环境验证
 - 正式运行时代码已集中到 `src/`，按 `commands/`、`phases/`、`execution/`、`shared/` 划分
 - Claude 适配器已支持 bundled runtime 打包、安装、自检和 sandbox 本地测试
-- Cursor 适配器已收敛到 `plugins/cursor/`，当前仍通过 workspace `engine_root` 调用源仓库入口
+- Cursor 适配器已支持 workspace-local runtime、命令/rule 投影、自检和 sandbox smoke
 - `tools/plugin/midstack-local.py` 已收敛为本地 CLI 适配层，不再承载膨胀的正式实现
 - 第 4 段多轨推理正式实现已收敛到 `src/phases/phase4/multitrack/`
 - Replay fixture 已拆分为 `tests/fixtures/active/` 与 `tests/fixtures/legacy/`，默认 replay、score 和仓库门禁只读取 active 样本
@@ -41,7 +41,7 @@ superseded_by: none
 - `plugins/claude/`
   官方 Claude Code 插件源实现；安装后使用 bundled runtime，不依赖 sandbox 内的源仓库 checkout
 - `plugins/cursor/`
-  Cursor command/rule projection 适配器；当前仍依赖工作区状态中的 `engine_root`
+  Cursor command/rule projection 适配器；安装后使用 workspace-local runtime，不依赖源仓库 checkout
 
 ### 工程工具
 
@@ -142,7 +142,8 @@ superseded_by: none
 ### Cursor 插件
 
 - 已支持本地 Cursor 插件链接和工作区命令/rule projection
-- 已支持工作区状态文件校验和版本检查
+- 已支持 workspace-local runtime 打包到目标工作区
+- 已支持工作区状态文件校验、runtime marker 检查和版本检查
 - 已支持固定 sandbox 自动化适配器冒烟回归
 
 ## 第一版未实现能力清单

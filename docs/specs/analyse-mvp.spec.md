@@ -38,7 +38,7 @@ superseded_by: none
 第一版 `analyse` 的 incident 合同、采集合同和推理合同在不同适配器之间保持一致；当前差异只在运行时分发方式：
 
 - Claude 适配器从安装后的 bundled runtime 进入 `src/commands/analyse.py`
-- Cursor 适配器通过 workspace state 中的 `engine_root` 调用 `tools/plugin/midstack-local.py`，再进入同一套 `src/commands/analyse.py`
+- Cursor 适配器从 workspace-local runtime 的 `.cursor/midstack-triage-runtime/bin/midstack-local.py` 进入同一套 bundled `src/commands/analyse.py`
 
 两种入口最终都复用：
 

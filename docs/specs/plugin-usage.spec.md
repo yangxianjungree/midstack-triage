@@ -31,8 +31,8 @@ superseded_by: none
 
 运行时说明：
 
-- Claude 适配器安装后运行 bundled runtime
-- Cursor 适配器当前通过 workspace state 中的 `engine_root` 回调源仓库入口
+- Claude 适配器安装后运行 plugin-local bundled runtime
+- Cursor 适配器安装后运行 workspace-local runtime
 - 两者对外命令面保持一致，均收敛为 `/midstack:*`
 
 ## 2. 插件命令与排障主流程对应表

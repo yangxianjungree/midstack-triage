@@ -170,3 +170,6 @@ Cursor:
 python3 plugins/cursor/plugin-install.py --upgrade --workspace-init /home/stephen/AI/midstack-sandbox
 python3 plugins/cursor/plugin-install.py --check-workspace /home/stephen/AI/midstack-sandbox
 ```
+
+For the full engineering, install, and sandbox gate matrix, see
+`docs/project/testing-and-install-gates.md`.

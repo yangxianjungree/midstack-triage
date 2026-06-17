@@ -70,7 +70,7 @@ python3 plugins/cursor/plugin-install.py --check-workspace /path/to/workspace
 
 安装或升级后，**重新加载 Cursor**（Reload Window），否则已打开的工作区可能不会加载新的 slash 命令投影。
 
-当前 Cursor 适配器通过 workspace state 中的 `engine_root` 回调本仓库入口，目标工作区需要能访问这个 checkout。
+Cursor 适配器会把 workspace-local runtime 安装到 `.cursor/midstack-triage-runtime/`，安装态不需要回调本仓库源码 checkout。
 
 ### 在已安装的工作区中执行
 
@@ -97,7 +97,7 @@ python3 plugins/cursor/plugin-install.py --check-workspace /path/to/workspace
 | --- | --- | --- |
 | MongoDB | Active MVP | 已打通 `start -> analyse` 主路径；`review` 用于质量反馈；第 3 段只读采集脚本已形成第一批 MVP |
 | Claude Code 插件 | 可用 | bundled runtime 打包、安装、自检和 sandbox 测试；不依赖 sandbox 内再 checkout 源仓库 |
-| Cursor 适配器 | 可用但未完全独立 | 当前仍通过 workspace `engine_root` 调用源仓库入口 |
+| Cursor 适配器 | 可用 | workspace-local runtime、命令/rule 投影、sandbox smoke 和安装态依赖检查已打通 |
 | Pulsar | Skeleton | 结构和样例已在，正式分析链路未完成 |
 
 **已验证成果**：
@@ -138,6 +138,7 @@ midstack-triage/
 - [docs/concepts/triage-workflow.md](docs/concepts/triage-workflow.md)：5 段流程解释
 - [docs/specs/plugin-runtime.spec.md](docs/specs/plugin-runtime.spec.md)：插件运行时合同
 - [docs/project/implementation-status.md](docs/project/implementation-status.md)：实现进展
+- [docs/project/testing-and-install-gates.md](docs/project/testing-and-install-gates.md)：测试、安装与 sandbox 门禁
 
 ## 设计边界
 

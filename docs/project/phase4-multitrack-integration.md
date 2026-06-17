@@ -22,7 +22,7 @@ superseded_by: none
 
 当前不同适配器的入口只在外层不同：
 
-- Cursor source-checkout mode：`tools/plugin/midstack-local.py` -> `src/commands/plugin_cli.py` -> `src/commands/analyse.py`
+- Cursor workspace-local runtime mode：`.cursor/midstack-triage-runtime/bin/midstack-local.py` -> bundled `src/commands/plugin_cli.py` -> bundled `src/commands/analyse.py`
 - Claude bundled runtime mode：`plugins/claude/runtime/bin/midstack-local.py` -> bundled `src/commands/plugin_cli.py` -> bundled `src/commands/analyse.py`
 
 也就是说，Phase 4 现在是 analyse 主路径中的一个过程阶段，不是一个独立 CLI 产品；适配器差异只在进入 analyse 主链路之前。

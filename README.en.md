@@ -70,7 +70,7 @@ python3 plugins/cursor/plugin-install.py --check-workspace /path/to/workspace
 
 After install or upgrade, **reload Cursor** (Reload Window). Otherwise an already-open workspace may not pick up new slash-command projections.
 
-The Cursor adapter calls back into this repository via `engine_root` in workspace state; the target workspace must be able to access this checkout.
+The Cursor adapter installs a workspace-local runtime under `.cursor/midstack-triage-runtime/`; installed workspaces do not need to call back into this repository checkout.
 
 ### Run in an installed workspace
 
@@ -97,7 +97,7 @@ These commands are only available inside an installed workspace. Examples assume
 | --- | --- | --- |
 | MongoDB | Active MVP | `start -> analyse` main path works; `review` for quality feedback; first batch of Phase 3 read-only collection scripts |
 | Claude Code plugin | Available | Bundled runtime packaging, install, self-check, and sandbox tests; no second checkout inside the sandbox |
-| Cursor adapter | Available, not fully standalone | Still calls the source repo entry via workspace `engine_root` |
+| Cursor adapter | Available | Workspace-local runtime, command/rule projection, sandbox smoke tests, and installed dependency checks |
 | Pulsar | Skeleton | Structure and samples in place; analysis path not complete |
 
 **Validated so far:**
@@ -140,6 +140,7 @@ Most detailed documentation is in Chinese. Entry points:
 - [docs/concepts/triage-workflow.md](docs/concepts/triage-workflow.md) — five-phase workflow
 - [docs/specs/plugin-runtime.spec.md](docs/specs/plugin-runtime.spec.md) — plugin runtime contract
 - [docs/project/implementation-status.md](docs/project/implementation-status.md) — implementation progress
+- [docs/project/testing-and-install-gates.md](docs/project/testing-and-install-gates.md) — testing, install, and sandbox gates
 
 Plugin READMEs ([Claude](plugins/claude/README.md), [Cursor](plugins/cursor/README.md)) are in English.
 

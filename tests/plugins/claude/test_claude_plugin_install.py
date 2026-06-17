@@ -8,7 +8,9 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "src"))
 from install_contracts import (
+    assert_cli_command_options_documented,
     assert_analyse_command_runtime_first_contract,
     assert_claude_commands_use_bundled_runtime,
     assert_no_common_source_checkout_contract,
@@ -21,6 +23,7 @@ from install_contracts import (
 
 ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_INSTALL_PATH = ROOT / "plugins" / "claude" / "plugin-install.py"
+from commands import plugin_cli
 
 
 def load_claude_plugin_install():
@@ -180,6 +183,37 @@ def test_claude_start_command_contract_forces_bundled_runtime_first():
 
 def test_slash_command_surface_documents_phase_mapping():
     assert_slash_command_surface_doc(ROOT / "docs" / "project" / "slash-command-surface.md")
+
+
+def test_claude_command_docs_track_cli_arguments():
+    assert_cli_command_options_documented(
+        {
+            "start": ROOT / "plugins" / "claude" / "commands" / "start.md",
+            "analyse": ROOT / "plugins" / "claude" / "commands" / "analyse.md",
+            "review": ROOT / "plugins" / "claude" / "commands" / "review.md",
+            "validate": ROOT / "plugins" / "claude" / "commands" / "validate.md",
+        },
+        plugin_cli,
+        required_by_command={
+            "start": {
+                "--middleware",
+                "--customer-clue",
+                "--environment-ip",
+                "--username",
+                "--password",
+                "--port",
+                "--output-root",
+            },
+            "analyse": {
+                "--incident-dir",
+                "--output-root",
+            },
+            "review": {
+                "--incident-dir",
+                "--output-root",
+            },
+        },
+    )
 
 
 def test_claude_command_contracts_do_not_depend_on_source_checkout():

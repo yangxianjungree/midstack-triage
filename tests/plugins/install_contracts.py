@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterable, List
+from typing import Dict, Iterable, List, Optional, Set
 
 
 COMMON_FORBIDDEN_TOKENS = [
@@ -123,3 +123,72 @@ def assert_slash_command_surface_doc(path: Path) -> None:
     errors = [token for token in required_tokens if token not in text]
     if errors:
         raise AssertionError("%s is missing slash surface tokens: %s" % (path, ", ".join(errors)))
+
+
+def cli_option_contracts(plugin_cli_module) -> Dict[str, Set[str]]:
+    parser = plugin_cli_module.build_parser()
+    subparsers_action = next(
+        action for action in parser._actions if getattr(action, "dest", None) == "command"
+    )
+    contracts: Dict[str, Set[str]] = {}
+    for command, subparser in subparsers_action.choices.items():
+        options: Set[str] = set()
+        for action in subparser._actions:
+            options.update(item for item in action.option_strings if item.startswith("--"))
+        contracts[command] = options
+    return contracts
+
+
+def assert_cli_command_options_documented(
+    command_docs: Dict[str, Path],
+    plugin_cli_module,
+    *,
+    required_by_command: Optional[Dict[str, Set[str]]] = None,
+) -> None:
+    contracts = cli_option_contracts(plugin_cli_module)
+    default_required_by_command = {
+        "start": {
+            "--middleware",
+            "--customer-clue",
+            "--environment-ip",
+            "--username",
+            "--password",
+            "--port",
+            "--output-root",
+            "--namespace",
+            "--cluster-id",
+            "--incident-id",
+        },
+        "analyse": {
+            "--incident-dir",
+            "--output-root",
+            "--remote-run-dir",
+            "--remote-config",
+            "--remote-output-dir",
+        },
+        "review": {
+            "--incident-dir",
+            "--output-root",
+        },
+        "finalize-analysis": {
+            "--incident-dir",
+            "--output-root",
+        },
+    }
+    if required_by_command is None:
+        required_by_command = default_required_by_command
+    errors: List[str] = []
+    for command, expected in required_by_command.items():
+        missing_from_cli = expected - contracts.get(command, set())
+        if missing_from_cli:
+            errors.append("%s missing expected CLI options: %s" % (command, ", ".join(sorted(missing_from_cli))))
+            continue
+        doc_path = command_docs.get(command)
+        if not doc_path:
+            continue
+        text = doc_path.read_text(encoding="utf-8")
+        missing_from_doc = expected - {option for option in expected if option in text}
+        if missing_from_doc:
+            errors.append("%s doc %s missing CLI options: %s" % (command, doc_path.name, ", ".join(sorted(missing_from_doc))))
+    if errors:
+        raise AssertionError("; ".join(errors))

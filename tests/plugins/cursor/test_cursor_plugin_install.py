@@ -4,8 +4,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "src"))
 from install_contracts import (
     assert_analyse_command_runtime_first_contract,
+    assert_cli_command_options_documented,
     assert_cursor_files_use_workspace_runtime,
     assert_no_common_source_checkout_contract,
     assert_review_and_validate_not_main_path,
@@ -18,6 +20,7 @@ from install_contracts import (
 ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_DIR = ROOT / "plugins" / "cursor"
 PLUGIN_INSTALL = PLUGIN_DIR / "plugin-install.py"
+from commands import plugin_cli
 
 
 def test_command_contracts_use_agent_cli_shell():
@@ -36,6 +39,18 @@ def test_command_contracts_use_agent_cli_shell():
 
 def test_slash_command_surface_documents_phase_mapping():
     assert_slash_command_surface_doc(ROOT / "docs" / "project" / "slash-command-surface.md")
+
+
+def test_cursor_command_docs_track_cli_arguments():
+    assert_cli_command_options_documented(
+        {
+            "start": PLUGIN_DIR / "commands" / "midstack:start.md",
+            "analyse": PLUGIN_DIR / "commands" / "midstack:analyse.md",
+            "review": PLUGIN_DIR / "commands" / "midstack:review.md",
+            "finalize-analysis": PLUGIN_DIR / "commands" / "midstack:analyse.md",
+        },
+        plugin_cli,
+    )
 
 
 def test_plugin_manifest_check_passes():

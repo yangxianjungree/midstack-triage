@@ -9,6 +9,7 @@ import yaml
 
 from .multitrack.l1_mapper import L1TemplateMapper
 from .multitrack.lead_orchestrator import LeadOrchestrator
+from .renderer import format_analysis_output
 
 
 def run_phase4_analysis(incident_dir: Path) -> Dict[str, Any]:
@@ -36,36 +37,10 @@ def run_phase4_analysis(incident_dir: Path) -> Dict[str, Any]:
     hypotheses = mapper.map_from_l1_output(l1_output)
     result = LeadOrchestrator(incident_dir, hypotheses).run()
 
-    analysis = _format_analysis_output(result, signal_bundle)
+    analysis = format_analysis_output(result, signal_bundle)
     analysis_path = incident_dir / "analysis.yaml"
     with analysis_path.open("w", encoding="utf-8") as fh:
         yaml.safe_dump(analysis, fh, allow_unicode=True, sort_keys=False)
     return result
-
-
-def _format_analysis_output(phase4_result: Dict[str, Any], signal_bundle: Dict[str, Any]) -> Dict[str, Any]:
-    """Render multitrack reasoning output into the Phase 4 analysis contract."""
-    hypotheses = phase4_result["hypotheses"]
-    best_hypothesis = max(hypotheses, key=lambda item: item["status"].get("confidence", 0))
-    status = best_hypothesis["status"]["status"]
-    confidence_map = {
-        "supported": "high",
-        "insufficient": "medium",
-        "refuted": "low",
-        "pending": "low",
-    }
-    return {
-        "conclusion_summary": {
-            "statement": best_hypothesis["final_text"],
-            "confidence": confidence_map.get(status, "low"),
-            "impact_scope": "%s availability" % signal_bundle.get("middleware", "unknown"),
-            "primary_cause_category": "runtime-issue",
-        },
-        "reasoning_process": {
-            "total_rounds": phase4_result["total_rounds"],
-            "hypotheses_evaluated": len(hypotheses),
-            "reasoning_board": "reasoning-board.yaml",
-        },
-    }
 
 __all__ = ["run_phase4_analysis"]

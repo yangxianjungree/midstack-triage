@@ -137,6 +137,49 @@ def test_directed_recollection_prefers_dns_path_and_skill_pool(tmp_path):
     ]
 
 
+def test_select_directed_recollection_script_ids_is_pure_dns_path():
+    structured_record = {"details": {"raw_logs": []}}
+    signal_bundle = {
+        "abnormal_signals": [
+            {"signal_id": "dns-resolution-failed"},
+            {"signal_id": "pod-crashloop", "object_ref": "pod/bnmongo-shard0-data-0"},
+        ]
+    }
+    collection_report = {
+        "evidence_gaps": [
+            {"gap": "lookup on 10.96.0.10:53 read udp connection refused"},
+        ]
+    }
+
+    selected = phase3_collection.select_directed_recollection_script_ids(
+        structured_record,
+        signal_bundle,
+        collection_report,
+    )
+
+    assert selected == [
+        phase3_collection.SCRIPT_DNS_COREDNS,
+        phase3_collection.SCRIPT_NETWORK_OVERLAY,
+        phase3_collection.SCRIPT_LOG_NODE_FILE_TAIL,
+    ]
+
+
+def test_filter_recollection_scripts_by_skill_pool_marks_miss_when_empty_overlap():
+    selected, miss = phase3_collection.filter_recollection_scripts_by_skill_pool(
+        [
+            phase3_collection.SCRIPT_DNS_COREDNS,
+            phase3_collection.SCRIPT_NETWORK_OVERLAY,
+        ],
+        {"mongodb.collect.pods.state"},
+    )
+
+    assert selected == [
+        phase3_collection.SCRIPT_DNS_COREDNS,
+        phase3_collection.SCRIPT_NETWORK_OVERLAY,
+    ]
+    assert miss is True
+
+
 def test_directed_recollection_falls_back_when_skill_pool_misses(tmp_path):
     output_dir = tmp_path / "incident"
     write_yaml(output_dir / "structured_record.yaml", {"details": {}})

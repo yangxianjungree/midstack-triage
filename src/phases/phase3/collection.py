@@ -630,10 +630,11 @@ def should_run_pod_describe_recollection(structured_record: Dict[str, Any], sign
     return bool(signal_object_pods(signal_bundle, ["pod-crashloop", "pod-not-ready"]))
 
 
-def directed_recollection_script_ids(output_dir: Path, skill_pool: Optional[set[str]] = None) -> List[str]:
-    structured_record = load_yaml(output_dir / "structured_record.yaml")
-    signal_bundle = load_yaml(output_dir / "signal_bundle.yaml")
-    collection_report = load_yaml(output_dir / "collection_report.yaml")
+def select_directed_recollection_script_ids(
+    structured_record: Dict[str, Any],
+    signal_bundle: Dict[str, Any],
+    collection_report: Dict[str, Any],
+) -> List[str]:
     selected: List[str] = []
 
     dns_path = evidence_mentions_dns_issue(structured_record, signal_bundle, collection_report) or signal_bundle_has(signal_bundle, "dns-resolution-failed")
@@ -652,18 +653,36 @@ def directed_recollection_script_ids(output_dir: Path, skill_pool: Optional[set[
             selected.append(SCRIPT_LOG_NODE_FILE_TAIL)
     if should_run_pod_describe_recollection(structured_record, signal_bundle):
         selected.append(SCRIPT_PODS_DESCRIBE)
-    selected = selected[:DIRECTED_RECOLLECTION_CAP]
+    return selected[:DIRECTED_RECOLLECTION_CAP]
+
+
+def filter_recollection_scripts_by_skill_pool(selected: List[str], skill_pool: Optional[set[str]]) -> tuple[List[str], bool]:
     if not skill_pool:
-        return selected
+        return selected, False
     filtered = [script_id for script_id in selected if script_id in skill_pool]
     if filtered:
-        return filtered
+        return filtered, False
+    return selected, bool(selected)
+
+
+def record_recollection_skill_pool_miss(output_dir: Path) -> None:
+    collection_report = load_yaml(output_dir / "collection_report.yaml")
     collection_report.setdefault("warnings", []).append(
         "directed recollection fell back to legacy script selection because matched skill pool did not cover triggered playbooks (gap_type=skill_pool_miss)"
     )
     collection_report["updated_at"] = now_iso()
     write_yaml(output_dir / "collection_report.yaml", collection_report)
-    return selected
+
+
+def directed_recollection_script_ids(output_dir: Path, skill_pool: Optional[set[str]] = None) -> List[str]:
+    structured_record = load_yaml(output_dir / "structured_record.yaml")
+    signal_bundle = load_yaml(output_dir / "signal_bundle.yaml")
+    collection_report = load_yaml(output_dir / "collection_report.yaml")
+    selected = select_directed_recollection_script_ids(structured_record, signal_bundle, collection_report)
+    filtered, skill_pool_miss = filter_recollection_scripts_by_skill_pool(selected, skill_pool)
+    if skill_pool_miss:
+        record_recollection_skill_pool_miss(output_dir)
+    return filtered
 
 
 def apply_scenario_routing_if_needed(output_dir: Path, args) -> Dict[str, Any]:

@@ -201,3 +201,93 @@ def test_run_remote_collection_invokes_execution_module(tmp_path, monkeypatch):
     assert result == remote_run_dir
     assert captured["command"][:3] == [sys.executable, "-m", "execution.remote.executor"]
     assert str(ROOT / "src") in captured["env"]["PYTHONPATH"].split(":")[0]
+
+
+def test_build_incident_from_remote_run_merges_and_copies_outputs(tmp_path):
+    remote_run_dir = tmp_path / "remote-run"
+    item_dir = remote_run_dir / "mongodb-collect-pods"
+    artifact_dir = item_dir / "artifacts"
+    artifact_dir.mkdir(parents=True)
+    write_yaml(
+        item_dir / "context.yaml",
+        {
+            "incident_id": "mongodb-remote-run",
+            "middleware": "mongodb",
+            "scenario": "kubernetes-runtime",
+            "namespace": "psmdb-test",
+            "cluster_id": "cluster-a",
+            "topology_type": "sharded",
+        },
+    )
+    write_yaml(
+        remote_run_dir / "remote-executor-run.yaml",
+        {
+            "incident_id": "mongodb-remote-run",
+            "namespace": "psmdb-test",
+            "status": "success",
+            "selected_ip": "192.168.154.251",
+        },
+    )
+    write_yaml(
+        item_dir / "remote-executor-result.yaml",
+        {
+            "script_id": "mongodb.collect.pods.state",
+            "status": "success",
+            "selected_ip": "192.168.154.251",
+            "process": {"exit_code": 0},
+        },
+    )
+    write_yaml(
+        item_dir / "output.yaml",
+        {
+            "script_id": "mongodb.collect.pods.state",
+            "structured_record_patch": {
+                "details": {
+                    "pods": [
+                        {
+                            "name": "bnmongo-shard0-data-0",
+                            "namespace": "psmdb-test",
+                            "status": "Running",
+                        }
+                    ]
+                }
+            },
+            "signal_bundle_patch": {
+                "abnormal_signals": [
+                    {
+                        "signal_id": "pod-not-ready",
+                        "object_ref": "pod/bnmongo-shard0-data-0",
+                    }
+                ]
+            },
+            "collection_report_patch": {
+                "successful_items": [
+                    {
+                        "item": "pods/state",
+                        "source": "kubectl",
+                    }
+                ]
+            },
+        },
+    )
+    (item_dir / "remote.stdout.txt").write_text("ok\n", encoding="utf-8")
+    (artifact_dir / "pods.json").write_text("{}\n", encoding="utf-8")
+    output_dir = tmp_path / "incident"
+    args = SimpleNamespace(scenario="", customer_clue="", incident_input={})
+
+    phase3_collection.build_incident_from_remote_run(remote_run_dir, output_dir, args)
+
+    input_data = yaml.safe_load((output_dir / "input.yaml").read_text(encoding="utf-8"))
+    structured_record = yaml.safe_load((output_dir / "structured_record.yaml").read_text(encoding="utf-8"))
+    signal_bundle = yaml.safe_load((output_dir / "signal_bundle.yaml").read_text(encoding="utf-8"))
+    collection_report = yaml.safe_load((output_dir / "collection_report.yaml").read_text(encoding="utf-8"))
+
+    assert input_data["incident_id"] == "mongodb-remote-run"
+    assert input_data["namespace"] == "psmdb-test"
+    assert structured_record["summary"]["topology_type"] == "sharded"
+    assert structured_record["details"]["pods"][0]["name"] == "bnmongo-shard0-data-0"
+    assert signal_bundle["abnormal_signals"][0]["signal_id"] == "pod-not-ready"
+    assert any(item["item"] == "remote-executor/mongodb.collect.pods.state" for item in collection_report["successful_items"])
+    assert (output_dir / "remote-executor-run.yaml").exists()
+    assert (output_dir / "script_outputs" / "mongodb.collect.pods.state" / "remote.stdout.txt").exists()
+    assert (output_dir / "script_outputs" / "mongodb.collect.pods.state" / "artifacts" / "pods.json").exists()

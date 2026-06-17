@@ -59,6 +59,46 @@ def copy_remote_run_support_files(remote_run_dir: Path, output_dir: Path) -> Non
             shutil.copy2(source, target)
 
 
+def copy_remote_script_output(item_dir: Path, target_dir: Path) -> None:
+    target_dir.mkdir(parents=True, exist_ok=True)
+    for filename in (
+        "output.yaml",
+        "context.yaml",
+        "remote-executor-request.yaml",
+        "remote-executor-result.yaml",
+        "remote.stdout.txt",
+        "remote.stderr.txt",
+        "exit_code.txt",
+        "artifact_retrieval_error.txt",
+    ):
+        if (item_dir / filename).exists():
+            shutil.copy2(item_dir / filename, target_dir / filename)
+    if (item_dir / "artifacts").exists():
+        shutil.copytree(item_dir / "artifacts", target_dir / "artifacts", dirs_exist_ok=True)
+
+
+def merge_remote_script_outputs(
+    remote_run_dir: Path,
+    output_dir: Path,
+    structured_record: Dict[str, Any],
+    signal_bundle: Dict[str, Any],
+    collection_report: Dict[str, Any],
+    item_dirs: Optional[List[Path]] = None,
+) -> List[Path]:
+    script_outputs_dir = output_dir / "script_outputs"
+    item_dirs = item_dirs if item_dirs is not None else script_run_dirs(remote_run_dir)
+    for item_dir in item_dirs:
+        executor_result = load_yaml(item_dir / "remote-executor-result.yaml") if (item_dir / "remote-executor-result.yaml").exists() else {}
+        output = load_yaml(item_dir / "output.yaml") if (item_dir / "output.yaml").exists() else {}
+        script_id = str(output.get("script_id") or executor_result.get("script_id") or item_dir.name)
+        if executor_result:
+            merge_remote_executor_result(collection_report, script_id, executor_result)
+        if output:
+            apply_script_output(structured_record, signal_bundle, collection_report, output)
+        copy_remote_script_output(item_dir, script_outputs_dir / script_id)
+    return item_dirs
+
+
 def merge_remote_executor_run_result(collection_report: Dict[str, Any], run_result: Dict[str, Any], has_script_outputs: bool) -> None:
     if not run_result:
         return
@@ -310,32 +350,7 @@ def build_incident_from_remote_run(remote_run_dir: Path, output_dir: Path, args,
     script_outputs_dir = output_dir / "script_outputs"
     if script_outputs_dir.exists():
         shutil.rmtree(script_outputs_dir)
-    item_dirs = script_run_dirs(remote_run_dir)
-    for item_dir in item_dirs:
-        executor_result = load_yaml(item_dir / "remote-executor-result.yaml") if (item_dir / "remote-executor-result.yaml").exists() else {}
-        output = load_yaml(item_dir / "output.yaml") if (item_dir / "output.yaml").exists() else {}
-        script_id = str(output.get("script_id") or executor_result.get("script_id") or item_dir.name)
-        if executor_result:
-            merge_remote_executor_result(collection_report, script_id, executor_result)
-        if output:
-            apply_script_output(structured_record, signal_bundle, collection_report, output)
-
-        target_dir = script_outputs_dir / script_id
-        target_dir.mkdir(parents=True, exist_ok=True)
-        for filename in (
-            "output.yaml",
-            "context.yaml",
-            "remote-executor-request.yaml",
-            "remote-executor-result.yaml",
-            "remote.stdout.txt",
-            "remote.stderr.txt",
-            "exit_code.txt",
-            "artifact_retrieval_error.txt",
-        ):
-            if (item_dir / filename).exists():
-                shutil.copy2(item_dir / filename, target_dir / filename)
-        if (item_dir / "artifacts").exists():
-            shutil.copytree(item_dir / "artifacts", target_dir / "artifacts", dirs_exist_ok=True)
+    item_dirs = merge_remote_script_outputs(remote_run_dir, output_dir, structured_record, signal_bundle, collection_report)
     merge_remote_executor_run_result(collection_report, run_result, bool(item_dirs))
     drop_closed_evidence_gaps(structured_record, collection_report)
     normalize_collection_report_gaps(collection_report)
@@ -407,31 +422,7 @@ def merge_remote_run_outputs(remote_run_dir: Path, output_dir: Path) -> None:
     run_result = load_remote_executor_run_result(remote_run_dir)
     item_dirs = script_run_dirs(remote_run_dir)
     merge_remote_executor_run_result(collection_report, run_result, bool(item_dirs))
-    script_outputs_dir = output_dir / "script_outputs"
-    for item_dir in item_dirs:
-        executor_result = load_yaml(item_dir / "remote-executor-result.yaml") if (item_dir / "remote-executor-result.yaml").exists() else {}
-        output = load_yaml(item_dir / "output.yaml") if (item_dir / "output.yaml").exists() else {}
-        script_id = str(output.get("script_id") or executor_result.get("script_id") or item_dir.name)
-        if executor_result:
-            merge_remote_executor_result(collection_report, script_id, executor_result)
-        if output:
-            apply_script_output(structured_record, signal_bundle, collection_report, output)
-        target_dir = script_outputs_dir / script_id
-        target_dir.mkdir(parents=True, exist_ok=True)
-        for filename in (
-            "output.yaml",
-            "context.yaml",
-            "remote-executor-request.yaml",
-            "remote-executor-result.yaml",
-            "remote.stdout.txt",
-            "remote.stderr.txt",
-            "exit_code.txt",
-            "artifact_retrieval_error.txt",
-        ):
-            if (item_dir / filename).exists():
-                shutil.copy2(item_dir / filename, target_dir / filename)
-        if (item_dir / "artifacts").exists():
-            shutil.copytree(item_dir / "artifacts", target_dir / "artifacts", dirs_exist_ok=True)
+    merge_remote_script_outputs(remote_run_dir, output_dir, structured_record, signal_bundle, collection_report, item_dirs)
     if (remote_run_dir / "remote-executor-run.yaml").exists():
         shutil.copy2(remote_run_dir / "remote-executor-run.yaml", output_dir / "directed-recollection-run.yaml")
     drop_closed_evidence_gaps(structured_record, collection_report)

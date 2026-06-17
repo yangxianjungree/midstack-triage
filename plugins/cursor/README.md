@@ -31,9 +31,10 @@ plugins/cursor/
 ## Install
 
 ```bash
+SANDBOX="$(realpath ../midstack-sandbox)"
 python3 plugins/cursor/plugin-install.py \
   --upgrade \
-  --workspace-init /path/to/your/workspace
+  --workspace-init "$SANDBOX"
 ```
 
 This:
@@ -48,7 +49,7 @@ Reload Cursor after upgrading.
 ## Agent CLI usage
 
 ```bash
-cd /path/to/your/workspace
+cd "$SANDBOX"
 agent --workspace .
 ```
 
@@ -80,10 +81,11 @@ After analyse, the agent still edits `analysis.yaml` / `report.md`, then runs `f
 ## Checks
 
 ```bash
+SANDBOX="$(realpath ../midstack-sandbox)"
 python3 plugins/cursor/plugin-install.py --check-manifest
-python3 plugins/cursor/plugin-install.py --check-workspace /path/to/workspace
+python3 plugins/cursor/plugin-install.py --check-workspace "$SANDBOX"
 python3 plugins/cursor/test-agent-cli.py
-python3 plugins/cursor/test-sandbox.py /home/stephen/AI/midstack-sandbox
+python3 plugins/cursor/test-sandbox.py "$SANDBOX"
 python3 tools/validators/validate-repo.py
 ```
 

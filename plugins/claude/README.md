@@ -15,8 +15,9 @@ skills.
 ## Install To Sandbox
 
 ```bash
+SANDBOX="$(realpath ../midstack-sandbox)"
 python3 plugins/claude/plugin-install.py install \
-  --workspace /home/stephen/AI/midstack-sandbox
+  --workspace "$SANDBOX"
 ```
 
 This command:
@@ -49,14 +50,15 @@ metadata, so use it only when command-surface changes are not involved.
 ## Check
 
 ```bash
+SANDBOX="$(realpath ../midstack-sandbox)"
 python3 plugins/claude/plugin-install.py check \
-  --workspace /home/stephen/AI/midstack-sandbox
+  --workspace "$SANDBOX"
 ```
 
 Then from the sandbox:
 
 ```bash
-cd /home/stephen/AI/midstack-sandbox
+cd "$SANDBOX"
 claude plugin list
 ```
 
@@ -114,7 +116,7 @@ The installed Claude plugin is self-contained in one specific sense: the
 Midstack runtime code, manifests, routing maps, domain assets, and analyse
 entrypoints are bundled into the installed plugin payload under
 `${CLAUDE_PLUGIN_ROOT}/runtime/`. The sandbox does not need a separate
-`/home/stephen/AI/midstack-triage` checkout at runtime.
+Midstack source checkout at runtime.
 
 It is not self-contained in the stronger "single binary with no external
 requirements" sense. Live triage still depends on:
@@ -136,6 +138,7 @@ runtime and local host dependencies from the installed plugin itself.
 For one-off development without installing through the marketplace:
 
 ```bash
-cd /home/stephen/AI/midstack-sandbox
-claude --plugin-dir /home/stephen/AI/midstack-triage/plugins/claude
+SANDBOX="$(realpath ../midstack-sandbox)"
+cd "$SANDBOX"
+claude --plugin-dir "$(realpath ../midstack-triage/plugins/claude)"
 ```

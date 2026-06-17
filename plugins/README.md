@@ -84,7 +84,7 @@ must stay limited to runtime implementation modules.
 ## Source Vs Projection
 
 Plugin source belongs in this repository. Target workspaces such as
-`/home/stephen/AI/midstack-sandbox` are consumers.
+the sibling `../midstack-sandbox` directory are consumers.
 
 Target workspaces may contain runtime state:
 
@@ -145,14 +145,33 @@ but live triage still requires host tools such as `python3` and `sshpass`, plus
 the remote Kubernetes/MongoDB environment that the incident collection flow
 targets.
 
+## Shared Install Contract
+
+Claude and Cursor use different installation layouts, but they share one
+runtime contract:
+
+- The installed runtime must be self-contained and must not call source
+  `tools/plugin/midstack-local.py` or require a source checkout from the target
+  workspace.
+- Incident outputs must be written under the target workspace
+  `.local/incidents/`, never under an installed plugin runtime directory.
+- Workspace state may record installed runtime paths and version bookkeeping,
+  but must not reintroduce the historical `engine_root` source-checkout field.
+- Slash commands and rules must call adapter runtime wrappers. They must not
+  instruct the agent to run raw `mongosh`, `pip install`, `ssh`, or `kubectl`
+  as the first diagnostic action.
+- Each adapter must document install, update, check, and smoke commands before
+  being treated as supported.
+
 ## Current Commands
 
 Claude:
 
 ```bash
+SANDBOX="$(realpath ../midstack-sandbox)"
 claude plugin validate plugins/claude
-python3 plugins/claude/plugin-install.py install --workspace /home/stephen/AI/midstack-sandbox
-python3 plugins/claude/plugin-install.py check --workspace /home/stephen/AI/midstack-sandbox
+python3 plugins/claude/plugin-install.py install --workspace "$SANDBOX"
+python3 plugins/claude/plugin-install.py check --workspace "$SANDBOX"
 ```
 
 `plugins/claude/plugin-install.py install` purges Claude's saved project state
@@ -167,8 +186,9 @@ when you explicitly want to preserve transcript/history state.
 Cursor:
 
 ```bash
-python3 plugins/cursor/plugin-install.py --upgrade --workspace-init /home/stephen/AI/midstack-sandbox
-python3 plugins/cursor/plugin-install.py --check-workspace /home/stephen/AI/midstack-sandbox
+SANDBOX="$(realpath ../midstack-sandbox)"
+python3 plugins/cursor/plugin-install.py --upgrade --workspace-init "$SANDBOX"
+python3 plugins/cursor/plugin-install.py --check-workspace "$SANDBOX"
 ```
 
 For the full engineering, install, and sandbox gate matrix, see

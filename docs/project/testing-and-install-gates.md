@@ -18,6 +18,22 @@ superseded_by: none
 | 安装态自检 | 在目标 workspace 安装插件并检查 payload 完整性 | `plugin-install.py check` / `--check-workspace` |
 | sandbox smoke | 从已安装 workspace 运行真实 slash 命令或等价 CLI | `/midstack:validate`、`/midstack:start`、`/midstack:analyse` |
 
+默认 sandbox 是当前仓库的兄弟目录：
+
+```bash
+SANDBOX="$(realpath ../midstack-sandbox)"
+```
+
+## 公共安装合同
+
+Claude 和 Cursor 的安装目录不同，但必须满足同一组合同：
+
+- 安装态 runtime 自包含，不依赖源码 checkout、源码 `tools/plugin/midstack-local.py` 或某个开发者机器路径。
+- incident 输出只进入目标 workspace 的 `.local/incidents/`。
+- workspace state 不允许回退到历史 `engine_root` 字段。
+- slash command / rules 只能调用安装态 runtime wrapper，不应引导 Agent 直接跑 `mongosh`、`pip install`、裸 `ssh` 或裸 `kubectl`。
+- 新增或修改 agent 适配器时，必须同步 `plugins/README.md`、对应 `plugins/<agent>/README.md` 和本文档门禁。
+
 ## 仓库工程门禁
 
 常规提交前至少运行：
@@ -48,9 +64,10 @@ git diff --check
 Claude 是 bundled plugin runtime。安装态必须从 `${CLAUDE_PLUGIN_ROOT}/runtime/...` 执行，不依赖 sandbox 内或兄弟目录里的源码 checkout。
 
 ```bash
-python3 plugins/claude/plugin-install.py install --workspace /home/stephen/AI/midstack-sandbox
-python3 plugins/claude/plugin-install.py check --workspace /home/stephen/AI/midstack-sandbox
-cd /home/stephen/AI/midstack-sandbox
+SANDBOX="$(realpath ../midstack-sandbox)"
+python3 plugins/claude/plugin-install.py install --workspace "$SANDBOX"
+python3 plugins/claude/plugin-install.py check --workspace "$SANDBOX"
+cd "$SANDBOX"
 claude -p "/midstack:validate" --allowedTools "Bash(python3 *)"
 ```
 
@@ -74,7 +91,7 @@ claude -p "/midstack:analyse" --allowedTools "Bash(python3 *)"
 验收重点：
 
 - 不运行 `mongosh`、`pip install`、raw `ssh`、raw `kubectl`
-- incident 输出在 `/home/stephen/AI/midstack-sandbox/.local/incidents/`
+- incident 输出在 sandbox workspace `.local/incidents/`
 - 不写入 `.claude/marketplaces/.../runtime/.local/incidents/`
 - 用户摘要不回显密码或 token
 
@@ -83,10 +100,11 @@ claude -p "/midstack:analyse" --allowedTools "Bash(python3 *)"
 Cursor 是 workspace-local runtime。安装态必须从目标 workspace 的 `.cursor/midstack-triage-runtime/...` 执行，不依赖源码 checkout。
 
 ```bash
-python3 plugins/cursor/plugin-install.py --upgrade --workspace-init /home/stephen/AI/midstack-sandbox
-python3 plugins/cursor/plugin-install.py --check-workspace /home/stephen/AI/midstack-sandbox
+SANDBOX="$(realpath ../midstack-sandbox)"
+python3 plugins/cursor/plugin-install.py --upgrade --workspace-init "$SANDBOX"
+python3 plugins/cursor/plugin-install.py --check-workspace "$SANDBOX"
 python3 plugins/cursor/test-agent-cli.py
-python3 plugins/cursor/test-sandbox.py /home/stephen/AI/midstack-sandbox
+python3 plugins/cursor/test-sandbox.py "$SANDBOX"
 ```
 
 Cursor installer/check 必须验证：
@@ -107,7 +125,7 @@ Cursor slash smoke 建议在 Cursor 里验证：
 验收重点：
 
 - Agent 生成的 shell 形态为 `python3 <workspace>/.cursor/midstack-triage-runtime/bin/midstack-local.py ...`
-- 不生成 `cd /home/stephen/AI/midstack-triage && python3 tools/plugin/midstack-local.py ...`
+- 不生成 `cd <source-checkout> && python3 tools/plugin/midstack-local.py ...`
 - incident 输出在 workspace `.local/incidents/`
 
 ## 什么时候跑哪些门禁
@@ -124,7 +142,7 @@ Cursor slash smoke 建议在 Cursor 里验证：
 ## 常见回归信号
 
 - Claude/Cursor 命令里出现 `engine_root`
-- 命令生成 `cd /home/stephen/AI/midstack-triage`
+- 命令生成 `cd <source-checkout>`
 - 命令直接调用源码 `tools/plugin/midstack-local.py`
 - Claude incident 写入 `.claude/marketplaces/.../runtime/.local/`
 - Cursor smoke 在源码仓库 cwd 下通过，但 sandbox 中失败

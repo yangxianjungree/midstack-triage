@@ -10,14 +10,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from shared.scenario_router import infer_scenario
-from shared.skill_resolver import (
-    extract_script_ids,
-    matched_asset_refs,
-    missing_required_scripts,
-    recollection_script_pool,
-    resolve_skills,
-    script_collection_statuses,
-)
 from shared.workspace import load_yaml, now_iso, resolve_path, write_yaml
 from .remote_run import (
     build_input_from_remote_run,
@@ -43,7 +35,6 @@ from .recollection import (
     has_file_tail_logs,
     has_log_sink_record,
     incident_evidence_text,
-    record_recollection_skill_pool_miss,
     select_directed_recollection_script_ids,
     should_run_dns_recollection,
     should_run_log_file_tail_recollection,
@@ -67,6 +58,11 @@ from .report_gaps import (
     infer_gap_type,
     normalize_collection_report_gaps,
     record_recollection_skill_pool_miss,
+)
+from .skill_runtime import (
+    enrich_skill_runtime_context,
+    resolve_skill_runtime,
+    write_skill_runtime_context,
 )
 
 
@@ -230,65 +226,6 @@ def apply_scenario_routing_if_needed(output_dir: Path, args) -> Dict[str, Any]:
     write_yaml(input_file, input_data)
     args.scenario = routing["scenario"]
     return input_data
-
-
-def resolve_skill_runtime(input_data: Dict[str, Any], output_dir: Path, collection_report: Dict[str, Any]) -> Dict[str, Any]:
-    middleware = str(input_data.get("middleware") or "mongodb")
-    scenario = str(input_data.get("scenario") or "unknown")
-    skills = resolve_skills(middleware, scenario)
-    skill_pool = recollection_script_pool(middleware, scenario)
-    required_scripts: List[str] = []
-    for skill in skills:
-        required_scripts.extend(extract_script_ids(skill["metadata"]))
-    required_scripts = sorted(set(required_scripts))
-
-    script_statuses = script_collection_statuses(output_dir, collection_report)
-    missing_or_failed = missing_required_scripts(required_scripts, script_statuses)
-    return {
-        "skills": skills,
-        "skill_pool": skill_pool,
-        "required_scripts": required_scripts,
-        "missing_or_failed": missing_or_failed,
-        "script_statuses": script_statuses,
-    }
-
-
-def write_skill_runtime_context(
-    output_dir: Path,
-    input_data: Dict[str, Any],
-    collection_report: Dict[str, Any],
-    runtime: Dict[str, Any],
-    middleware: str,
-) -> None:
-    skills = runtime.get("skills") or []
-    skill_pool = runtime.get("skill_pool") or set()
-    collection_report["skill_evidence_check"] = {
-        "skill_ids": [skill["id"] for skill in skills],
-        "required_scripts": runtime.get("required_scripts") or [],
-        "recollection_script_pool": sorted(skill_pool),
-        "script_statuses": runtime.get("script_statuses") or {},
-        "missing_or_failed": runtime.get("missing_or_failed") or [],
-    }
-    collection_report["updated_at"] = now_iso()
-    write_yaml(output_dir / "collection_report.yaml", collection_report)
-
-    input_data["matched_skill_ids"] = [skill["id"] for skill in skills]
-    input_data["matched_assets"] = matched_asset_refs(middleware, skills)
-    write_yaml(output_dir / "input.yaml", input_data)
-
-
-def enrich_skill_runtime_context(output_dir: Path, input_data: Dict[str, Any]) -> Dict[str, Any]:
-    collection_report_file = output_dir / "collection_report.yaml"
-    collection_report = load_yaml(collection_report_file) if collection_report_file.exists() else {}
-    runtime = resolve_skill_runtime(input_data, output_dir, collection_report)
-    middleware = str(input_data.get("middleware") or "mongodb")
-    write_skill_runtime_context(output_dir, input_data, collection_report, runtime, middleware)
-    return {
-        "skills": runtime["skills"],
-        "skill_pool": runtime["skill_pool"],
-        "required_scripts": runtime["required_scripts"],
-        "missing_or_failed": runtime["missing_or_failed"],
-    }
 
 
 def run_directed_recollection_if_needed(args, output_dir: Path, skill_pool: Optional[set[str]] = None) -> bool:

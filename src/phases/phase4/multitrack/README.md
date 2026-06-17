@@ -7,13 +7,13 @@
 - `reasoning_board.py` - 共享黑板与过程态落盘
 - `hypothesis_track.py` - 单轨观察、推理、验证闭环
 - `lead_orchestrator.py` - 多轨编排与终止判断
-- `agents/` - 协议、mock、Claude 实现和工厂
-- `agent_interface.py` - 兼容导出层，避免旧 import 断裂；内部实现不要再经由它互相引用
+- `multitrack/agents/` - 协议、mock、Claude 实现和工厂
+- `agent_interface.py` - 兼容导出层，避免旧 import 断裂；不要再让新代码经由它互相引用
 - `l1_mapper.py` - 从第 3 段输入映射初始假设
-- `cli_integration.py` - 兼容转发层；正式 Phase 4 入口已经上移到 `src/phases/phase4/reasoning.py`
+- `cli_integration.py` - 兼容转发层；正式 Phase 4 入口在 `src/phases/phase4/reasoning.py`
 - `data_structures.py` - 过程态数据结构
 
-`agents/` 子目录约束：
+`multitrack/agents/` 子目录约束：
 
 - `base.py` 只放协议和共享接口约定
 - `mock.py` 放默认本地/测试 agent

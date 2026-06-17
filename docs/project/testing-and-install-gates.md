@@ -36,6 +36,8 @@ Claude 和 Cursor 的安装目录不同，但必须满足同一组合同：
 
 公共合同测试放在 `tests/plugins/install_contracts.py`。Claude/Cursor 适配器测试应复用这里的 helper，不要各自复制禁止 token、runtime wrapper、首跳工具约束。
 
+本地维护者的安装态回归收口脚本是 `tools/validators/validate-installed-adapters.py`。它只串起现有 installer、check 和 smoke 命令，不是新的 runtime 入口。
+
 ## 仓库工程门禁
 
 常规提交前至少运行：
@@ -138,6 +140,7 @@ Cursor slash smoke 建议在 Cursor 里验证：
 | runtime 代码 | `python3 tools/validators/validate-repo.py` |
 | Claude command / installer / runtime bundle | Claude 单测 + install/check + `/midstack:validate` |
 | Cursor command / installer / runtime bundle | Cursor 单测 + `test-agent-cli.py` + `test-sandbox.py` |
+| 安装态回归收口 | `tools/validators/validate-installed-adapters.py` |
 | 远程执行或采集脚本 | validator + replay + 真实远程采集回归 |
 | 推理、规则、review、报告输出 | replay + score gate + 相关 phase 测试 |
 

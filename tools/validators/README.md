@@ -51,6 +51,15 @@ python3 tools/validators/validate-repo.py --skip-score
 python3 tools/validators/validate-repo.py --skip-cursor
 ```
 
+校验已安装 Claude/Cursor 适配器的 sandbox 回归：
+
+```bash
+python3 tools/validators/validate-installed-adapters.py
+python3 tools/validators/validate-installed-adapters.py --sandbox "$(realpath ../midstack-sandbox)"
+```
+
+默认 sandbox 是当前仓库的兄弟目录 `../midstack-sandbox`。该脚本只编排已有 installer、check 和 smoke 命令，不复制适配器内部检查逻辑。
+
 校验 MongoDB 脚本 manifest、插件运行时映射、插件接口示例和知识资产 metadata：
 
 ```bash

@@ -7,7 +7,9 @@
 - `finalize.py`
   分析收口、guardrail、最终输出整理。
 - `review.py`
-  分析复核、五维评分和改进建议。
+  review 命令入口、incident 状态校验、review 结果写回。
+- `review_scoring.py`
+  分析复核纯逻辑、五维评分、过程风险发现和改进建议生成。
 
 规则：
 

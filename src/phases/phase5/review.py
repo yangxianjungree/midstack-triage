@@ -277,6 +277,18 @@ def review_regression_risks(findings: List[Dict[str, str]]) -> List[str]:
     return risks
 
 
+def build_review_block(analysis: Dict[str, Any]) -> Dict[str, Any]:
+    findings = review_process_findings(analysis)
+    score = review_score_from_analysis(analysis)
+    return {
+        "score": score,
+        "overall": {"level": overall_level(score), "reason": "Average of local review score dimensions."},
+        "improvement_suggestions": review_suggestions(score, analysis, findings),
+        "regression_risks": review_regression_risks(findings),
+        "generated_at": now_iso(),
+    }
+
+
 def run_review(args) -> int:
     output_root = path_from_arg(args.output_root)
     if args.incident_dir:
@@ -325,16 +337,7 @@ def run_review(args) -> int:
         print("ERROR: missing analysis.yaml: %s" % analysis_file, file=sys.stderr)
         return 1
     analysis = load_yaml(analysis_file)
-    findings = review_process_findings(analysis)
-    score = review_score_from_analysis(analysis)
-    level = overall_level(score)
-    analysis["review"] = {
-        "score": score,
-        "overall": {"level": level, "reason": "Average of local review score dimensions."},
-        "improvement_suggestions": review_suggestions(score, analysis, findings),
-        "regression_risks": review_regression_risks(findings),
-        "generated_at": now_iso(),
-    }
+    analysis["review"] = build_review_block(analysis)
     analysis["updated_at"] = now_iso()
     write_yaml(analysis_file, analysis)
     update_incident_meta(incident_dir, {"status": "reviewed", "current_command": "review"})

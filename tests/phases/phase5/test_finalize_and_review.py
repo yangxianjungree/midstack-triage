@@ -11,7 +11,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from phases.phase5.finalize import finalize_analysis
-from phases.phase5.review import run_review
+from phases.phase5.review import build_review_block, run_review
 
 
 def write_yaml(path: Path, payload) -> None:
@@ -67,6 +67,34 @@ def test_finalize_analysis_writes_adapter_output_and_report(tmp_path):
     assert adapter["next_actions"] == ["check pod events"]
     meta = yaml.safe_load((incident_dir / "meta.yaml").read_text(encoding="utf-8"))
     assert meta["status"] == "analysed"
+
+
+def test_build_review_block_scores_supported_analysis():
+    review = build_review_block(
+        {
+            "conclusion_summary": {
+                "statement": "impact confirmed",
+                "confidence": "medium",
+                "deepest_supported_level": "impact",
+                "primary_cause_category": "kubernetes-runtime",
+                "evidence": ["probe failures"],
+            },
+            "hypotheses": [
+                {
+                    "hypothesis_id": "H1",
+                    "status": "supported",
+                    "validation_actions": ["checked pod events"],
+                }
+            ],
+            "knowledge_candidates": [],
+            "next_actions": [{"action": "inspect coredns"}],
+        }
+    )
+
+    assert review["overall"]["level"] in ("medium", "high")
+    assert "evidence_completeness" in review["score"]
+    assert isinstance(review["improvement_suggestions"], list)
+    assert isinstance(review["regression_risks"], list)
 
 
 def test_run_review_writes_review_block_and_adapter_output(tmp_path):

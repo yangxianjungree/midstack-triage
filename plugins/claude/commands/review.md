@@ -7,7 +7,7 @@ Use the current workspace as the incident output root. The plugin runtime is
 packaged under `${CLAUDE_PLUGIN_ROOT}`.
 
 ```bash
-export MIDSTACK_TRIAGE_WORKSPACE="$(pwd)"
+export MIDSTACK_TRIAGE_WORKSPACE="$(python3 "${CLAUDE_PLUGIN_ROOT}/runtime/bin/resolve-workspace.py")"
 python3 "${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py" review \
   --output-root "$MIDSTACK_TRIAGE_WORKSPACE/.local/incidents"
 ```

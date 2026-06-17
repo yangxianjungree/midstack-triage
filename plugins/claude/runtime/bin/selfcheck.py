@@ -58,6 +58,7 @@ def main() -> int:
     warnings: list[str] = []
     required_paths = [
         (RUNTIME_ROOT / "bin" / "midstack-local.py", "runtime wrapper"),
+        (RUNTIME_ROOT / "bin" / "resolve-workspace.py", "workspace resolver"),
         (RUNTIME_ROOT / "tools" / "plugin" / "midstack-local.py", "plugin runtime"),
         (RUNTIME_ROOT / "tools" / "support" / "common.py", "tools support module"),
         (RUNTIME_ROOT / "src" / "commands" / "plugin_cli.py", "plugin CLI adapter"),

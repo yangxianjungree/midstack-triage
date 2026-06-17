@@ -39,6 +39,7 @@ MANIFEST_PATH = PLUGIN_DIR / ".claude-plugin" / "plugin.json"
 INSTALLED_PLUGINS_PATH = Path.home() / ".claude" / "plugins" / "installed_plugins.json"
 RUNTIME_MARKER_FILES = [
     "runtime/bin/midstack-local.py",
+    "runtime/bin/resolve-workspace.py",
     "runtime/tools/plugin/midstack-local.py",
     "runtime/bin/selfcheck.py",
     "runtime/tools/support/common.py",
@@ -157,7 +158,7 @@ def validate_source_layout() -> None:
         if not PLUGIN_DIR.joinpath("commands", "%s.md" % name).exists():
             errors.append("missing required Claude command: commands/%s.md" % name)
 
-    for marker in ("runtime/bin/midstack-local.py", "runtime/bin/validate-repo.py", "runtime/bin/selfcheck.py"):
+    for marker in ("runtime/bin/midstack-local.py", "runtime/bin/resolve-workspace.py", "runtime/bin/validate-repo.py", "runtime/bin/selfcheck.py"):
         if not PLUGIN_DIR.joinpath(marker).exists():
             errors.append("missing required Claude runtime wrapper: %s" % marker)
 

@@ -150,6 +150,83 @@ def test_runtime_markers_do_not_include_removed_remote_shims():
     assert all("remote-executor" not in item for item in module.RUNTIME_COPY_DIRS)
 
 
+def test_claude_start_command_contract_forces_bundled_runtime_first():
+    text = (ROOT / "plugins" / "claude" / "commands" / "start.md").read_text(encoding="utf-8")
+
+    required = [
+        "First action",
+        "Bash",
+        "${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py",
+        "Do not claim the incident was started",
+        "adapter-output.yaml",
+        "Do not run `mongosh`",
+        "Do not run `pip",
+        "Do not run raw `ssh`",
+        "Do not run raw `kubectl`",
+    ]
+    for token in required:
+        assert token in text
+
+
+def test_claude_command_contracts_do_not_depend_on_source_checkout():
+    command_dir = ROOT / "plugins" / "claude" / "commands"
+    for path in command_dir.glob("*.md"):
+        text = path.read_text(encoding="utf-8")
+        assert "${CLAUDE_PLUGIN_ROOT}" in text
+        if path.name != "validate.md":
+            assert "resolve-workspace.py" in text
+            assert 'MIDSTACK_TRIAGE_WORKSPACE="$(pwd)"' not in text
+        if path.name in ("start.md", "analyse.md"):
+            assert "Do not print passwords or tokens" in text
+        assert "engine_root" not in text
+        assert "cd /home/stephen/AI/midstack-triage" not in text
+        assert "tools/plugin/midstack-local.py" not in text
+
+
+def test_resolve_workspace_uses_installed_plugin_project_path(tmp_path, monkeypatch):
+    plugin_root = tmp_path / "cache" / "midstack"
+    workspace = tmp_path / "sandbox"
+    home = tmp_path / "home"
+    installed = home / ".claude" / "plugins" / "installed_plugins.json"
+    resolver = ROOT / "plugins" / "claude" / "runtime" / "bin" / "resolve-workspace.py"
+
+    plugin_root.mkdir(parents=True)
+    workspace.mkdir()
+    installed.parent.mkdir(parents=True)
+    installed.write_text(
+        json.dumps(
+            {
+                "plugins": {
+                    "midstack@midstack-triage-local": [
+                        {
+                            "scope": "local",
+                            "installPath": str(plugin_root),
+                            "projectPath": str(workspace),
+                        }
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    env = os.environ.copy()
+    env["HOME"] = str(home)
+    env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
+    env.pop("CLAUDE_PROJECT_DIR", None)
+    proc = subprocess.run(
+        [sys.executable, str(resolver)],
+        cwd=str(plugin_root),
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip() == str(workspace.resolve())
+
+
 def test_check_install_reports_installed_plugin_selfcheck_errors(tmp_path, monkeypatch):
     module = load_claude_plugin_install()
     workspace = (tmp_path / "sandbox").resolve()

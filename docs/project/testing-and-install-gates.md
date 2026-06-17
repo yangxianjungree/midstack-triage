@@ -155,8 +155,6 @@ Cursor slash smoke 建议在 Cursor 里验证：
 - 命令直接调用源码 `tools/plugin/midstack-local.py`
 - Claude incident 写入 `.claude/marketplaces/.../runtime/.local/`
 - Cursor smoke 在源码仓库 cwd 下通过，但 sandbox 中失败
-- Agent 在 `/midstack:start` 里自行执行 `mongosh`、`pip install`、raw `ssh`、raw `sshpass` 或 raw `kubectl`
-
 - Agent 在 `/midstack:start` 里绕过 runtime 自行执行排障动作
 
 出现以上任一情况，应先修安装态合同和门禁，再讨论 analyse 排障效果本身。

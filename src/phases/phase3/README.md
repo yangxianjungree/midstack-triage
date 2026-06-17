@@ -6,6 +6,8 @@
 
 - `collection.py`
   Phase 3 control-plane 编排入口：导入 remote run、调用场景路由、富化 skill runtime、触发定向补采。
+- `incident_build.py`
+  从 remote run 输出还原 incident 工作目录，生成 `input.yaml`、`structured_record.yaml`、`signal_bundle.yaml` 和 `collection_report.yaml`。
 - `remote_collection.py`
   control plane 侧启动 `execution.remote.executor`，并把定向补采 remote run 合并回 incident。
 - `remote_run.py`

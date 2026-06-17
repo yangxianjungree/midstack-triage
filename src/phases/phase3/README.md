@@ -6,6 +6,8 @@
 
 - `collection.py`
   Phase 3 control-plane 编排入口：导入 remote run、调用场景路由、富化 skill runtime、触发定向补采。
+- `remote_collection.py`
+  control plane 侧启动 `execution.remote.executor`，并把定向补采 remote run 合并回 incident。
 - `remote_run.py`
   remote executor 输出目录契约、脚本输出合并、remote-executor 结果写入采集报告。
 - `recollection.py`

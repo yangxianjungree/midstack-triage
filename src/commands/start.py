@@ -145,6 +145,7 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory, probe_
     remote_validation = readiness["remote_validation"]
     object_inventory = readiness["object_inventory"]
     status = readiness["status"]
+    intake["local_context"] = readiness.get("local_context") or intake.get("local_context") or {}
     write_yaml(output_dir / "phase1-intake.yaml", intake)
     write_yaml(output_dir / "environment-check.yaml", {"remote_validation": remote_validation})
     write_yaml(output_dir / "object-inventory.yaml", object_inventory)
@@ -219,6 +220,21 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory, probe_
                 "offline_artifact": intake.get("offline_artifact") or {},
             },
         )
+    elif intake["environment_mode"] == "local":
+        write_yaml(
+            output_dir / "local-config.yaml",
+            {
+                "name": "%s-local" % incident_id,
+                "purpose": "incident local Kubernetes environment",
+                "created_at": created_at,
+                "context": readiness.get("local_context") or {},
+                "defaults": {
+                    "kubectl_required": True,
+                    "kubectl_exec_required": True,
+                    "middleware_tools_location": "pod_internal",
+                },
+            },
+        )
     output = adapter_output("start", incident_id, args.middleware, status, "local incident %s is %s" % (incident_id, status), output_dir)
     if status == "ready":
         if intake["environment_mode"] == "offline":
@@ -228,6 +244,13 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory, probe_
                 "or run /midstack:analyse %s --execution-mode offline" % incident_id,
             ]
             output["user_message"] = "%s; next run /midstack:analyse --execution-mode offline" % output["summary"]
+        elif intake["environment_mode"] == "local":
+            output["summary"] = "%s; local kubectl context ready" % output["summary"]
+            output["next_actions"] = [
+                "run /midstack:analyse --execution-mode local",
+                "or run /midstack:analyse %s --execution-mode local" % incident_id,
+            ]
+            output["user_message"] = "%s; next run /midstack:analyse --execution-mode local" % output["summary"]
         elif object_inventory.get("namespace_source") == "auto_discovered":
             output["summary"] = "%s; namespace auto-discovered as %s" % (output["summary"], object_inventory.get("selected_namespace"))
             output["next_actions"] = [

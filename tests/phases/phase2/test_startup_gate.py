@@ -93,12 +93,26 @@ def test_remote_readiness_gate_updates_namespace_when_auto_discovered():
     assert result["object_inventory"]["selected_namespace"] == "psmdb-test"
 
 
-def test_local_readiness_gate_keeps_local_blocked_with_context_hint():
+def test_local_readiness_gate_uses_local_context_and_inventory_without_remote_validation():
+    calls = []
+
+    def fail_remote_validation(access):
+        raise AssertionError("local readiness must not call remote validation")
+
+    def discover_inventory(access, namespace):
+        calls.append((access, namespace))
+        return {
+            "status": "passed",
+            "namespace_source": "auto_discovered",
+            "selected_namespace": "psmdb-test",
+        }
+
+    args = _args(environment_ip=[], username="", password="")
     result = evaluate_startup_readiness(
-        _args(environment_ip=[], username="", password=""),
-        _intake(status="blocked", environment_mode="local", execution_mode="local"),
-        validate_remote_environment=lambda access: {"status": "should_not_run"},
-        discover_mongodb_inventory=lambda access, namespace: {"status": "should_not_run"},
+        args,
+        _intake(status="ready_for_validation", environment_mode="local", execution_mode="local"),
+        validate_remote_environment=fail_remote_validation,
+        discover_mongodb_inventory=discover_inventory,
         probe_local_context=lambda: {
             "status": "available",
             "reason": "",
@@ -106,7 +120,27 @@ def test_local_readiness_gate_keeps_local_blocked_with_context_hint():
         },
     )
 
-    assert result["status"] == "blocked"
+    assert result["status"] == "ready"
     assert result["remote_validation"]["status"] == "skipped"
-    assert result["object_inventory"]["status"] == "skipped"
+    assert result["object_inventory"]["status"] == "passed"
     assert result["local_context"]["current_context"] == "prod-cluster"
+    assert args.namespace == "psmdb-test"
+    assert calls == [({"execution_mode": "local", "current_context": "prod-cluster"}, "")]
+
+
+def test_local_readiness_gate_blocks_when_local_context_is_unavailable():
+    result = evaluate_startup_readiness(
+        _args(environment_ip=[], username="", password=""),
+        _intake(status="ready_for_validation", environment_mode="local", execution_mode="local"),
+        validate_remote_environment=lambda access: {"status": "should_not_run"},
+        discover_mongodb_inventory=lambda access, namespace: {"status": "should_not_run"},
+        probe_local_context=lambda: {
+            "status": "unavailable",
+            "reason": "kubectl_not_found",
+            "current_context": "",
+        },
+    )
+
+    assert result["status"] == "blocked"
+    assert result["blocking_items"][0]["code"] == "local_context_unavailable"
+    assert result["follow_up_questions"][0]["field"] == "execution_mode"

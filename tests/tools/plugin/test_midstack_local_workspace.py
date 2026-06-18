@@ -384,12 +384,27 @@ def test_start_without_middleware_is_runtime_blocked_instead_of_argparse_error(t
     assert output["follow_up_questions"][0]["field"] == "middleware"
 
 
-def test_start_local_mode_blocks_without_ssh_credentials(tmp_path, monkeypatch):
+def test_start_local_mode_ready_with_local_context_and_inventory(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+    calls = []
+
+    def fail_remote_validation(access):
+        raise AssertionError("local start must not validate remote SSH access")
+
+    def discover_inventory(access, namespace):
+        calls.append((access, namespace))
+        return {
+            "status": "passed",
+            "selected_namespace": "psmdb-test",
+            "namespace_source": "auto_discovered",
+        }
+
+    monkeypatch.setattr(module, "validate_remote_environment", fail_remote_validation)
+    monkeypatch.setattr(module, "discover_mongodb_inventory", discover_inventory)
 
     args = SimpleNamespace(
         middleware="mongodb",
-        incident_id="",
+        incident_id="local-ready-start",
         customer_clue="mongo node may be unhealthy",
         environment_ip=[],
         username="",
@@ -401,17 +416,71 @@ def test_start_local_mode_blocks_without_ssh_credentials(tmp_path, monkeypatch):
         output_root=".local/incidents",
     )
 
-    rc = module.command_start(args)
-    assert rc == 0
+    assert module.command_start(
+        args,
+        probe_local_context=lambda: {
+            "status": "available",
+            "reason": "",
+            "current_context": "prod-cluster",
+        },
+    ) == 0
 
-    current_incident = read_current_incident(tmp_path / ".local" / "incidents")
-    output = load_yaml(current_incident / "adapter-output.yaml")
-    assert output["status"] == "blocked"
-    assert output["blocking_items"][0]["code"] == "local_start_not_implemented"
+    incident_dir = tmp_path / ".local" / "incidents" / "local-ready-start"
+    output = load_yaml(incident_dir / "adapter-output.yaml")
+    intake = load_yaml(incident_dir / "phase1-intake.yaml")
+    local_config = load_yaml(incident_dir / "local-config.yaml")
+    assert output["status"] == "ready"
+    assert intake["environment_mode"] == "local"
+    assert local_config["context"]["current_context"] == "prod-cluster"
+    assert calls == [({"execution_mode": "local", "current_context": "prod-cluster"}, "")]
+    assert output["next_actions"] == [
+        "run /midstack:analyse --execution-mode local",
+        "or run /midstack:analyse local-ready-start --execution-mode local",
+    ]
 
 
-def test_start_local_mode_follow_up_mentions_available_local_context(tmp_path, monkeypatch):
+def test_start_local_mode_blocks_when_local_context_unavailable(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="local-context-missing",
+        customer_clue="mongo node may be unhealthy",
+        environment_ip=[],
+        username="",
+        password="",
+        port=22,
+        namespace="",
+        cluster_id="",
+        environment_mode="local",
+        output_root=".local/incidents",
+    )
+
+    assert module.command_start(
+        args,
+        probe_local_context=lambda: {
+            "status": "unavailable",
+            "reason": "kubectl_not_found",
+            "current_context": "",
+        },
+    ) == 0
+
+    output = load_yaml(tmp_path / ".local" / "incidents" / "local-context-missing" / "adapter-output.yaml")
+    assert output["status"] == "blocked"
+    assert output["blocking_items"][0]["code"] == "local_context_unavailable"
+
+
+def test_start_local_mode_ready_does_not_emit_follow_up_questions(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+    monkeypatch.setattr(
+        module,
+        "discover_mongodb_inventory",
+        lambda access, namespace: {
+            "status": "passed",
+            "selected_namespace": "psmdb-test",
+            "namespace_source": "auto_discovered",
+        },
+    )
 
     args = SimpleNamespace(
         middleware="mongodb",
@@ -437,9 +506,8 @@ def test_start_local_mode_follow_up_mentions_available_local_context(tmp_path, m
     ) == 0
 
     output = load_yaml(tmp_path / ".local" / "incidents" / "local-context-follow-up" / "adapter-output.yaml")
-    assert output["status"] == "blocked"
-    assert output["follow_up_questions"][0]["field"] == "execution_mode"
-    assert "prod-cluster" in output["follow_up_questions"][0]["question"]
+    assert output["status"] == "ready"
+    assert "follow_up_questions" not in output
 
 
 def test_start_offline_mode_blocks_with_artifact_prompt(tmp_path, monkeypatch):

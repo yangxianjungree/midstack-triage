@@ -36,3 +36,23 @@ def test_run_remote_kubectl_json_reports_invalid_json(monkeypatch):
     assert result["status"] == "failed"
     assert result["resource"] == "pods"
     assert result["error"]["stdout"] == "not-json"
+
+
+def test_run_local_kubectl_json_uses_local_subprocess(monkeypatch):
+    calls = []
+
+    class Proc:
+        returncode = 0
+        stdout = '{"items": [{"metadata": {"name": "pod-0"}}]}'
+        stderr = ""
+
+    def fake_run(command, stdout, stderr, universal_newlines, timeout):
+        calls.append(command)
+        return Proc()
+
+    monkeypatch.setattr(phase2_kubectl.subprocess, "run", fake_run)
+
+    result = phase2_kubectl.run_remote_kubectl_json({"execution_mode": "local"}, "pods", "psmdb-test")
+
+    assert result == {"status": "passed", "resource": "pods", "payload": {"items": [{"metadata": {"name": "pod-0"}}]}}
+    assert calls == [["kubectl", "get", "pods", "-n", "psmdb-test", "-o", "json"]]

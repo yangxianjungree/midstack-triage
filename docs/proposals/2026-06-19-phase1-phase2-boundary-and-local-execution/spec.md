@@ -45,8 +45,9 @@ Offline/manual paths remain documented but are not deepened in this slice.
 - `src/commands/start.py` delegates Phase 2 readiness instead of directly
   containing SSH/kubectl validation and MongoDB inventory branching.
 - Existing remote start behavior stays compatible.
-- Local mode remains blocked until the next local-executor slice, but its
-  readiness state is produced by Phase 2 rather than Phase 1 command glue.
+- Local start mode can become `ready` when the local Kubernetes context is
+  available and Phase 2 object inventory passes; local analyse execution
+  remains the next local-executor slice.
 - Specs explain the new Phase 1 vs Phase 2 contract.
 
 ## Commands
@@ -82,11 +83,16 @@ git diff --check
   - Acceptance: proposal and specs define local as remote-minus-SSH and identify the next implementation slice.
   - Verify: `git diff --check`
   - Files: `docs/proposals/2026-06-19-phase1-phase2-boundary-and-local-execution/spec.md`
+- [x] Task: Enable local start readiness gate
+  - Acceptance: explicit `local` start probes local kubectl context, uses local kubectl for MongoDB inventory, writes `local-config.yaml`, and can return `ready` without remote SSH validation.
+  - Verify: `python3 -m pytest tests/phases/phase1 tests/phases/phase2 tests/tools/plugin/test_midstack_local_workspace.py -q`
+  - Files: `src/phases/phase1/intake.py`, `src/phases/phase2/startup_gate.py`, `src/phases/phase2/kubectl.py`, `src/commands/start.py`
 
 ## Open Questions
 
-- Whether the local executor should reuse the remote executor CLI with a local
-  transport adapter, or get a separate CLI facade over the same script runner.
+- Whether the local analyse executor should reuse the remote executor CLI with
+  a local transport adapter, or get a separate CLI facade over the same script
+  runner.
 - Whether Phase 2 should eventually own all missing-input prompts, or only
   command-backed readiness prompts. This proposal starts by moving the
   command-backed gates first.

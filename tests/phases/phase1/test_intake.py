@@ -65,16 +65,16 @@ def test_remote_intake_is_ready_for_validation_when_required_fields_exist():
     assert intake["follow_up_questions"] == []
 
 
-def test_local_intake_does_not_require_ssh_credentials_but_blocks_until_executor_exists():
+def test_local_intake_does_not_require_ssh_credentials_and_is_ready_for_phase2_gate():
     intake = build_start_intake(args(environment_mode="local", environment_ip=[], username="", password=""))
 
     assert intake["environment_mode"] == "local"
     assert intake["execution_mode"] == "local"
     assert intake["intake_scenario"]["id"] == "local_fault_cluster"
-    assert intake["intake_scenario"]["readiness"] == "blocked_until_local_executor"
-    assert intake["status"] == "blocked"
-    assert [item["code"] for item in intake["blocking_items"]] == ["local_start_not_implemented"]
-    assert intake["follow_up_questions"][0]["field"] == "execution_mode"
+    assert intake["intake_scenario"]["readiness"] == "phase2_gate_required"
+    assert intake["status"] == "ready_for_validation"
+    assert intake["blocking_items"] == []
+    assert intake["follow_up_questions"] == []
 
 
 def test_local_intake_follow_up_mentions_available_local_context():
@@ -92,9 +92,9 @@ def test_local_intake_follow_up_mentions_available_local_context():
         )
     )
 
-    assert intake["status"] == "blocked"
+    assert intake["status"] == "ready_for_validation"
     assert intake["local_context"]["current_context"] == "prod-cluster"
-    assert "prod-cluster" in intake["follow_up_questions"][0]["question"]
+    assert intake["follow_up_questions"] == []
 
 
 def test_offline_intake_guides_user_to_existing_artifacts():

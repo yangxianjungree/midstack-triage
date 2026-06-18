@@ -61,7 +61,7 @@ def _intake_scenario(mode_name: str, customer_clue: str) -> Dict[str, str]:
             "environment_class": environment_class,
             "access_pattern": "local_runtime",
             "evidence_source": "live_local",
-            "readiness": "blocked_until_local_executor",
+            "readiness": "phase2_gate_required",
         }
     if _has_hint(clue, MANUAL_OFFLINE_HINTS):
         scenario_id = "manual_guided_offline"
@@ -228,17 +228,7 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
         blocking_items.extend(remote_blocks)
         follow_up_questions.extend(remote_questions)
     elif mode.name == "local":
-        blocking_items.append(
-            _blocking_item(
-                "local_start_not_implemented",
-                "local start mode is recognized but local live collection is not implemented",
-                "use remote mode with SSH access, or offline mode with existing artifacts",
-                "execution_mode",
-            )
-        )
-        follow_up_questions.append(
-            _local_execution_mode_question(local_context)
-        )
+        pass
     elif mode.name == "offline":
         artifact_source = str(getattr(args, "artifact_source", "") or "")
         offline_artifact = _offline_artifact_status(artifact_source)

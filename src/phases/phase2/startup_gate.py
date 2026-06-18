@@ -37,6 +37,18 @@ def _namespace_not_found_follow_up() -> Dict[str, str]:
     )
 
 
+def _local_context_follow_up(local_context: Dict[str, str]) -> Dict[str, str]:
+    status = str(local_context.get("status") or "")
+    current_context = str(local_context.get("current_context") or "")
+    if status == "unreachable":
+        question = "本机 kubectl context%s 当前不可访问，请修复本机 kubeconfig/context，或改用 remote SSH 接入。" % (
+            " %s" % current_context if current_context else ""
+        )
+    else:
+        question = "本机未检测到可用 kubectl context，请配置本机 kubectl，或改用 remote SSH 接入。"
+    return _follow_up("execution_mode", question, "working local kubectl context or remote access fields")
+
+
 def _access_from_args(args: Any) -> Dict[str, Any]:
     env_ips = [item for item in (getattr(args, "environment_ip", []) or []) if item]
     primary_ip = env_ips[0] if env_ips else ""
@@ -47,6 +59,40 @@ def _access_from_args(args: Any) -> Dict[str, Any]:
         "password": getattr(args, "password", ""),
         "port": getattr(args, "port", 22),
     }
+
+
+def _local_access(local_context: Dict[str, str]) -> Dict[str, str]:
+    return {
+        "execution_mode": "local",
+        "current_context": str(local_context.get("current_context") or ""),
+    }
+
+
+def _add_mongodb_inventory_gate(args: Any, access: Dict[str, Any], object_inventory: Dict[str, Any], blocking_items, follow_up_questions) -> None:
+    if getattr(args, "middleware", "") != "mongodb":
+        return
+    if not getattr(args, "namespace", "") and object_inventory["status"] == "passed":
+        args.namespace = str(object_inventory.get("selected_namespace") or "")
+    elif not getattr(args, "namespace", "") and object_inventory["status"] == "ambiguous":
+        candidate_namespaces = object_inventory.get("candidate_namespaces") or []
+        blocking_items.append(
+            {
+                "code": "multiple_mongodb_namespaces_detected",
+                "message": "multiple MongoDB candidate namespaces were detected",
+                "required_user_action": "provide namespace explicitly",
+                "candidate_namespaces": candidate_namespaces,
+            }
+        )
+        follow_up_questions.append(_namespace_ambiguous_follow_up(candidate_namespaces))
+    elif not getattr(args, "namespace", "") and object_inventory["status"] == "not_found":
+        blocking_items.append(
+            {
+                "code": "mongodb_namespace_not_detected",
+                "message": "MongoDB namespace could not be auto-detected from pods, statefulsets, or services",
+                "required_user_action": "provide namespace explicitly",
+            }
+        )
+        follow_up_questions.append(_namespace_not_found_follow_up())
 
 
 def evaluate_startup_readiness(
@@ -81,30 +127,23 @@ def evaluate_startup_readiness(
                 }
             )
             follow_up_questions.append(_remote_access_follow_up())
-        elif getattr(args, "middleware", "") == "mongodb":
+        else:
             object_inventory = discover_mongodb_inventory(access, getattr(args, "namespace", ""))
-            if not getattr(args, "namespace", "") and object_inventory["status"] == "passed":
-                args.namespace = str(object_inventory.get("selected_namespace") or "")
-            elif not getattr(args, "namespace", "") and object_inventory["status"] == "ambiguous":
-                candidate_namespaces = object_inventory.get("candidate_namespaces") or []
-                blocking_items.append(
-                    {
-                        "code": "multiple_mongodb_namespaces_detected",
-                        "message": "multiple MongoDB candidate namespaces were detected",
-                        "required_user_action": "provide namespace explicitly",
-                        "candidate_namespaces": candidate_namespaces,
-                    }
-                )
-                follow_up_questions.append(_namespace_ambiguous_follow_up(candidate_namespaces))
-            elif not getattr(args, "namespace", "") and object_inventory["status"] == "not_found":
-                blocking_items.append(
-                    {
-                        "code": "mongodb_namespace_not_detected",
-                        "message": "MongoDB namespace could not be auto-detected from pods, statefulsets, or services",
-                        "required_user_action": "provide namespace explicitly",
-                    }
-                )
-                follow_up_questions.append(_namespace_not_found_follow_up())
+            _add_mongodb_inventory_gate(args, access, object_inventory, blocking_items, follow_up_questions)
+    elif intake.get("status") == "ready_for_validation" and intake.get("environment_mode") == "local":
+        if local_context.get("status") != "available":
+            blocking_items.append(
+                {
+                    "code": "local_context_unavailable",
+                    "message": "local kubectl context is not available",
+                    "required_user_action": "configure local kubectl context or use remote mode with SSH access",
+                }
+            )
+            follow_up_questions.append(_local_context_follow_up(local_context))
+        else:
+            access = _local_access(local_context)
+            object_inventory = discover_mongodb_inventory(access, getattr(args, "namespace", ""))
+            _add_mongodb_inventory_gate(args, access, object_inventory, blocking_items, follow_up_questions)
 
     status = "ready" if intake.get("status") == "ready_for_validation" and not blocking_items else "blocked"
     return {

@@ -96,16 +96,19 @@ Phase 2 负责持续从用户交互中补齐信息，并通过只读命令判断
 - 已完成目标对象的基础盘点，或已有用户明确指定的 namespace/对象范围
 - 如已提供故障线索，线索内容可以被理解（线索本身为可选输入，缺失不构成 `blocked`）
 
-当前 `ready` 适用于 `remote` 主路径，以及具备完整 `artifact_source` 的 `offline` 证据目录；`local` 在对应执行链路完成前返回 `blocked` 并提供结构化追问。
+当前 `ready` 适用于 `remote` 主路径、具备完整 `artifact_source` 的
+`offline` 证据目录，以及显式 `local` 且本机 kubectl context 与对象盘点均通过
+的启动路径。`local` 的后续分析采集执行链路仍需单独完成。
 
 ### 本地上下文提示
 
 当用户未提供远程 IP，或显式选择 `local` 时，`/start` 可记录
 `phase1-intake.yaml.local_context`。该字段只用于提示当前机器是否存在可用
 Kubernetes context，帮助用户判断是否应切换到 `local`、继续提供 SSH 信息，
-或改用 `offline` 证据路径。当前不会基于 `local_context` 返回 `ready`。
-显式 `local` 模式返回 `blocked` 时，应在追问中说明本机 kubectl context
-状态，避免用户误以为已经进入本地采集链路。
+或改用 `offline` 证据路径。显式 `local` 模式会在 Phase 2 重新探测本机
+context；context 可用且目标对象盘点通过时，`/start` 可返回 `ready` 并写入
+`local-config.yaml`。如果 context 缺失或不可达，应返回结构化 `blocked`，并在
+追问中说明本机 kubectl context 状态。
 
 ### 典型 `blocked` 条件
 
@@ -113,6 +116,7 @@ Kubernetes context，帮助用户判断是否应切换到 `local`、继续提供
 - 无法通过提供的远程信息完成基础连通性验证
 - 远程环境没有 Kubernetes
 - 无法执行基础 Kubernetes 操作，例如 `kubectl exec`
+- 显式 `local` 模式下，本机 kubectl context 缺失或不可达
 - 远程环境中不存在目标中间件，或当前入口无法触达目标环境
 
 ## 3. 第 2 段：环境确认与对象盘点

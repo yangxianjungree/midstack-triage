@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import secrets
 from datetime import datetime
+from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Dict
 
 from phases.phase1.intake import build_start_intake
-from shared.workspace import adapter_output, now_iso, path_from_arg, write_current_incident, write_yaml
+from shared.workspace import adapter_output, load_yaml, now_iso, path_from_arg, write_current_incident, write_yaml
 
 
 INCIDENT_ID_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -18,7 +20,8 @@ def rand4() -> str:
 
 
 def generated_incident_id(middleware: str) -> str:
-    return "%s-%s-%s" % (middleware, datetime.now().strftime("%Y%m%d-%H%M%S"), rand4())
+    prefix = middleware or "incident"
+    return "%s-%s-%s" % (prefix, datetime.now().strftime("%Y%m%d-%H%M%S"), rand4())
 
 
 def unique_incident_id(middleware: str, output_root) -> str:
@@ -29,15 +32,70 @@ def unique_incident_id(middleware: str, output_root) -> str:
     return generated_incident_id(middleware)
 
 
+def _load_prior_start_values(output_dir: Path) -> Dict[str, Any]:
+    values: Dict[str, Any] = {}
+    input_file = output_dir / "input.yaml"
+    if input_file.exists():
+        input_data = load_yaml(input_file)
+        values.update(
+            {
+                "middleware": input_data.get("middleware") or "",
+                "customer_clue": input_data.get("customer_clue") or "",
+                "namespace": input_data.get("namespace") or "",
+                "cluster_id": input_data.get("cluster_id") or "",
+                "environment_mode": input_data.get("environment_mode") or "",
+                "environment_ip": input_data.get("environment_ips") or [],
+                "port": input_data.get("remote_port") or None,
+            }
+        )
+    remote_config_file = output_dir / "remote-config.yaml"
+    if remote_config_file.exists():
+        access = load_yaml(remote_config_file).get("access") or {}
+        values.update(
+            {
+                "environment_ip": access.get("candidate_ips") or values.get("environment_ip") or [],
+                "username": access.get("username") or "",
+                "password": access.get("password") or "",
+                "port": access.get("port") or values.get("port") or None,
+            }
+        )
+    return values
+
+
+def _merge_start_args(args: Any, prior_values: Dict[str, Any]) -> Any:
+    merged = vars(args).copy()
+    for field in ("middleware", "customer_clue", "namespace", "cluster_id", "environment_mode", "username", "password"):
+        if not merged.get(field) and prior_values.get(field):
+            merged[field] = prior_values[field]
+    if not merged.get("environment_ip") and prior_values.get("environment_ip"):
+        merged["environment_ip"] = prior_values["environment_ip"]
+    if merged.get("port") in (None, ""):
+        merged["port"] = prior_values.get("port") or 22
+    return SimpleNamespace(**merged)
+
+
 def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int:
+    if not hasattr(args, "middleware"):
+        args.middleware = ""
     if not hasattr(args, "environment_mode"):
-        args.environment_mode = "remote"
+        args.environment_mode = ""
+    if not hasattr(args, "port"):
+        args.port = None
     output_root = path_from_arg(args.output_root)
+    prior_values: Dict[str, Any] = {}
+    if args.incident_id:
+        prior_values = _load_prior_start_values(output_root / args.incident_id)
+        if prior_values:
+            args = _merge_start_args(args, prior_values)
+    if getattr(args, "port", None) is None:
+        args.port = 22
     incident_id = args.incident_id or unique_incident_id(args.middleware, output_root)
     env_ips = [item for item in (args.environment_ip or []) if item]
     primary_ip = env_ips[0] if env_ips else ""
     output_dir = output_root / incident_id
     created_at = now_iso()
+    prior_meta = load_yaml(output_dir / "meta.yaml") if (output_dir / "meta.yaml").exists() else {}
+    original_created_at = prior_meta.get("created_at") or created_at
 
     intake = build_start_intake(args)
     blocking_items = list(intake["blocking_items"])
@@ -94,7 +152,7 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
             "incident_id": incident_id,
             "middleware": args.middleware,
             "status": status,
-            "created_at": created_at,
+            "created_at": original_created_at,
             "updated_at": created_at,
             "plugin_version": "local-cli",
             "current_command": "start",

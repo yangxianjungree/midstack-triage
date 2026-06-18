@@ -172,6 +172,9 @@ superseded_by: none
 
 - 能直接传就直接传
 - 传不全就交互补齐
+- 缺必填项时由 runtime 返回结构化 `blocked`、`blocking_items` 和 `follow_up_questions`，而不是由 slash 命令或 argparse 提前截断
+- 带显式 `incident_id` 再次执行 `/plugin:start` 时，表示继续补齐同一个 intake；runtime 会从既有 `input.yaml` / `remote-config.yaml` 继承未重新提供的字段
+- 不带 `incident_id` 的 `/plugin:start` 永远新建 incident
 - `remote` 是当前默认主路径，表示通过 SSH 进入跳板机或故障环境后执行只读采集
 - `local` 表示 runtime 已在故障集群或控制面机器上；当前只在 Phase 1 识别并返回 blocked 引导，不执行本地采集
 - `offline` 表示仅消费已有 incident、fixture、remote-run、日志或手工命令输出；当前 `/start` 只识别并返回 blocked 引导，正式分析应走 `/plugin:analyse --execution-mode offline`

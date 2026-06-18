@@ -111,6 +111,8 @@ slash 命令与 5 阶段流程的简明说明见 [Slash 命令面说明](../proj
 - 不结束流程
 - 继续引导用户纠正或补充信息
 - 明确指出当前阻塞项
+- 优先展示 runtime 返回的 `follow_up_questions`
+- 用户补答时应带上同一个 `incident_id` 再次执行 `/midstack:start`，runtime 会复用已保存输入并只补新答案
 
 ### `ready` 时的行为
 

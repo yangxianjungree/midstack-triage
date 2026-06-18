@@ -56,6 +56,13 @@ superseded_by: none
 - `ready`
 - `blocked`
 
+### 续填规则
+
+`blocked` 不是终止态。用户补充缺失信息时，应显式带上同一个
+`incident_id` 再次执行 `/midstack:start`。第 1 段会复用既有
+`input.yaml` 和 `remote-config.yaml` 中已确认的字段，只用新参数补齐缺口。
+不带 `incident_id` 的 `/midstack:start` 始终创建新的排障记录。
+
 ### `ready` 最小条件
 
 - 已提供远程环境信息

@@ -36,6 +36,11 @@ Default `remote` mode is the current main path and requires `--environment-ip`,
 `--username`, and `--password`. `local` and `offline` are recognized by Phase 1
 but currently return blocked guidance instead of running collection.
 
+If a previous `start` returned `blocked` and `$ARGUMENTS` appears to answer its
+follow-up questions, run `start` again with the same `--incident-id`. Fields
+already captured in the incident may be omitted; the runtime merges them from
+the existing record.
+
 Run:
 
 ```bash
@@ -65,5 +70,6 @@ When `status=blocked`:
 - summarize `blocking_items`
 - prefer `follow_up_questions` when present and ask those questions directly
 - show the read-only `next_actions`
+- include the incident id so the user's next answer can continue this same start record
 
 Do not print passwords or tokens.

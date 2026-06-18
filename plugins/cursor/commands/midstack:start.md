@@ -49,6 +49,11 @@ Required CLI fields for `remote`: `middleware`, at least one `--environment-ip`,
 
 Optional: `--customer-clue`, `--port` (default 22), `--namespace`, `--cluster-id`, `--incident-id`, `--environment-mode`.
 
+If a previous `start` returned `blocked` and the user is answering its
+follow-up questions, run `start` again with the same `--incident-id`. You may
+omit fields already captured by that incident; the runtime merges them from the
+existing record.
+
 Example shell (replace paths and secrets):
 
 ```bash
@@ -70,3 +75,6 @@ If `ready`, state exactly `next run /midstack:analyse`.
 If `blocked`, summarize blocking items. If multiple MongoDB namespaces were detected, list candidates and ask the user to choose one.
 
 Prefer `follow_up_questions` from `adapter-output.yaml` when present; ask those questions directly instead of inventing new ones.
+
+When asking follow-up questions, include the incident id and tell the user their
+next answer will continue that same start record.

@@ -117,6 +117,86 @@ def test_start_blocked_writes_follow_up_questions_for_missing_remote_inputs(tmp_
     assert output["next_actions"] == [item["question"] for item in output["follow_up_questions"]]
 
 
+def test_start_can_continue_blocked_incident_with_missing_remote_answers(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+    calls = []
+
+    def validate_remote_environment(access):
+        calls.append(access)
+        return {"status": "passed", "checks": []}
+
+    monkeypatch.setattr(module, "validate_remote_environment", validate_remote_environment)
+    monkeypatch.setattr(
+        module,
+        "discover_mongodb_inventory",
+        lambda access, namespace: {
+            "status": "passed",
+            "selected_namespace": "psmdb-test",
+            "namespace_source": "auto_discovered",
+        },
+    )
+
+    first_args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="phase1-continue-demo",
+        customer_clue="mongo node may be unhealthy",
+        environment_ip=["192.168.154.251"],
+        username="",
+        password="",
+        port=22022,
+        namespace="",
+        cluster_id="",
+        output_root=".local/incidents",
+    )
+    assert module.command_start(first_args) == 0
+
+    incident_dir = tmp_path / ".local" / "incidents" / "phase1-continue-demo"
+    first_output = load_yaml(incident_dir / "adapter-output.yaml")
+    assert first_output["status"] == "blocked"
+    assert [item["field"] for item in first_output["follow_up_questions"]] == ["username", "password"]
+
+    second_args = SimpleNamespace(
+        middleware="",
+        incident_id="phase1-continue-demo",
+        customer_clue="",
+        environment_ip=[],
+        username="root",
+        password="123",
+        port=None,
+        namespace="",
+        cluster_id="",
+        environment_mode="",
+        output_root=".local/incidents",
+    )
+    assert module.command_start(second_args) == 0
+
+    output = load_yaml(incident_dir / "adapter-output.yaml")
+    input_data = load_yaml(incident_dir / "input.yaml")
+    remote_config = load_yaml(incident_dir / "remote-config.yaml")
+    assert output["status"] == "ready"
+    assert input_data["middleware"] == "mongodb"
+    assert input_data["customer_clue"] == "mongo node may be unhealthy"
+    assert input_data["environment_ips"] == ["192.168.154.251"]
+    assert remote_config["access"]["username"] == "root"
+    assert remote_config["access"]["password"] == "123"
+    assert remote_config["access"]["port"] == 22022
+    assert calls[-1]["primary_ip"] == "192.168.154.251"
+    assert calls[-1]["port"] == 22022
+
+
+def test_start_without_middleware_is_runtime_blocked_instead_of_argparse_error(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    args = module.build_parser().parse_args(["start", "--output-root", ".local/incidents"])
+
+    assert module.command_start(args) == 0
+    current_incident = read_current_incident(tmp_path / ".local" / "incidents")
+    output = load_yaml(current_incident / "adapter-output.yaml")
+    assert output["status"] == "blocked"
+    assert output["blocking_items"][0]["code"] == "missing_middleware"
+    assert output["follow_up_questions"][0]["field"] == "middleware"
+
+
 def test_start_local_mode_blocks_without_ssh_credentials(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
 

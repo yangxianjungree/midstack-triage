@@ -58,14 +58,14 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     start = subparsers.add_parser("start")
-    start.add_argument("--middleware", required=True)
+    start.add_argument("--middleware", default="")
     start.add_argument("--customer-clue", default="")
     start.add_argument("--namespace", default="")
     start.add_argument("--cluster-id", default="")
     start.add_argument(
         "--environment-mode",
         choices=sorted(execution_mode_names()),
-        default="remote",
+        default="",
         help="Start intake mode. remote is the default SSH path; local/offline are recognized but blocked until their evidence path is supplied.",
     )
     start.add_argument("--incident-id")
@@ -73,7 +73,7 @@ def build_parser() -> argparse.ArgumentParser:
     start.add_argument("--environment-ip", action="append", default=[], help="Remote environment IP. May be repeated; the first IP is used as jump host.")
     start.add_argument("--username", default="")
     start.add_argument("--password", default="")
-    start.add_argument("--port", type=int, default=22)
+    start.add_argument("--port", type=int)
     start.set_defaults(func=command_start)
 
     analyse = subparsers.add_parser("analyse")

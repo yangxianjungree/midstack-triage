@@ -8,8 +8,8 @@
   第 1 段启动门面；实际远端接入能力来自 `src/execution/remote/access.py`。
 - `phase2/inventory.py`
   环境对象盘点、拓扑与 namespace 发现。
-- `phase3/collection.py`
-  远程采集编排、回放输入构建、场景路由、定向补采。
+- `phase3/`
+  远程采集编排、回放输入构建、场景路由、skill runtime、定向补采；实现按 topic 拆分，不再保留单一聚合入口。
 - `phase4/reasoning.py`
   第 4 段推理运行时门面。
 - `phase4/multitrack/`

@@ -50,13 +50,13 @@ superseded_by: none
 
 - `src/` 只放会进入插件 runtime payload 的正式实现。
 - `tools/` 只放薄入口、校验器、回放和工程脚本。
-- `collection.py`、`__init__.py` 之类的聚合层只保留兼容导出，不再承载新增实现。
+- 不再新增 `collection.py` 这类聚合入口；`__init__.py` 只做显式导出，不承载实现。
 - 新的 phase 代码优先按 `src/phases/phaseN/<topic>.py` 增加，不再回到扁平 shim。
 - Claude 与 Cursor 的安装态都不能回调源码 checkout。
 
 ## 还要继续治理的项
 
-- Phase 3 继续收紧 `collection.py` 的聚合职责。
+- Phase 3 已移除 `collection.py` 聚合入口；后续禁止重新引入大聚合文件。
 - Phase 4 继续减少 `_data` 这类内部结构外泄。
 - 安装态 smoke 继续覆盖 Claude / Cursor 的真实 workspace。
 - `.local/`、`__pycache__`、fixture hygiene 等工程门禁继续保持。

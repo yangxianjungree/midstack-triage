@@ -43,7 +43,14 @@ superseded_by: none
 两种入口最终都复用：
 
 - `src/commands/analyse.py`
-- `src/phases/phase3/collection.py`
+- `src/phases/phase3/incident_build.py`
+- `src/phases/phase3/remote_collection.py`
+- `src/phases/phase3/remote_run.py`
+- `src/phases/phase3/recollection.py`
+- `src/phases/phase3/recollection_run.py`
+- `src/phases/phase3/report_gaps.py`
+- `src/phases/phase3/scenario_routing.py`
+- `src/phases/phase3/skill_runtime.py`
 - `src/phases/phase4/reasoning.py`
 - `src/phases/phase5/finalize.py`
 - `src/execution/remote/executor.py`

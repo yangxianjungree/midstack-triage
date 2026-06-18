@@ -9,6 +9,7 @@ from commands import analyse as analyse_command
 from commands import finalize as finalize_command
 from commands import review as review_command
 from commands import start as start_command
+from phases.phase1.local_context import probe_local_context
 from phases.phase1.startup import validate_remote_environment
 from phases.phase2.inventory import discover_mongodb_inventory
 from phases.phase3.incident_build import build_incident_from_remote_run
@@ -19,11 +20,12 @@ from phases.phase3.report_gaps import normalize_collection_report_gaps
 from phases.phase3.scenario_routing import apply_scenario_routing_if_needed
 from phases.phase3.skill_runtime import enrich_skill_runtime_context
 
-def command_start(args: argparse.Namespace) -> int:
+def command_start(args: argparse.Namespace, probe_local_context=probe_local_context) -> int:
     return start_command.run(
         args,
         validate_remote_environment=validate_remote_environment,
         discover_mongodb_inventory=discover_mongodb_inventory,
+        probe_local_context=probe_local_context,
     )
 
 

@@ -48,6 +48,7 @@ superseded_by: none
   - 当前默认主路径：Agent/runtime 通过 SSH 进入跳板机或故障环境，再用远端 `kubectl` 做只读确认和采集。
 - `local`
   - 表示 Agent/runtime 已经在故障集群或控制面机器上。当前仅完成 Phase 1 识别和引导，本地 live executor 完成前不得隐式回退到 SSH。
+  - 当远程接入信息缺失或用户显式选择 `local` 时，Phase 1 可做轻量本地 `kubectl` context 探测，并把结果作为 `local_context` 提示；这只是 intake hint，不代表本地采集已实现。
 - `offline`
   - 表示用户只有已有 incident、fixture、remote-run、日志、截图或手工命令输出。若提供完整离线证据目录，`/start` 可直接进入 `ready` 并转向离线分析。
 
@@ -86,6 +87,13 @@ superseded_by: none
 - 如已提供故障线索，线索内容可以被理解（线索本身为可选输入，缺失不构成 `blocked`）
 
 当前 `ready` 适用于 `remote` 主路径，以及具备完整 `artifact_source` 的 `offline` 证据目录；`local` 在对应执行链路完成前返回 `blocked` 并提供结构化追问。
+
+### 本地上下文提示
+
+当用户未提供远程 IP，或显式选择 `local` 时，`/start` 可记录
+`phase1-intake.yaml.local_context`。该字段只用于提示当前机器是否存在可用
+Kubernetes context，帮助用户判断是否应切换到 `local`、继续提供 SSH 信息，
+或改用 `offline` 证据路径。当前不会基于 `local_context` 返回 `ready`。
 
 ### 典型 `blocked` 条件
 

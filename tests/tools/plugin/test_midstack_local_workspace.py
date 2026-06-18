@@ -119,6 +119,81 @@ def test_start_blocked_writes_follow_up_questions_for_missing_remote_inputs(tmp_
     assert output["next_actions"] == [item["question"] for item in output["follow_up_questions"]]
 
 
+def test_start_missing_remote_ip_records_available_local_context_hint(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="local-context-hint",
+        customer_clue="mongo node may be unhealthy",
+        environment_ip=[],
+        username="root",
+        password="123",
+        port=22,
+        namespace="",
+        cluster_id="",
+        environment_mode="remote",
+        output_root=".local/incidents",
+    )
+
+    assert module.command_start(
+        args,
+        probe_local_context=lambda: {
+            "status": "available",
+            "reason": "",
+            "current_context": "prod-cluster",
+        },
+    ) == 0
+
+    incident_dir = tmp_path / ".local" / "incidents" / "local-context-hint"
+    intake = load_yaml(incident_dir / "phase1-intake.yaml")
+    output = load_yaml(incident_dir / "adapter-output.yaml")
+    assert intake["local_context"] == {
+        "status": "available",
+        "reason": "",
+        "current_context": "prod-cluster",
+    }
+    assert "prod-cluster" in output["follow_up_questions"][0]["question"]
+    assert output["follow_up_questions"][0]["field"] == "environment_mode"
+
+
+def test_start_ready_remote_does_not_probe_local_context(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    monkeypatch.setattr(module, "validate_remote_environment", lambda access: {"status": "passed", "checks": []})
+    monkeypatch.setattr(
+        module,
+        "discover_mongodb_inventory",
+        lambda access, namespace: {
+            "status": "passed",
+            "selected_namespace": "psmdb-test",
+            "namespace_source": "auto_discovered",
+        },
+    )
+
+    args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="remote-no-local-probe",
+        customer_clue="mongo node may be unhealthy",
+        environment_ip=["192.168.154.251"],
+        username="root",
+        password="123",
+        port=22,
+        namespace="",
+        cluster_id="",
+        environment_mode="remote",
+        output_root=".local/incidents",
+    )
+
+    def fail_probe():
+        raise AssertionError("ready remote start must not probe local context")
+
+    assert module.command_start(args, probe_local_context=fail_probe) == 0
+
+    intake = load_yaml(tmp_path / ".local" / "incidents" / "remote-no-local-probe" / "phase1-intake.yaml")
+    assert intake["local_context"]["status"] == "not_checked"
+
+
 def test_start_can_continue_blocked_incident_with_missing_remote_answers(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
     calls = []

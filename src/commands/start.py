@@ -118,7 +118,7 @@ def _namespace_not_found_follow_up() -> Dict[str, str]:
     )
 
 
-def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int:
+def run(args, *, validate_remote_environment, discover_mongodb_inventory, probe_local_context) -> int:
     if not hasattr(args, "middleware"):
         args.middleware = ""
     if not hasattr(args, "environment_mode"):
@@ -146,6 +146,15 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
     created_at = now_iso()
     prior_meta = load_yaml(output_dir / "meta.yaml") if (output_dir / "meta.yaml").exists() else {}
     original_created_at = prior_meta.get("created_at") or created_at
+
+    local_context = {
+        "status": "not_checked",
+        "reason": "",
+        "current_context": "",
+    }
+    if not primary_ip or str(args.environment_mode or "").strip().lower() == "local":
+        local_context = probe_local_context()
+    args.local_context = local_context
 
     intake = build_start_intake(args)
     blocking_items = list(intake["blocking_items"])

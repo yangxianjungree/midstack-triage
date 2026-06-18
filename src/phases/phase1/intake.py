@@ -81,10 +81,17 @@ def _intake_scenario(mode_name: str, customer_clue: str) -> Dict[str, str]:
     }
 
 
-def _environment_mode_question() -> Dict[str, str]:
+def _environment_mode_question(local_context: Dict[str, str] | None = None) -> Dict[str, str]:
+    question = "当前插件能否通过 SSH 进入目标环境？如果不能，请说明是在故障集群机器上(local)，还是只有日志/截图/命令输出(offline)。"
+    if (local_context or {}).get("status") == "available":
+        current_context = str((local_context or {}).get("current_context") or "")
+        question = "%s 本机检测到可用 kubectl context%s；如果这就是故障集群，请改用 local，否则请补 SSH 信息。" % (
+            question,
+            " %s" % current_context if current_context else "",
+        )
     return _follow_up(
         "environment_mode",
-        "当前插件能否通过 SSH 进入目标环境？如果不能，请说明是在故障集群机器上(local)，还是只有日志/截图/命令输出(offline)。",
+        question,
         "remote, local, or offline",
     )
 
@@ -135,11 +142,11 @@ def _offline_artifact_status(artifact_source: str) -> Dict[str, Any]:
     }
 
 
-def _remote_required_items(args: Any, primary_ip: str) -> tuple[List[Dict[str, str]], List[Dict[str, str]]]:
+def _remote_required_items(args: Any, primary_ip: str, local_context: Dict[str, str]) -> tuple[List[Dict[str, str]], List[Dict[str, str]]]:
     blocking_items: List[Dict[str, str]] = []
     follow_up_questions: List[Dict[str, str]] = []
     if not primary_ip:
-        follow_up_questions.append(_environment_mode_question())
+        follow_up_questions.append(_environment_mode_question(local_context))
         blocking_items.append(
             _blocking_item(
                 "missing_environment_ip",
@@ -168,6 +175,11 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
     primary_ip = env_ips[0] if env_ips else ""
     pasted_evidence = str(getattr(args, "pasted_evidence", "") or "")
     manual_evidence_ref = str(getattr(args, "manual_evidence_ref", "") or "")
+    local_context = getattr(args, "local_context", None) or {
+        "status": "not_checked",
+        "reason": "",
+        "current_context": "",
+    }
     blocking_items: List[Dict[str, str]] = []
     follow_up_questions: List[Dict[str, str]] = []
     manual_evidence: Dict[str, str] = {
@@ -193,7 +205,7 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
             manual_evidence["ref"] = manual_evidence_ref
 
     if mode.name == "remote":
-        remote_blocks, remote_questions = _remote_required_items(args, primary_ip)
+        remote_blocks, remote_questions = _remote_required_items(args, primary_ip, local_context)
         blocking_items.extend(remote_blocks)
         follow_up_questions.extend(remote_questions)
     elif mode.name == "local":
@@ -255,6 +267,7 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
         "collects_live_evidence": mode.collects_live_evidence,
         "offline_artifact": offline_artifact,
         "manual_evidence": manual_evidence,
+        "local_context": local_context,
         "blocking_items": blocking_items,
         "follow_up_questions": follow_up_questions,
     }

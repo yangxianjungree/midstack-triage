@@ -167,6 +167,7 @@ superseded_by: none
 - `password`：`remote` 模式必填
 - `port`：可选，默认 `22`
 - `artifact_source`：`offline` 模式可选；提供时必须指向已有离线证据目录
+- `pasted_evidence`：`offline` 模式可选；保存为原始证据，不直接进入分析
 - `clue`：可选，支持直接传客户原始故障线索
 
 原则：
@@ -180,6 +181,7 @@ superseded_by: none
 - `local` 表示 runtime 已在故障集群或控制面机器上；当前只在 Phase 1 识别并返回 blocked 引导，不执行本地采集
 - `offline` 表示仅消费已有 incident、fixture、remote-run、日志或手工命令输出；缺少 `artifact_source` 时 `/start` 返回 blocked 引导
 - `offline` 模式提供完整 `artifact_source` 时，`/start` 可返回 `ready`，但不执行分析；下一步仍走 `/plugin:analyse --execution-mode offline`
+- `offline` 模式提供 `pasted_evidence` 时，`/start` 将其保存到 `logs/raw/manual-evidence.txt`，但仍保持 `blocked`，直到存在完整离线证据目录或后续治理步骤
 - Phase 1 会在 `phase1-intake.yaml` 记录 `intake_scenario`，用于区分 `remote_ssh`、`local_fault_cluster`、`offline_existing_artifacts`、`offline_production` 和 `manual_guided_offline`
 - `intake_scenario` 不改变当前执行能力；`remote_ssh` 仍是唯一 ready live path，其他场景在对应 executor 或 artifact path 完成前保持 `blocked`
 - `offline_production` 和 `manual_guided_offline` 应返回场景化追问，分别索要告警/SRE 引用或手工命令输出/截图/日志

@@ -32,12 +32,14 @@ Parse `$ARGUMENTS` for:
 - `port`: default `22` unless specified.
 - `environment_mode`: default `remote`; use `local` only when the runtime is already on the fault cluster/control host, or `offline` when the user only has existing artifacts or pasted command output.
 - `artifact_source`: for `offline`, provide an existing local artifact directory when one exists.
+- `pasted_evidence`: for `offline`, pass pasted command output or screen text as raw evidence only.
 
 Default `remote` mode is the current main path and requires `--environment-ip`,
 `--username`, and `--password`. `local` is recognized by Phase 1 but returns
 blocked guidance until local collection exists. `offline` returns blocked
 guidance unless `--artifact-source` points at a complete offline evidence
-directory.
+directory. `--pasted-evidence` is preserved under `logs/raw/` but does not make
+the incident ready.
 
 If a previous `start` returned `blocked` and `$ARGUMENTS` appears to answer its
 follow-up questions, run `start` again with the same `--incident-id`. Fields

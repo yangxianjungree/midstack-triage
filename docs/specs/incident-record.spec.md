@@ -205,8 +205,11 @@ updated_at:
 
 - `logs/raw/`
   - 原始日志
+  - 手工粘贴的命令输出或截图文字应先作为原始证据保存，例如 `logs/raw/manual-evidence.txt`
 - `logs/processed/`
   - 处理后日志
+
+手工粘贴内容在未经治理前不得直接伪装成 `structured_record.yaml`、`signal_bundle.yaml` 或 `collection_report.yaml`。
 
 ## 10. 文件之间的关系
 

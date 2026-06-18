@@ -23,6 +23,7 @@ def args(**overrides):
         "namespace": "",
         "cluster_id": "",
         "artifact_source": "",
+        "pasted_evidence": "",
     }
     values.update(overrides)
     return SimpleNamespace(**values)
@@ -107,6 +108,23 @@ def test_manual_offline_clue_is_classified_for_todesk_style_guidance():
     assert intake["intake_scenario"]["id"] == "manual_guided_offline"
     assert intake["intake_scenario"]["access_pattern"] == "operator_paste"
     assert intake["follow_up_questions"][0]["field"] == "manual_input"
+
+
+def test_manual_offline_pasted_evidence_is_captured_but_not_ready():
+    intake = build_start_intake(
+        args(
+            environment_mode="offline",
+            customer_clue="ToDesk 环境，只能粘贴命令输出",
+            pasted_evidence="kubectl get pods output",
+        )
+    )
+
+    assert intake["status"] == "blocked"
+    assert intake["manual_evidence"] == {
+        "status": "captured",
+        "kind": "pasted_text",
+    }
+    assert intake["blocking_items"][0]["code"] == "offline_start_needs_artifacts"
 
 
 def test_offline_intake_blocks_when_artifact_source_does_not_exist(tmp_path):

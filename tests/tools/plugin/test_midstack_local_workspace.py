@@ -295,6 +295,39 @@ def test_start_offline_mode_ready_with_valid_artifact_source(tmp_path, monkeypat
     ]
 
 
+def test_start_manual_offline_pasted_evidence_is_saved_as_raw_only(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="manual-evidence-start",
+        customer_clue="ToDesk 环境，只能粘贴命令输出",
+        environment_ip=[],
+        username="",
+        password="",
+        port=22,
+        namespace="",
+        cluster_id="",
+        environment_mode="offline",
+        artifact_source="",
+        pasted_evidence="kubectl get pods\npod-a CrashLoopBackOff\n",
+        output_root=".local/incidents",
+    )
+
+    assert module.command_start(args) == 0
+
+    incident_dir = tmp_path / ".local" / "incidents" / "manual-evidence-start"
+    output = load_yaml(incident_dir / "adapter-output.yaml")
+    intake = load_yaml(incident_dir / "phase1-intake.yaml")
+    raw_file = incident_dir / "logs" / "raw" / "manual-evidence.txt"
+    assert output["status"] == "blocked"
+    assert intake["manual_evidence"]["status"] == "captured"
+    assert raw_file.read_text(encoding="utf-8") == "kubectl get pods\npod-a CrashLoopBackOff\n"
+    assert not (incident_dir / "structured_record.yaml").exists()
+    assert not (incident_dir / "signal_bundle.yaml").exists()
+    assert not (incident_dir / "collection_report.yaml").exists()
+
+
 def test_offline_analyse_does_not_call_remote_collection(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
     fixture = ROOT / "tests" / "fixtures" / "active" / "mongodb" / "kubernetes-crashloop-sample"

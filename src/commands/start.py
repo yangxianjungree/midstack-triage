@@ -84,6 +84,8 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
         args.port = None
     if not hasattr(args, "artifact_source"):
         args.artifact_source = ""
+    if not hasattr(args, "pasted_evidence"):
+        args.pasted_evidence = ""
     output_root = path_from_arg(args.output_root)
     prior_values: Dict[str, Any] = {}
     if args.incident_id:
@@ -182,7 +184,13 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
     }
     if args.artifact_source:
         input_payload["artifact_source"] = args.artifact_source
+    if args.pasted_evidence:
+        input_payload["manual_evidence_ref"] = "logs/raw/manual-evidence.txt"
     write_yaml(output_dir / "input.yaml", input_payload)
+    if args.pasted_evidence:
+        raw_file = output_dir / "logs" / "raw" / "manual-evidence.txt"
+        raw_file.parent.mkdir(parents=True, exist_ok=True)
+        raw_file.write_text(args.pasted_evidence, encoding="utf-8")
     if primary_ip and intake["environment_mode"] == "remote":
         write_yaml(
             output_dir / "remote-config.yaml",

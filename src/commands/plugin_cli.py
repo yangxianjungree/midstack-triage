@@ -72,6 +72,7 @@ def build_parser() -> argparse.ArgumentParser:
     start.add_argument("--output-root", default=".local/incidents")
     start.add_argument("--environment-ip", action="append", default=[], help="Remote environment IP. May be repeated; the first IP is used as jump host.")
     start.add_argument("--artifact-source", default="", help="Existing offline artifact directory for --environment-mode offline.")
+    start.add_argument("--pasted-evidence", default="", help="Raw pasted command output or screen text for manual offline intake.")
     start.add_argument("--username", default="")
     start.add_argument("--password", default="")
     start.add_argument("--port", type=int)

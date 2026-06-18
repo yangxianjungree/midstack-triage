@@ -138,7 +138,6 @@ def _offline_artifact_status(artifact_source: str) -> Dict[str, Any]:
 def _remote_required_items(args: Any, primary_ip: str) -> tuple[List[Dict[str, str]], List[Dict[str, str]]]:
     blocking_items: List[Dict[str, str]] = []
     follow_up_questions: List[Dict[str, str]] = []
-    offline_artifact: Dict[str, Any] = {}
     if not primary_ip:
         follow_up_questions.append(_environment_mode_question())
         blocking_items.append(
@@ -167,8 +166,13 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
     intake_scenario = _intake_scenario(mode.name, customer_clue)
     env_ips = [str(item) for item in (getattr(args, "environment_ip", []) or []) if item]
     primary_ip = env_ips[0] if env_ips else ""
+    pasted_evidence = str(getattr(args, "pasted_evidence", "") or "")
     blocking_items: List[Dict[str, str]] = []
     follow_up_questions: List[Dict[str, str]] = []
+    manual_evidence: Dict[str, str] = {
+        "status": "missing",
+        "kind": "",
+    }
     offline_artifact: Dict[str, Any] = {
         "status": "unconfigured",
         "source": "",
@@ -179,6 +183,11 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
     if not middleware:
         blocking_items.append(_blocking_item("missing_middleware", "middleware is required", "provide middleware, for example mongodb", "middleware"))
         follow_up_questions.append(_follow_up("middleware", "要排查的中间件是什么？", "middleware name, for example mongodb"))
+    if pasted_evidence:
+        manual_evidence = {
+            "status": "captured",
+            "kind": "pasted_text",
+        }
 
     if mode.name == "remote":
         remote_blocks, remote_questions = _remote_required_items(args, primary_ip)
@@ -242,6 +251,7 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
         "requires_remote_access": mode.requires_transport,
         "collects_live_evidence": mode.collects_live_evidence,
         "offline_artifact": offline_artifact,
+        "manual_evidence": manual_evidence,
         "blocking_items": blocking_items,
         "follow_up_questions": follow_up_questions,
     }

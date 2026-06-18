@@ -39,16 +39,17 @@ Extract fields from the user's natural-language request:
 - `customer_clue`: preserve the original symptom or fault clue from the user message when present.
 - `port`: default to `22` unless the user provides a different SSH port.
 - `artifact_source`: for offline mode, extract an existing local incident, fixture, or remote-run artifact directory when the user provides one.
+- `pasted_evidence`: for offline/manual mode, pass pasted command output or screen text as raw evidence only.
 
 Default environment mode is `remote`, which means the runtime can SSH into a jump host or fault-domain host and then use remote `kubectl`.
 
 Use `--environment-mode local` only when the agent/runtime is already on the fault cluster or control host. This mode is recognized by Phase 1 but currently returns blocked guidance until local collection is implemented.
 
-Use `--environment-mode offline` when the user only has existing incident artifacts, remote-run output, logs, screenshots, or pasted command output. If the user provides an existing complete artifact directory, pass it as `--artifact-source`; otherwise the runtime returns blocked guidance.
+Use `--environment-mode offline` when the user only has existing incident artifacts, remote-run output, logs, screenshots, or pasted command output. If the user provides an existing complete artifact directory, pass it as `--artifact-source`; if they paste command output or screen text, pass it as `--pasted-evidence`. Pasted evidence is stored raw and still returns blocked guidance.
 
 Required CLI fields for `remote`: `middleware`, at least one `--environment-ip`, `--username`, `--password`.
 
-Optional: `--customer-clue`, `--port` (default 22), `--namespace`, `--cluster-id`, `--incident-id`, `--environment-mode`, `--artifact-source`.
+Optional: `--customer-clue`, `--port` (default 22), `--namespace`, `--cluster-id`, `--incident-id`, `--environment-mode`, `--artifact-source`, `--pasted-evidence`.
 
 If a previous `start` returned `blocked` and the user is answering its
 follow-up questions, run `start` again with the same `--incident-id`. You may

@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from shared.io import load_yaml_object as load_yaml
+from shared.workspace import runtime_root
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = runtime_root()
 
 
 def load_manifest_readonly_scripts(middleware: str) -> Set[str]:

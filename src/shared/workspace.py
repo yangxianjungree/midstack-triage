@@ -12,6 +12,17 @@ from shared.io import load_yaml_object, now_iso as runtime_now_iso, write_yaml_o
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def source_root() -> Path:
+    return ROOT
+
+
+def runtime_root() -> Path:
+    value = os.environ.get("MIDSTACK_TRIAGE_RUNTIME_ROOT", "").strip()
+    if value:
+        return Path(value).expanduser().resolve()
+    return source_root()
+
+
 def now_iso() -> str:
     return runtime_now_iso()
 
@@ -57,7 +68,7 @@ def workspace_root() -> Path:
     value = os.environ.get("MIDSTACK_TRIAGE_WORKSPACE", "").strip()
     if value:
         return Path(value).expanduser().resolve()
-    return ROOT
+    return runtime_root()
 
 
 def path_from_arg(value: str) -> Path:
@@ -72,7 +83,7 @@ def resolve_path(value: str) -> Path:
     workspace_path = workspace_root() / path
     if workspace_path.exists():
         return workspace_path
-    return ROOT / path
+    return runtime_root() / path
 
 
 def current_incident_marker(output_root: Path) -> Path:

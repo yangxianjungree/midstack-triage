@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from shared.io import load_yaml_object as load_yaml
+from shared.workspace import runtime_root
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = runtime_root()
 DEFAULT_MAP_PATH = ROOT / "core" / "routing" / "scenario-signal-map.yaml"
 
 

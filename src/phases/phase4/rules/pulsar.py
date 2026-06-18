@@ -7,14 +7,14 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 try:
-    from .common import load_yaml, write_yaml
+    from .common import load_yaml, runtime_root, write_yaml
 except ImportError:  # pragma: no cover - supports direct file execution
     RULES_DIR = Path(__file__).resolve().parent
     if str(RULES_DIR) not in sys.path:
         sys.path.insert(0, str(RULES_DIR))
-    from common import load_yaml, write_yaml
+    from common import load_yaml, runtime_root, write_yaml
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = runtime_root()
 
 
 def parse_args() -> argparse.Namespace:

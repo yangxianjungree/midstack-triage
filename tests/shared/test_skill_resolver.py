@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import importlib
+import os
 import sys
 import tempfile
 import unittest
@@ -19,6 +21,40 @@ from shared.skill_resolver import (  # noqa: E402
 
 
 class SkillResolverTest(unittest.TestCase):
+    def test_resolve_skills_uses_runtime_root(self) -> None:
+        module = importlib.import_module("shared.skill_resolver")
+        original_runtime_root = os.environ.get("MIDSTACK_TRIAGE_RUNTIME_ROOT")
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime_root = Path(tmp) / "runtime"
+            skill_dir = runtime_root / "domains" / "mongodb" / "skills" / "replica-set" / "demo"
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "metadata.yaml").write_text(
+                yaml.safe_dump(
+                    {
+                        "id": "mongodb.skill.demo",
+                        "title": "Demo",
+                        "middleware": "mongodb",
+                        "component": "replica-set",
+                        "primary_scenario": "replica-inconsistency",
+                        "required_assets": ["demo"],
+                    },
+                    sort_keys=False,
+                ),
+                encoding="utf-8",
+            )
+            os.environ["MIDSTACK_TRIAGE_RUNTIME_ROOT"] = str(runtime_root)
+            try:
+                reloaded = importlib.reload(module)
+                matches = reloaded.resolve_skills("mongodb", "replica-inconsistency")
+                self.assertEqual([item["id"] for item in matches], ["mongodb.skill.demo"])
+                self.assertEqual(matches[0]["skill_dir"], skill_dir)
+            finally:
+                if original_runtime_root is None:
+                    os.environ.pop("MIDSTACK_TRIAGE_RUNTIME_ROOT", None)
+                else:
+                    os.environ["MIDSTACK_TRIAGE_RUNTIME_ROOT"] = original_runtime_root
+                importlib.reload(module)
+
     def test_script_collection_statuses_reads_script_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output_dir = Path(tmp)

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
+import os
 import sys
+import tempfile
 import unittest
+import importlib
 from pathlib import Path
 
 import yaml
@@ -33,6 +36,30 @@ def load_fixture_structured_record(case_id: str) -> dict:
 
 
 class ScenarioRouterTest(unittest.TestCase):
+    def test_load_routing_map_uses_runtime_root(self) -> None:
+        module = importlib.import_module("shared.scenario_router")
+        original_runtime_root = os.environ.get("MIDSTACK_TRIAGE_RUNTIME_ROOT")
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime_root = Path(tmp) / "runtime"
+            routing_dir = runtime_root / "core" / "routing"
+            routing_dir.mkdir(parents=True)
+            routing_map = routing_dir / "scenario-signal-map.yaml"
+            routing_map.write_text(
+                yaml.safe_dump({"routing_map_id": "test.map", "routes": []}),
+                encoding="utf-8",
+            )
+            os.environ["MIDSTACK_TRIAGE_RUNTIME_ROOT"] = str(runtime_root)
+            try:
+                reloaded = importlib.reload(module)
+                self.assertEqual(reloaded.DEFAULT_MAP_PATH, routing_map)
+                self.assertEqual(reloaded.load_routing_map()["routing_map_id"], "test.map")
+            finally:
+                if original_runtime_root is None:
+                    os.environ.pop("MIDSTACK_TRIAGE_RUNTIME_ROOT", None)
+                else:
+                    os.environ["MIDSTACK_TRIAGE_RUNTIME_ROOT"] = original_runtime_root
+                importlib.reload(module)
+
     def test_crashloop_routes_to_kubernetes_runtime(self) -> None:
         result = infer_scenario(load_fixture_signal_bundle("kubernetes-crashloop-sample"))
         self.assertEqual(result["scenario"], "kubernetes-runtime")

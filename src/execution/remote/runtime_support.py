@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
 from shared.io import load_yaml_object, now_iso as runtime_now_iso, write_json_object, write_yaml_object
+from shared.workspace import runtime_root
 
 
-RUNTIME_ROOT = Path(os.environ.get("MIDSTACK_TRIAGE_RUNTIME_ROOT", "")).expanduser().resolve() if os.environ.get("MIDSTACK_TRIAGE_RUNTIME_ROOT") else None
-ROOT = RUNTIME_ROOT if RUNTIME_ROOT else Path(__file__).resolve().parents[3]
+ROOT = runtime_root()
 DEFAULT_LOCAL_OUTPUT = ROOT / ".local" / "remote-runs"
 DEFAULT_REMOTE_ROOT = "/tmp/midstack-triage"
 DEFAULT_RUNTIME_MAP = ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml"

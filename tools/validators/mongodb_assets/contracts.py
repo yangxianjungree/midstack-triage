@@ -109,9 +109,6 @@ def load_scenarios(scenarios_dir: Path, middleware: str, errors: List[str]) -> D
         for field in ("tags", "symptoms", "applicable_middleware", "diagnostic_goals", "route_hints"):
             if field in data:
                 require_list_of_strings(data, field, scenario_file, errors)
-        applicable = data.get("applicable_middleware") or []
-        if isinstance(applicable, list) and middleware not in applicable:
-            fail(errors, "%s applicable_middleware must include %s" % (scenario_file, middleware))
     return scenarios
 
 

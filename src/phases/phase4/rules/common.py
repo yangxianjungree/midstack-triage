@@ -11,6 +11,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from shared.io import load_yaml_object, write_yaml_object
+from shared.workspace import runtime_root
 
 
 def load_yaml(path: Path) -> Dict[str, Any]:

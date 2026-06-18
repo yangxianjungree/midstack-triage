@@ -29,6 +29,10 @@ from .common import (  # noqa: E402
 def validate_scenario_reference(metadata_path: Path, scenario_id: str, scenarios: Dict[str, Dict[str, Any]], errors: List[str]) -> None:
     if scenario_id not in scenarios:
         fail(errors, "%s scenario reference does not exist: scenarios/%s/scenario.yaml" % (metadata_path, scenario_id))
+        return
+    applicable = scenarios[scenario_id].get("applicable_middleware") or []
+    if isinstance(applicable, list) and MIDDLEWARE not in applicable:
+        fail(errors, "%s scenario %s does not declare middleware %s" % (metadata_path, scenario_id, MIDDLEWARE))
 
 
 def validate_component_reference(metadata_path: Path, component: str, triage_surfaces: set, errors: List[str]) -> None:

@@ -7,7 +7,6 @@ routes:
   - scenario: kubernetes-runtime
     middleware:
       - mongodb
-      - pulsar
     when_any_signal:
       - pod-unschedulable
       - pod-node-selector-mismatch
@@ -51,7 +50,6 @@ routes:
   - scenario: resource-exhaustion
     middleware:
       - mongodb
-      - pulsar
     when_any_signal:
       - pod-resource-insufficient
       - node-disk-pressure

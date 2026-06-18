@@ -13,7 +13,6 @@ symptoms:
   - broker reports backlog or ledger write timeout on affected topics
 applicable_middleware:
   - pulsar
-  - mongodb
 diagnostic_goals:
   - determine whether backlog is caused by consumer stall, broker pressure, bookie storage, or routing issues
   - identify the affected topic, subscription, tenant, and blast radius

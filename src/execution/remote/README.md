@@ -7,13 +7,16 @@
 - `access.py`
   SSH/SSHPass transport、基础环境校验、scp 收发。
 - `transport.py`
-  执行编排使用的 transport 接口；当前默认实现仍委托 `access.py` 的 SSH/scp 函数。
+  执行编排使用的 transport 接口；默认 remote transport 委托 `access.py` 的
+  SSH/scp 函数，local transport 在本机通过 subprocess/文件复制执行同一套编排。
 - `error_contract.py`
   remote executor 的错误码、状态映射、capability check 条目和通用错误分类。
 - `capabilities.py`
   兼容导出旧 capability 符号；新实现优先落到对应子模块。
 - `executor_preflight.py`
-  remote executor 批量运行前的基础 preflight：本地 `sshpass`、SSH、远端 `kubectl`、集群上下文和 `kubectl exec` 权限。
+  executor 批量运行前的基础 preflight：remote 检查本地 `sshpass`、SSH、远端
+  `kubectl`、集群上下文和 `kubectl exec` 权限；local 检查本机 shell、
+  `kubectl`、集群上下文和 `kubectl exec` 权限。
 - `mongodb_collection_runtime.py`
   MongoDB Pod/容器目标解析、mongo shell 选择、pod 内执行目标摘要。
 - `script_capabilities.py`
@@ -33,7 +36,8 @@
 - `executor.py`
   MongoDB 远程脚本执行器兼容门面；保留旧导入面和 `python -m execution.remote.executor`。
 - `cli.py`
-  远程执行器 CLI 参数解析和批量编排；`python -m execution.remote.executor` 仍通过兼容入口转发到这里。
+  执行器 CLI 参数解析和批量编排；`python -m execution.remote.executor` 仍通过
+  兼容入口转发到这里，`--transport local` 显式选择本地执行。
 
 规则：
 

@@ -98,7 +98,8 @@ Phase 2 负责持续从用户交互中补齐信息，并通过只读命令判断
 
 当前 `ready` 适用于 `remote` 主路径、具备完整 `artifact_source` 的
 `offline` 证据目录，以及显式 `local` 且本机 kubectl context 与对象盘点均通过
-的启动路径。`local` 的后续分析采集执行链路仍需单独完成。
+的启动路径。显式 `local` 的后续分析采集通过本地 transport 复用 Phase 3
+脚本编排，不经过 SSH。
 
 ### 本地上下文提示
 
@@ -107,8 +108,10 @@ Phase 2 负责持续从用户交互中补齐信息，并通过只读命令判断
 Kubernetes context，帮助用户判断是否应切换到 `local`、继续提供 SSH 信息，
 或改用 `offline` 证据路径。显式 `local` 模式会在 Phase 2 重新探测本机
 context；context 可用且目标对象盘点通过时，`/start` 可返回 `ready` 并写入
-`local-config.yaml`。如果 context 缺失或不可达，应返回结构化 `blocked`，并在
-追问中说明本机 kubectl context 状态。
+`local-config.yaml`。`/analyse --execution-mode local` 读取该文件并在本机执行
+只读采集脚本。如果 context 缺失、不可达，或 ready incident 缺少
+`local-config.yaml`，应返回结构化 `blocked`，并在追问或 next action 中说明
+本机 kubectl context 状态。
 
 ### 典型 `blocked` 条件
 
@@ -117,6 +120,7 @@ context；context 可用且目标对象盘点通过时，`/start` 可返回 `rea
 - 远程环境没有 Kubernetes
 - 无法执行基础 Kubernetes 操作，例如 `kubectl exec`
 - 显式 `local` 模式下，本机 kubectl context 缺失或不可达
+- 显式 `local` analyse 时，ready incident 缺少 `local-config.yaml`
 - 远程环境中不存在目标中间件，或当前入口无法触达目标环境
 
 ## 3. 第 2 段：环境确认与对象盘点

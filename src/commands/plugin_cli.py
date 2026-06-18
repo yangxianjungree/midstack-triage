@@ -14,7 +14,7 @@ from phases.phase1.startup import validate_remote_environment
 from phases.phase2.inventory import discover_mongodb_inventory
 from phases.phase3.incident_build import build_incident_from_remote_run
 from phases.phase3.recollection_run import run_directed_recollection_if_needed
-from phases.phase3.remote_collection import run_remote_collection
+from phases.phase3.remote_collection import run_local_collection, run_remote_collection
 from phases.phase3.remote_run import load_remote_executor_run_result, remote_executor_next_actions, remote_executor_required_user_action
 from phases.phase3.report_gaps import normalize_collection_report_gaps
 from phases.phase3.scenario_routing import apply_scenario_routing_if_needed
@@ -39,6 +39,7 @@ def command_analyse(args: argparse.Namespace) -> int:
     return analyse_command.run(
         args,
         run_remote_collection=run_remote_collection,
+        run_local_collection=run_local_collection,
         load_remote_executor_run_result=load_remote_executor_run_result,
         build_incident_from_remote_run=build_incident_from_remote_run,
         apply_scenario_routing_if_needed=apply_scenario_routing_if_needed,

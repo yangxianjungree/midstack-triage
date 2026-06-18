@@ -227,6 +227,11 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory, probe_
                 "name": "%s-local" % incident_id,
                 "purpose": "incident local Kubernetes environment",
                 "created_at": created_at,
+                "access": {
+                    "execution_mode": "local",
+                    "current_context": str((readiness.get("local_context") or {}).get("current_context") or ""),
+                    "primary_ip": "local",
+                },
                 "context": readiness.get("local_context") or {},
                 "defaults": {
                     "kubectl_required": True,

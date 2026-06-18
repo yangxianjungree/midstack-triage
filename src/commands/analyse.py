@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-from execution.modes import mode_allows_remote_collection, resolve_execution_mode
+from execution.modes import mode_allows_existing_artifacts, mode_allows_remote_collection, resolve_execution_mode
 from phases.phase4.rules import generate_rule_analysis, supported_middlewares
 from shared.workspace import (
     adapter_output,
@@ -100,16 +100,42 @@ def _write_remote_executor_failed_output(
     return 1
 
 
+def _write_missing_local_config_output(incident_dir: Path, input_data: Dict[str, Any]) -> int:
+    incident_id = str(input_data.get("incident_id") or incident_dir.name)
+    middleware = str(input_data.get("middleware") or "mongodb")
+    return write_blocked_output(
+        "analyse",
+        incident_id,
+        middleware,
+        incident_dir,
+        "incident local config is missing",
+        [
+            {
+                "code": "missing_local_config",
+                "message": "missing incident local-config.yaml: %s" % (incident_dir / "local-config.yaml"),
+                "required_user_action": "rerun /midstack:start --environment-mode local so Phase 2 can validate local kubectl access",
+            }
+        ],
+        ["rerun /midstack:start --environment-mode local with a working local kubectl context"],
+    )
+
+
 def _prepare_analysis_inputs(
     args,
     output_dir: Path,
     incident_mode: bool,
     run_remote_collection,
+    run_local_collection,
     load_remote_executor_run_result,
     build_incident_from_remote_run,
 ) -> Dict[str, Any]:
     if args.remote_config:
         remote_run_dir = run_remote_collection(args, output_dir)
+        remote_run_result = load_remote_executor_run_result(remote_run_dir)
+        build_incident_from_remote_run(remote_run_dir, output_dir, args, preserve_existing_input=incident_mode)
+        return remote_run_result
+    if getattr(args, "local_config", ""):
+        remote_run_dir = run_local_collection(args, output_dir)
         remote_run_result = load_remote_executor_run_result(remote_run_dir)
         build_incident_from_remote_run(remote_run_dir, output_dir, args, preserve_existing_input=incident_mode)
         return remote_run_result
@@ -253,6 +279,7 @@ def run(
     args,
     *,
     run_remote_collection,
+    run_local_collection,
     load_remote_executor_run_result,
     build_incident_from_remote_run,
     apply_scenario_routing_if_needed,
@@ -286,22 +313,6 @@ def run(
     incident_mode = False
     previous_incident_status = ""
     remote_run_result: Dict[str, Any] = {}
-    if execution_mode.name == "local":
-        return write_blocked_output(
-            "analyse",
-            "none",
-            "mongodb",
-            output_root,
-            "local execution mode is not implemented",
-            [
-                {
-                    "code": "local_execution_not_implemented",
-                    "message": "local execution mode is reserved but no local executor is available yet",
-                    "required_user_action": "use --execution-mode remote or offline",
-                }
-            ],
-            ["use --execution-mode remote for live collection or offline for existing artifacts"],
-        )
     if not (args.incident_dir or args.remote_config or args.remote_run_dir or args.input_dir):
         try:
             args.incident_dir = str(read_current_incident(output_root))
@@ -336,6 +347,22 @@ def run(
                 }
             ],
             ["rerun analyse with --execution-mode remote or use existing collected artifacts"],
+        )
+    if (args.input_dir or args.remote_run_dir) and not mode_allows_existing_artifacts(execution_mode):
+        return write_blocked_output(
+            "analyse",
+            "none",
+            "mongodb",
+            path_from_arg(args.output_dir) if getattr(args, "output_dir", "") else output_root,
+            "execution mode does not allow existing artifacts",
+            [
+                {
+                    "code": "execution_mode_existing_artifacts_disabled",
+                    "message": "--input-dir/--remote-run-dir requires --execution-mode remote or offline",
+                    "required_user_action": "use --execution-mode offline for existing artifacts, or use a ready local incident for local live collection",
+                }
+            ],
+            ["rerun analyse with --execution-mode offline or provide --incident-dir for local live collection"],
         )
     if args.incident_dir:
         incident_mode = True
@@ -382,7 +409,6 @@ def run(
         input_data = load_yaml(incident_dir / "input.yaml")
         args.incident_input = input_data
         args.incident_id_override = str(input_data.get("incident_id") or incident_dir.name)
-        args.remote_config = str(incident_dir / "remote-config.yaml")
         object_inventory_file = incident_dir / "object-inventory.yaml"
         if object_inventory_file.exists():
             args.object_inventory = str(object_inventory_file)
@@ -414,7 +440,16 @@ def run(
                     ["run /midstack:analyse with --execution-mode remote or provide existing artifacts"],
                 )
             args.remote_config = ""
-        elif not Path(args.remote_config).exists():
+            args.local_config = ""
+        elif execution_mode.name == "local":
+            args.remote_config = ""
+            args.local_config = str(incident_dir / "local-config.yaml")
+            if not Path(args.local_config).exists():
+                return _write_missing_local_config_output(incident_dir, input_data)
+        else:
+            args.remote_config = str(incident_dir / "remote-config.yaml")
+            args.local_config = ""
+        if execution_mode.name == "remote" and not Path(args.remote_config).exists():
             return write_blocked_output(
                 "analyse",
                 str(input_data.get("incident_id") or incident_dir.name),
@@ -443,6 +478,7 @@ def run(
             output_dir,
             incident_mode,
             run_remote_collection,
+            run_local_collection,
             load_remote_executor_run_result,
             build_incident_from_remote_run,
         )

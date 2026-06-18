@@ -81,7 +81,7 @@ from execution.remote.script_output_contract import (
     SCRIPT_OUTPUT_REQUIRED_FIELDS,
     validate_script_output_contract as validate_output_contract,
 )
-from execution.remote.transport import FunctionRemoteTransport, RemoteTransport
+from execution.remote.transport import FunctionRemoteTransport, LocalTransport, RemoteTransport
 
 
 def classify_remote_error(detail: str, default_code: str) -> Dict[str, str]:

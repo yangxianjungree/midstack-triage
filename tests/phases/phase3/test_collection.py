@@ -275,7 +275,44 @@ def test_run_remote_collection_invokes_execution_module(tmp_path, monkeypatch):
 
     assert result == remote_run_dir
     assert captured["command"][:3] == [sys.executable, "-m", "execution.remote.executor"]
+    assert "--transport" not in captured["command"]
     assert str(ROOT / "src") in captured["env"]["PYTHONPATH"].split(":")[0]
+
+
+def test_run_local_collection_invokes_execution_module_with_local_transport(tmp_path, monkeypatch):
+    output_dir = tmp_path / "incident"
+    remote_output_dir = tmp_path / "remote-runs"
+    remote_run_dir = remote_output_dir / "mongodb-local-run-20260619-000000"
+    remote_run_dir.mkdir(parents=True, exist_ok=True)
+    local_config = tmp_path / "local.yaml"
+    local_config.write_text("access:\n  execution_mode: local\n", encoding="utf-8")
+    captured = {}
+
+    def fake_run(command, env, stdout, stderr, universal_newlines, timeout):
+        captured["command"] = command
+
+        class Result:
+            returncode = 0
+            stdout = "local_dir=%s\n" % remote_run_dir
+            stderr = ""
+
+        return Result()
+
+    monkeypatch.setattr(phase3_remote_collection.subprocess, "run", fake_run)
+    args = SimpleNamespace(
+        local_config=str(local_config),
+        remote_output_dir=str(remote_output_dir),
+        remote_namespace="psmdb-test",
+        object_inventory="",
+    )
+
+    result = phase3_remote_collection.run_local_collection(args, output_dir)
+
+    assert result == remote_run_dir
+    assert captured["command"][:3] == [sys.executable, "-m", "execution.remote.executor"]
+    assert captured["command"][captured["command"].index("--config") + 1] == str(local_config)
+    assert captured["command"][captured["command"].index("--transport") + 1] == "local"
+    assert "--namespace" in captured["command"]
 
 
 def test_build_incident_from_remote_run_merges_and_copies_outputs(tmp_path):

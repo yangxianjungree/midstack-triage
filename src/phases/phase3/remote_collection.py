@@ -19,7 +19,7 @@ from .remote_run import (
 from .report_gaps import drop_closed_evidence_gaps, normalize_collection_report_gaps
 
 
-def run_remote_collection(args, output_dir: Path, script_ids: List[str] = None) -> Path:
+def _run_executor_collection(args, output_dir: Path, config_path: str, script_ids: List[str] = None, transport: str = "remote") -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     src_dir = str(Path(__file__).resolve().parents[2])
     env = os.environ.copy()
@@ -30,10 +30,12 @@ def run_remote_collection(args, output_dir: Path, script_ids: List[str] = None) 
         "-m",
         "execution.remote.executor",
         "--config",
-        str(resolve_path(args.remote_config)),
+        str(resolve_path(config_path)),
         "--output-dir",
         str(resolve_path(args.remote_output_dir)),
     ]
+    if transport == "local":
+        command.extend(["--transport", "local"])
     if getattr(args, "object_inventory", ""):
         command.extend(["--inventory-file", str(resolve_path(args.object_inventory))])
     if args.remote_namespace:
@@ -70,6 +72,14 @@ def run_remote_collection(args, output_dir: Path, script_ids: List[str] = None) 
     if local_dir is not None:
         return local_dir
     raise RuntimeError("remote executor output did not include local_dir")
+
+
+def run_remote_collection(args, output_dir: Path, script_ids: List[str] = None) -> Path:
+    return _run_executor_collection(args, output_dir, str(args.remote_config), script_ids, transport="remote")
+
+
+def run_local_collection(args, output_dir: Path, script_ids: List[str] = None) -> Path:
+    return _run_executor_collection(args, output_dir, str(args.local_config), script_ids, transport="local")
 
 
 def merge_remote_run_outputs(remote_run_dir: Path, output_dir: Path) -> None:

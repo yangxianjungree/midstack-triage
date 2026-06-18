@@ -14,6 +14,11 @@ from commands import plugin_cli as module  # noqa: E402
 from shared.workspace import load_yaml, path_from_arg, read_current_incident, resolve_path  # noqa: E402
 
 
+def write_yaml(path: Path, payload) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=False), encoding="utf-8")
+
+
 def test_path_from_arg_uses_workspace_env(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
     assert path_from_arg(".local/incidents") == tmp_path / ".local/incidents"
@@ -693,3 +698,145 @@ def test_offline_analyse_does_not_call_remote_collection(tmp_path, monkeypatch):
     assert module.command_analyse(args) == 0
     adapter = yaml.safe_load((output_dir / "adapter-output.yaml").read_text(encoding="utf-8"))
     assert adapter["status"] == "completed"
+
+
+def test_local_analyse_incident_uses_local_collection(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+    incident_dir = tmp_path / ".local" / "incidents" / "mongodb-local-ready"
+    incident_dir.mkdir(parents=True)
+    write_yaml(
+        incident_dir / "input.yaml",
+        {
+            "incident_id": "mongodb-local-ready",
+            "middleware": "mongodb",
+            "namespace": "psmdb-test",
+            "cluster_id": "",
+            "environment_mode": "local",
+            "execution_mode": "local",
+            "customer_clue": "MongoDB pod is not ready.",
+            "scenario": "unknown",
+        },
+    )
+    write_yaml(
+        incident_dir / "meta.yaml",
+        {
+            "incident_id": "mongodb-local-ready",
+            "middleware": "mongodb",
+            "status": "ready",
+            "current_command": "start",
+        },
+    )
+    write_yaml(
+        incident_dir / "local-config.yaml",
+        {
+            "access": {
+                "execution_mode": "local",
+                "current_context": "prod-cluster",
+            }
+        },
+    )
+    remote_run_dir = tmp_path / ".local" / "remote-runs" / "mongodb-local-run"
+    script_dir = remote_run_dir / "mongodb.collect.pods.state"
+    script_dir.mkdir(parents=True)
+    write_yaml(
+        script_dir / "context.yaml",
+        {
+            "incident_id": "mongodb-local-run",
+            "middleware": "mongodb",
+            "namespace": "psmdb-test",
+            "cluster_id": "local-run",
+            "topology_type": "unknown",
+        },
+    )
+    write_yaml(
+        remote_run_dir / "remote-executor-run.yaml",
+        {
+            "incident_id": "mongodb-local-run",
+            "middleware": "mongodb",
+            "status": "success",
+            "namespace": "psmdb-test",
+            "selected_ip": "local",
+            "error": {"code": "", "message": ""},
+            "script_results": [
+                {
+                    "script_id": "mongodb.collect.pods.state",
+                    "status": "success",
+                    "summary": "pods collected",
+                }
+            ],
+        },
+    )
+    write_yaml(
+        script_dir / "remote-executor-result.yaml",
+        {
+            "script_id": "mongodb.collect.pods.state",
+            "status": "success",
+            "process": {"exit_code": 0},
+        },
+    )
+    write_yaml(
+        script_dir / "output.yaml",
+        {
+            "script_id": "mongodb.collect.pods.state",
+            "status": "success",
+            "summary": "pods collected",
+            "structured_record_patch": {
+                "details": {
+                    "pods": [
+                        {
+                            "name": "mongo-0",
+                            "namespace": "psmdb-test",
+                            "status": "Running",
+                        }
+                    ]
+                }
+            },
+            "signal_bundle_patch": {
+                "abnormal_signals": [
+                    {
+                        "signal_id": "pod-not-ready",
+                        "object_ref": "pod/mongo-0",
+                    }
+                ]
+            },
+            "collection_report_patch": {
+                "successful_items": [
+                    {
+                        "item": "pods/state",
+                        "source": "kubectl",
+                    }
+                ]
+            },
+        },
+    )
+    (script_dir / "remote.stdout.txt").write_text("ok\n", encoding="utf-8")
+    calls = []
+
+    def fake_local_collection(args, output_dir, script_ids=None):
+        calls.append((args.local_config, args.remote_namespace, script_ids))
+        return remote_run_dir
+
+    monkeypatch.setattr(module, "run_local_collection", fake_local_collection)
+
+    args = SimpleNamespace(
+        input_dir=None,
+        remote_run_dir=None,
+        remote_config=None,
+        incident_dir=str(incident_dir),
+        output_dir=None,
+        output_root=".local/incidents",
+        scenario=None,
+        customer_clue=None,
+        remote_output_dir=".local/remote-runs",
+        remote_namespace="",
+        object_inventory="",
+        execution_mode="local",
+    )
+
+    assert module.command_analyse(args) == 0
+
+    adapter = load_yaml(incident_dir / "adapter-output.yaml")
+    assert adapter["status"] == "completed"
+    assert calls == [(str(incident_dir / "local-config.yaml"), "psmdb-test", None)]
+    assert (incident_dir / "analysis.yaml").exists()
+    assert (incident_dir / "remote-executor-run.yaml").exists()

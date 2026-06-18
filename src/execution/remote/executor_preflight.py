@@ -18,7 +18,8 @@ def validate_executor_capabilities(
     which_fn: Callable[[str], str | None] = shutil.which,
 ) -> Tuple[bool, List[Dict[str, str]], Dict[str, str]]:
     checks: List[Dict[str, str]] = []
-    if not which_fn("sshpass"):
+    is_local = access.get("execution_mode") == "local"
+    if not is_local and not which_fn("sshpass"):
         return False, [capability_result("sshpass", "blocked", "sshpass is not installed locally", "missing_sshpass")], {
             "code": "missing_sshpass",
             "message": "sshpass is not installed locally",
@@ -27,9 +28,14 @@ def validate_executor_capabilities(
     ssh_proc = run_ssh_fn(access, "echo ok", 20)
     if ssh_proc.returncode != 0:
         code = classify_ssh_error(ssh_proc.stderr)
-        checks.append(capability_result("ssh", "blocked", ssh_proc.stderr.strip() or "ssh check failed", code))
-        return False, checks, {"code": code, "message": ssh_proc.stderr.strip() or "ssh check failed"}
-    checks.append(capability_result("ssh", "success", "ssh echo ok succeeded"))
+        check_name = "local_shell" if is_local else "ssh"
+        detail = ssh_proc.stderr.strip() or "%s check failed" % check_name
+        checks.append(capability_result(check_name, "blocked", detail, code))
+        return False, checks, {"code": code, "message": detail}
+    if is_local:
+        checks.append(capability_result("local_shell", "success", "local shell echo ok succeeded"))
+    else:
+        checks.append(capability_result("ssh", "success", "ssh echo ok succeeded"))
 
     kubectl_proc = run_ssh_fn(access, "kubectl version --client=true >/dev/null", 20)
     if kubectl_proc.returncode != 0:

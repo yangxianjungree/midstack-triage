@@ -8,7 +8,7 @@ SRC_DIR = ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from execution.remote.transport import FunctionRemoteTransport  # noqa: E402
+from execution.remote.transport import FunctionRemoteTransport, LocalTransport  # noqa: E402
 
 
 def test_function_transport_delegates_run_and_copy_operations(tmp_path):
@@ -37,3 +37,31 @@ def test_function_transport_delegates_run_and_copy_operations(tmp_path):
         ("copy_to", str(local_file), "/tmp/payload.yaml"),
         ("copy_from", "/tmp/out", str(tmp_path / "out"), True),
     ]
+
+
+def test_local_transport_runs_commands_and_copies_files(tmp_path):
+    transport = LocalTransport()
+    source = tmp_path / "source.yaml"
+    source.write_text("ok: true\n", encoding="utf-8")
+    staged = tmp_path / "workspace" / "source.yaml"
+
+    transport.copy_to({}, source, str(staged))
+    result = transport.run({}, "cat %s" % staged, timeout=12)
+    copied = tmp_path / "copied.yaml"
+    transport.copy_from({}, str(staged), copied)
+
+    assert result.returncode == 0
+    assert result.stdout == "ok: true\n"
+    assert copied.read_text(encoding="utf-8") == "ok: true\n"
+
+
+def test_local_transport_copies_directories_recursively(tmp_path):
+    transport = LocalTransport()
+    source_dir = tmp_path / "workspace" / "artifacts"
+    source_dir.mkdir(parents=True)
+    (source_dir / "pods.json").write_text("{}\n", encoding="utf-8")
+    dest_dir = tmp_path / "out" / "artifacts"
+
+    transport.copy_from({}, str(source_dir), dest_dir, recursive=True)
+
+    assert (dest_dir / "pods.json").read_text(encoding="utf-8") == "{}\n"

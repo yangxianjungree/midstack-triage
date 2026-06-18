@@ -40,6 +40,7 @@ from execution.remote.script_runner import (
     status_from_error_code,
     validate_executor_capabilities,
 )
+from execution.remote.transport import LocalTransport
 
 
 def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
@@ -54,7 +55,18 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--namespace", default="", help="Explicit namespace. If omitted, a known MongoDB namespace is selected.")
     parser.add_argument("--namespace-candidates", default="mongo,psmdb-test,mongodb,default", help="Comma-separated namespace candidates.")
     parser.add_argument("--inventory-file", default="", help="Optional object-inventory.yaml from /start for topology and target hints.")
+    parser.add_argument("--transport", choices=("remote", "local"), default="remote", help="Execution transport. remote uses SSH; local runs on this machine.")
     return parser.parse_args(argv)
+
+
+def _local_access_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    access = dict(config.get("access") or {})
+    context = config.get("context") or {}
+    if isinstance(context, dict):
+        access.setdefault("current_context", str(context.get("current_context") or ""))
+    access.setdefault("execution_mode", "local")
+    access.setdefault("primary_ip", "local")
+    return access
 
 
 def main(argv: List[str] | None = None) -> int:
@@ -74,8 +86,12 @@ def main(argv: List[str] | None = None) -> int:
     remote_root = args.remote_root.rstrip("/")
     try:
         cfg = load_config(Path(args.config))
-        access = cfg["access"]
-        transport = default_remote_transport()
+        if args.transport == "local":
+            access = _local_access_from_config(cfg)
+            transport = LocalTransport()
+        else:
+            access = cfg["access"]
+            transport = default_remote_transport()
         selected_ip = str(access.get("primary_ip") or "")
         script_entries = load_script_entries(Path(args.manifest), Path(args.runtime_map), [str(item) for item in (args.script_id or []) if item])
         script_ids = [str(item["script_id"]) for item in script_entries]

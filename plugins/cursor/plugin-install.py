@@ -20,6 +20,7 @@ from install_common import (  # noqa: E402
     load_json,
     missing_markers,
     now_iso,
+    prefixed_runtime_markers,
     remove_path,
     stage_runtime_dirs,
     write_json,
@@ -49,19 +50,7 @@ RUNTIME_COPY_DIRS = RuntimeBundleLayout().copy_dirs()
 RUNTIME_MARKER_FILES = [
     "bin/midstack-local.py",
     "bin/validate-repo.py",
-    "tools/plugin/midstack-local.py",
-    "tools/support/common.py",
-    "src/commands/plugin_cli.py",
-    "src/execution/remote/kubectl.py",
-    "src/execution/remote/runtime_support.py",
-    "src/execution/remote/transport.py",
-    "src/phases/phase4/rules/common.py",
-    "src/phases/phase4/rules/mongodb.py",
-    "src/shared/io.py",
-    "src/shared/skill_resolver.py",
-    "domains/mongodb/scripts/manifest.yaml",
-    "interfaces/plugin/script-runtime-map.example.yaml",
-]
+] + list(prefixed_runtime_markers())
 RUNTIME_FORBIDDEN_TEXT = [
     "Cursor source-checkout",
     "workspace `engine_root`",

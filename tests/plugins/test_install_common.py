@@ -8,10 +8,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from plugins.support.install_common import (
+    COMMON_RUNTIME_MARKER_FILES,
     RuntimeBundleLayout,
     ensure_local_outputs_gitignore,
     load_json,
     missing_markers,
+    prefixed_runtime_markers,
     write_json,
 )
 
@@ -20,6 +22,16 @@ def test_runtime_bundle_layout_projects_common_dirs_with_optional_prefix():
     assert RuntimeBundleLayout().copy_dirs()[0] == ("tools/plugin", "tools/plugin")
     assert RuntimeBundleLayout("runtime").copy_dirs()[0] == ("tools/plugin", "runtime/tools/plugin")
     assert ("src", "runtime/src") in RuntimeBundleLayout("runtime").copy_dirs()
+
+
+def test_runtime_markers_share_common_runtime_files_with_optional_prefix():
+    assert "src/shared/asset_resolver.py" in COMMON_RUNTIME_MARKER_FILES
+    assert "src/shared/workspace.py" in COMMON_RUNTIME_MARKER_FILES
+    assert "src/execution/remote/runtime_support.py" in COMMON_RUNTIME_MARKER_FILES
+    assert prefixed_runtime_markers("runtime")[:2] == (
+        "runtime/tools/plugin/midstack-local.py",
+        "runtime/tools/support/common.py",
+    )
 
 
 def test_json_helpers_require_object(tmp_path):

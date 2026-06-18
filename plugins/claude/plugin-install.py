@@ -24,6 +24,7 @@ from install_common import (  # noqa: E402
     load_json,
     missing_markers,
     now_iso,
+    prefixed_runtime_markers,
     remove_path,
     stage_runtime_dirs,
     write_json,
@@ -56,30 +57,9 @@ INSTALLED_PLUGINS_PATH = Path.home() / ".claude" / "plugins" / "installed_plugin
 RUNTIME_MARKER_FILES = [
     "runtime/bin/midstack-local.py",
     "runtime/bin/resolve-workspace.py",
-    "runtime/tools/plugin/midstack-local.py",
+    "runtime/bin/validate-repo.py",
     "runtime/bin/selfcheck.py",
-    "runtime/tools/support/common.py",
-    "runtime/src/commands/plugin_cli.py",
-    "runtime/src/execution/__init__.py",
-    "runtime/src/execution/remote/__init__.py",
-    "runtime/src/execution/remote/access.py",
-    "runtime/src/execution/remote/executor.py",
-    "runtime/src/execution/remote/kubectl.py",
-    "runtime/src/execution/remote/mongodb_collection_runtime.py",
-    "runtime/src/execution/remote/transport.py",
-    "runtime/src/phases/phase4/rules/__init__.py",
-    "runtime/src/phases/phase4/rules/common.py",
-    "runtime/src/phases/phase4/rules/mongodb.py",
-    "runtime/src/phases/phase4/rules/pulsar.py",
-    "runtime/src/shared/__init__.py",
-    "runtime/src/shared/io.py",
-    "runtime/src/shared/patch_merge.py",
-    "runtime/src/shared/scenario_router.py",
-    "runtime/src/shared/skill_resolver.py",
-    "runtime/domains/mongodb/scripts/manifest.yaml",
-    "runtime/core/routing/scenario-signal-map.yaml",
-    "runtime/interfaces/plugin/script-runtime-map.example.yaml",
-]
+] + list(prefixed_runtime_markers("runtime"))
 RUNTIME_COPY_DIRS = RuntimeBundleLayout("runtime").copy_dirs()
 
 

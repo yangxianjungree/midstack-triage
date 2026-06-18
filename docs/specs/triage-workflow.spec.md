@@ -51,6 +51,20 @@ superseded_by: none
 - `offline`
   - 表示用户只有已有 incident、fixture、remote-run、日志、截图或手工命令输出。当前 `/start` 只完成识别和引导，正式分析走离线证据输入。
 
+### 接入场景分类
+
+第 1 段除 `environment_mode` 外，还应在 `phase1-intake.yaml` 中记录
+`intake_scenario`。`environment_mode` 只表达取证机制，`intake_scenario`
+表达用户当前接入场景和证据来源。
+
+当前分类：
+
+- `remote_ssh`：当前主路径，Agent/runtime 可通过 SSH 进入目标环境。
+- `local_fault_cluster`：runtime 已在故障集群或控制面机器上，当前仅识别并阻塞。
+- `offline_existing_artifacts`：用户已有 incident、fixture、remote-run、日志或命令输出。
+- `offline_production`：线上生产/SRE/告警类输入，当前按已有证据或平台产物引导。
+- `manual_guided_offline`：ToDesk、远程桌面、手工粘贴命令输出或截图类输入。
+
 ### 输出状态
 
 - `ready`

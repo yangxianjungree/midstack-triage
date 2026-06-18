@@ -7,6 +7,11 @@ from typing import Any, Dict, List
 from execution.modes import resolve_execution_mode
 
 
+PRODUCTION_HINTS = ("production", "prod", "online", "线上", "生产", "告警", "监控", "sre", "incident", "alert")
+DEVELOPMENT_TEST_HINTS = ("dev", "development", "test", "testing", "研发", "测试")
+MANUAL_OFFLINE_HINTS = ("todesk", "remote desktop", "远程桌面", "手工", "人工", "粘贴", "截图", "命令输出", "paste", "screenshot", "command output")
+
+
 def _blocking_item(code: str, message: str, required_user_action: str, field: str) -> Dict[str, str]:
     return {
         "code": code,
@@ -24,10 +29,69 @@ def _follow_up(field: str, question: str, expected_answer: str) -> Dict[str, str
     }
 
 
+def _has_hint(text: str, hints: tuple[str, ...]) -> bool:
+    return any(hint in text for hint in hints)
+
+
+def _environment_class(customer_clue: str) -> str:
+    clue = customer_clue.lower()
+    if _has_hint(clue, PRODUCTION_HINTS):
+        return "production"
+    if _has_hint(clue, DEVELOPMENT_TEST_HINTS):
+        return "development_test"
+    return "unknown"
+
+
+def _intake_scenario(mode_name: str, customer_clue: str) -> Dict[str, str]:
+    clue = customer_clue.lower()
+    environment_class = _environment_class(customer_clue)
+    if mode_name == "remote":
+        return {
+            "id": "remote_ssh",
+            "environment_class": environment_class,
+            "access_pattern": "ssh_runtime",
+            "evidence_source": "live_remote",
+            "readiness": "supported",
+        }
+    if mode_name == "local":
+        return {
+            "id": "local_fault_cluster",
+            "environment_class": environment_class,
+            "access_pattern": "local_runtime",
+            "evidence_source": "live_local",
+            "readiness": "blocked_until_local_executor",
+        }
+    if _has_hint(clue, MANUAL_OFFLINE_HINTS):
+        scenario_id = "manual_guided_offline"
+        access_pattern = "operator_paste"
+    elif environment_class == "production":
+        scenario_id = "offline_production"
+        access_pattern = "platform_or_artifacts"
+    else:
+        scenario_id = "offline_existing_artifacts"
+        access_pattern = "artifact_input"
+    return {
+        "id": scenario_id,
+        "environment_class": environment_class,
+        "access_pattern": access_pattern,
+        "evidence_source": "existing_artifacts",
+        "readiness": "blocked_until_artifacts_supplied",
+    }
+
+
+def _environment_mode_question() -> Dict[str, str]:
+    return _follow_up(
+        "environment_mode",
+        "当前插件能否通过 SSH 进入目标环境？如果不能，请说明是在故障集群机器上(local)，还是只有日志/截图/命令输出(offline)。",
+        "remote, local, or offline",
+    )
+
+
 def _remote_required_items(args: Any, primary_ip: str) -> tuple[List[Dict[str, str]], List[Dict[str, str]]]:
     blocking_items: List[Dict[str, str]] = []
     follow_up_questions: List[Dict[str, str]] = []
     if not primary_ip:
+        follow_up_questions.append(_environment_mode_question())
         blocking_items.append(
             _blocking_item(
                 "missing_environment_ip",
@@ -48,8 +112,10 @@ def _remote_required_items(args: Any, primary_ip: str) -> tuple[List[Dict[str, s
 
 def build_start_intake(args: Any) -> Dict[str, Any]:
     middleware = str(getattr(args, "middleware", "") or "")
+    customer_clue = str(getattr(args, "customer_clue", "") or "")
     mode_name = str(getattr(args, "environment_mode", "") or "remote").strip().lower()
     mode = resolve_execution_mode(mode_name)
+    intake_scenario = _intake_scenario(mode.name, customer_clue)
     env_ips = [str(item) for item in (getattr(args, "environment_ip", []) or []) if item]
     primary_ip = env_ips[0] if env_ips else ""
     blocking_items: List[Dict[str, str]] = []
@@ -93,6 +159,7 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
         "status": status,
         "environment_mode": mode.name,
         "execution_mode": mode.name,
+        "intake_scenario": intake_scenario,
         "middleware": middleware,
         "environment_ips": env_ips,
         "primary_ip": primary_ip,

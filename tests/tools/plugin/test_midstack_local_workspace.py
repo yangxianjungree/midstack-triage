@@ -75,6 +75,7 @@ def test_start_ready_output_points_to_midstack_analyse(tmp_path, monkeypatch):
     phase1_intake = load_yaml(current_incident / "phase1-intake.yaml")
     assert phase1_intake["status"] == "ready_for_validation"
     assert phase1_intake["environment_mode"] == "remote"
+    assert phase1_intake["intake_scenario"]["id"] == "remote_ssh"
     assert output["next_actions"] == [
         "run /midstack:analyse",
         "or run /midstack:analyse %s" % current_incident.name,
@@ -110,6 +111,7 @@ def test_start_blocked_writes_follow_up_questions_for_missing_remote_inputs(tmp_
     assert output["status"] == "blocked"
     assert intake["status"] == "blocked"
     assert [item["field"] for item in output["follow_up_questions"]] == [
+        "environment_mode",
         "environment_ip",
         "username",
         "password",

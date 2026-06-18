@@ -1,5 +1,5 @@
 ---
-status: draft
+status: completed
 last_updated: 2026-06-18
 supersedes: none
 superseded_by: none
@@ -24,7 +24,7 @@ Midstack 当前已经形成清晰的双平面运行时：
 
 这条主架构方向成立，MongoDB MVP 也已经通过 fixture replay、score gate、插件安装态检查等门禁支撑。
 
-当前主要架构债集中在 Phase 4 推理核和治理资产对齐：
+整改前主要架构债集中在 Phase 4 推理核和治理资产对齐：
 
 1. `analysis.yaml` 有两个生产者路径。
    `src/phases/phase4/reasoning.py` 会通过 multitrack renderer 写入 `analysis.yaml`，随后 `src/commands/analyse.py` 又调用 `generate_rule_analysis()` 用 rules fallback 覆盖同一文件。
@@ -62,6 +62,8 @@ Midstack 当前已经形成清晰的双平面运行时：
 - 改变 `/midstack:start`、`/midstack:analyse`、`/midstack:review` 的用户命令面。
 - 重构 execution plane 的 SSH、kubectl、script runtime。
 - 调整 MongoDB 诊断质量或新增场景规则。
+- 统一 runtime root / workspace root 解析合同。
+- 处理 scenario、routing、domain assets 三方一致性治理。
 - 处理 Pulsar MVP 支持状态、Python 版本兼容、全仓 metadata version/status 推广等横向治理问题。
 
 ## 变更类型
@@ -74,9 +76,98 @@ Midstack 当前已经形成清晰的双平面运行时：
 - 治理资产更新：更新 `.cursor/skills/midstack-architecture-review/`。
 - taxonomy / metadata 纪律：明确逻辑组件与排查面的字段或枚举边界。
 
-## 当前状态
+## Spec-driven 需求梳理
 
-### Phase 4 三机制
+### 假设
+
+1. 本轮整改目标是兑现本提案内的 Phase 4 收敛和治理资产对齐，不处理相邻 P1/P2 架构债。
+2. `/midstack:analyse` 用户命令面保持兼容；已有消费者继续读取 `analysis.yaml`、`report.md` 和 `adapter-output.yaml`。
+3. 短期生产分析能力以 rules fallback + guardrails 为事实源；multitrack 保留为过程推理与诊断辅助，不宣称真实 Agent 生产闭环。
+4. taxonomy 先新增事实源并接入 validator，不在本轮批量重命名资产 metadata 字段。
+
+### Objective
+
+本轮交付的是一次架构合同收敛：
+
+- 对使用者：`/midstack:analyse` 的主输出仍稳定可用，且不会再出现 Phase 4 多轨草稿和 rules fallback 同写 `analysis.yaml` 的歧义。
+- 对维护者：README、architecture、implementation status、Phase 4 集成说明和架构检视 skill 能反映当前真实 runtime。
+- 对贡献者：领域资产中 MongoDB 逻辑组件和排查面 taxonomy 有可校验边界。
+
+### Tech Stack
+
+- Python runtime：`src/commands/`、`src/phases/`、`src/shared/`
+- YAML artifacts：incident 目录下的 `analysis.yaml`、`analysis.rules-fallback.yaml`、`analysis.multitrack.yaml`、`reasoning-board.yaml`
+- Docs：Markdown + YAML front matter
+- Validators/tests：`pytest`、`tools/validators/*`、`tools/replay/*`
+
+### Commands
+
+本轮最小门禁：
+
+```bash
+python3 -m py_compile $(find src -type f -name '*.py')
+python3 -m pytest tests/phases/phase4 tests/tools/plugin/test_midstack_analyse.py -q
+python3 tools/replay/mongodb-replay.py --run-analyse
+python3 tools/replay/mongodb-score.py --run-analyse --min-level medium
+git diff --check
+```
+
+完整门禁：
+
+```bash
+python3 tools/validators/validate-repo.py
+python3 -m pytest tests/execution tests/phases tests/shared tests/tools -q
+python3 -m pytest tests/plugins/claude tests/plugins/cursor -q
+```
+
+### Project Structure
+
+```text
+src/commands/analyse.py                 → analyse 编排，生产 analysis.yaml / report.md
+src/phases/phase4/reasoning.py          → Phase 4 multitrack facade，只写 multitrack 辅助产物
+src/phases/phase4/rules/                → 当前生产 analysis.yaml 的 rules fallback analyzer
+docs/concepts/architecture.md           → 架构事实源说明
+docs/project/implementation-status.md   → L3 实现进展
+docs/project/phase4-multitrack-integration.md → Phase 4 当前集成说明
+docs/analysis/                          → incident-specific 或实现诊断类分析记录
+.cursor/skills/midstack-architecture-review/  → 架构检视治理资产
+core/taxonomies/                        → 共用 taxonomy 事实源
+tools/validators/                       → repo / asset / taxonomy 校验入口
+```
+
+### Code Style
+
+新增运行时合同应保持显式文件名常量和薄函数封装，避免把产物名散落在多个调用点：
+
+```python
+MULTITRACK_ANALYSIS_FILENAME = "analysis.multitrack.yaml"
+
+
+def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> None:
+    analysis_path = incident_dir / MULTITRACK_ANALYSIS_FILENAME
+    write_yaml_object(analysis_path, analysis, allow_unicode=True)
+```
+
+文档更新只描述当前事实和决策，不把未来能力写成已实现状态。
+
+### Testing Strategy
+
+| 层级 | 验证内容 | 入口 |
+| --- | --- | --- |
+| Unit / facade | Phase 4 不写生产 `analysis.yaml`，Unicode YAML 正常保留 | `tests/phases/phase4/test_reasoning_io.py` |
+| CLI integration | `/midstack:analyse` 同时保留生产分析和 multitrack 辅助产物 | `tests/phases/phase4/multitrack/e2e/test_cli_integration.py`、`tests/tools/plugin/test_midstack_analyse.py` |
+| Validator | docs/taxonomy/asset 合同不漂移 | `python3 tools/validators/validate-repo.py` |
+| Replay / score | MongoDB MVP 诊断质量不退化 | `tools/replay/mongodb-replay.py`、`tools/replay/mongodb-score.py` |
+
+### Boundaries
+
+- Always：保持 `analysis.yaml` schema 和生产路径兼容；新增产物只能作为辅助引用；更新测试覆盖任何运行时合同变化。
+- Ask first：真实 Agent 生产闭环、rules engine 下沉到 domains、字段批量改名、插件命令面变化。
+- Never：把 multitrack mock 输出宣称为生产结论；删除 rules fallback；把 incident-specific 实现稿留在 L1 specs；隐式改变现有 adapter output 主 record ref。
+
+## 状态记录
+
+### 整改前 Phase 4 三机制
 
 | 机制 | 当前位置 | 当前状态 | 问题 |
 | --- | --- | --- | --- |
@@ -84,15 +175,17 @@ Midstack 当前已经形成清晰的双平面运行时：
 | multitrack | `src/phases/phase4/multitrack/` | 框架和测试存在，默认 mock | 会先写 `analysis.yaml`，随后被 rules 覆盖 |
 | agent task | `agent-reasoning-task.md` | 给 Agent/人工 refinement 的任务合同 | 当前不是自动生产最终 `analysis.yaml` 的闭环 |
 
-### 当前输出事实
+### 整改后输出事实
 
-`/midstack:analyse` 当前完成后：
+`/midstack:analyse` 完成后：
 
 - `analysis.yaml` 来自 rules fallback 和 guardrails。
 - `analysis.rules-fallback.yaml` 保存 rules fallback 副本。
+- `analysis.multitrack.yaml` 保存 multitrack renderer 产出的辅助诊断草稿。
+- `reasoning-board.yaml` 保存 multitrack reasoning board。
 - `agent-reasoning-task.md` 指导后续 Agent refinement。
 - `report.md` 由当前 `analysis.yaml` 渲染。
-- multitrack 会生成 reasoning board，但其渲染到 `analysis.yaml` 的结果不保留为生产输出。
+- multitrack 不写生产 `analysis.yaml`。
 
 ## 决策建议
 
@@ -102,10 +195,9 @@ Midstack 当前已经形成清晰的双平面运行时：
 
 - `analysis.yaml` 的生产者是 rules fallback + guardrails。
 - multitrack 不再写 `analysis.yaml`。
-- multitrack 输出保留为独立诊断辅助产物，例如：
+- multitrack 输出保留为独立诊断辅助产物：
   - `reasoning-board.yaml`
   - `analysis.multitrack.yaml`
-  - 或 `phase4-multitrack-result.yaml`
 - `agent-reasoning-task.md` 继续作为人工/Agent refinement 合同，不宣称自动闭环。
 
 这保持当前真实能力不后退，同时消除双写和死路径。
@@ -133,10 +225,7 @@ Midstack 当前已经形成清晰的双平面运行时：
 
 ### D4. `rs-status-collection-gap.spec.md` 迁出 L1 specs
 
-建议迁移到：
-
-- `docs/proposals/2026-06-12-phase4-reasoning-model/`，如果视为历史实现计划；
-- 或 `docs/analysis/`，如果视为一次 MongoDB sandbox 诊断分析。
+迁移到 `docs/analysis/rs-status-collection-gap.md`。该文件更像一次 MongoDB sandbox incident 的实现诊断记录，而不是稳定 L1 规范或仍待评审的 proposal。
 
 迁移后，在 `docs/specs/README` 或 `docs/README.md` 保持 L1 列表不包含该文件。
 
@@ -159,7 +248,7 @@ Midstack 当前已经形成清晰的双平面运行时：
 | A. 新增 taxonomy | 增加 `core/taxonomies/component-types.yaml` 或 `asset-surface-types.yaml` | 保留现有字段，先建立校验事实源 | 中低 |
 | B. 字段改名 | 将资产 metadata 的 `component` 改为 `surface` / `triage_surface` | 语义最清楚 | 需要迁移资产和 validator |
 
-建议先采用方案 A，避免一次性改动大量领域资产。
+采用方案 A，但 taxonomy 命名为 `triage-surface-types.yaml`。原因是资产 metadata 当前字段仍叫 `component`，但语义实际上是排查面；taxonomy 名称必须先把概念说清楚，避免继续与 `domains/mongodb/metadata.yaml` 的逻辑组件混淆。
 
 ## 影响范围
 
@@ -184,7 +273,7 @@ Midstack 当前已经形成清晰的双平面运行时：
 - `docs/project/implementation-status.md`
 - `docs/project/phase4-multitrack-integration.md`
 - `docs/README.md`
-- `docs/specs/rs-status-collection-gap.spec.md` 的迁移位置或引用
+- `docs/analysis/rs-status-collection-gap.md` 的迁移位置或引用
 
 ### 治理资产
 
@@ -198,7 +287,7 @@ Midstack 当前已经形成清晰的双平面运行时：
 
 可能涉及：
 
-- `core/taxonomies/component-types.yaml` 或新的排查面 taxonomy。
+- `core/taxonomies/triage-surface-types.yaml`。
 - MongoDB asset validator。
 - tool boundary / runtime classification validator，视实际文档更新范围决定。
 
@@ -216,9 +305,9 @@ Midstack 当前已经形成清晰的双平面运行时：
 - 该产物是增量文件，不破坏旧消费者。
 - adapter output 可选择性加入 record ref，但不应替代 `analysis` record ref。
 
-如果新增 component taxonomy：
+如果新增 triage surface taxonomy：
 
-- 先只增加 validator warning 或文档引用。
+- 本轮接入 validator 校验现有资产 metadata 的 `component` 字段。
 - 字段改名必须另开迁移任务，不能在本提案中隐式完成。
 
 ## 落地切片
@@ -237,6 +326,17 @@ Midstack 当前已经形成清晰的双平面运行时：
 - `tests/tools/plugin/test_midstack_analyse.py` 继续通过。
 - replay/score gate 不退化。
 
+任务：
+
+- [x] Task: Phase 4 multitrack 改写 `analysis.multitrack.yaml`
+  - Acceptance: 直接调用 Phase 4 facade 不创建生产 `analysis.yaml`；`/midstack:analyse` 仍创建生产 `analysis.yaml`。
+  - Verify: `python3 -m pytest tests/phases/phase4/test_reasoning_io.py tests/phases/phase4/multitrack/e2e/test_cli_integration.py -q`
+  - Files: `src/phases/phase4/reasoning.py`、`tests/phases/phase4/test_reasoning_io.py`、`tests/phases/phase4/multitrack/e2e/test_cli_integration.py`
+- [x] Task: adapter output 暴露 multitrack 辅助产物
+  - Acceptance: `adapter-output.yaml.record_refs` 保留 `analysis`，并新增 `analysis_multitrack`。
+  - Verify: `python3 -m pytest tests/tools/plugin/test_midstack_analyse.py -q`
+  - Files: `src/commands/analyse.py`、`tests/tools/plugin/test_midstack_analyse.py`
+
 ### Slice 2. 文档现实对齐
 
 目标：
@@ -250,11 +350,22 @@ Midstack 当前已经形成清晰的双平面运行时：
 - 文档不再出现“默认真实 Claude API 推理编排已生效”的歧义表述。
 - 新中间件落地说明包含 rules analyser 或明确 skeleton 状态。
 
+任务：
+
+- [x] Task: README / implementation status 写清当前默认推理路径
+  - Acceptance: 文档明确 `analysis.yaml` 当前来自 rules fallback + guardrails，multitrack 是过程辅助产物。
+  - Verify: `rg -n "rules fallback|analysis.multitrack|真实 Claude|默认" README.md docs/project/implementation-status.md`
+  - Files: `README.md`、`docs/project/implementation-status.md`
+- [x] Task: architecture / Phase 4 integration 写清 rules engine 落点
+  - Acceptance: 新中间件接入说明不会只指向 `domains/`，而会说明生产 analyse 还需要 rules analyzer 或明确 skeleton。
+  - Verify: `rg -n "src/phases/phase4/rules|analysis.multitrack|reasoning-board" docs/concepts/architecture.md docs/project/phase4-multitrack-integration.md`
+  - Files: `docs/concepts/architecture.md`、`docs/project/phase4-multitrack-integration.md`
+
 ### Slice 3. 迁移 rs-status 实现稿
 
 目标：
 
-- 将 `docs/specs/rs-status-collection-gap.spec.md` 移到 proposals 或 analysis。
+- 将 `docs/specs/rs-status-collection-gap.spec.md` 移到 `docs/analysis/rs-status-collection-gap.md`。
 - 保留必要引用，避免断链。
 - `docs/README.md` 的 specs 列表只包含稳定 L1 规范。
 
@@ -262,6 +373,13 @@ Midstack 当前已经形成清晰的双平面运行时：
 
 - `docs/specs/` 不再包含 incident-specific implementation note。
 - 迁移文件 front matter 标为 `draft` 或 `archived`，不作为 L1 裁决依据。
+
+任务：
+
+- [x] Task: 将 rs-status 实现诊断迁到 `docs/analysis/`
+  - Acceptance: `docs/specs/rs-status-collection-gap.spec.md` 删除，迁移文件有 front matter 且 status 不是 authoritative。
+  - Verify: `rg -n "rs-status-collection-gap|rs.status Collection" docs`
+  - Files: `docs/specs/rs-status-collection-gap.spec.md`、`docs/analysis/rs-status-collection-gap.md`、`docs/README.md`
 
 ### Slice 4. 更新架构检视 skill
 
@@ -275,6 +393,13 @@ Midstack 当前已经形成清晰的双平面运行时：
 - skill 不再建议删除现行有效目录。
 - skill 能识别 `src/execution` 与 `plugins/*/runtime` 的职责。
 
+任务：
+
+- [x] Task: 更新 architecture review skill 基准和 checklist
+  - Acceptance: skill 将 `src/` 双平面、`plugins/*/runtime`、`tools/generators`、`tools/importers`、`domains/*/components` 标为现行有效路径。
+  - Verify: `rg -n "src/execution|bundled runtime|workspace-local runtime|tools/generators|Phase 4" .cursor/skills/midstack-architecture-review`
+  - Files: `.cursor/skills/midstack-architecture-review/SKILL.md`、`.cursor/skills/midstack-architecture-review/checklist.md`
+
 ### Slice 5. Component taxonomy
 
 目标：
@@ -286,6 +411,13 @@ Midstack 当前已经形成清晰的双平面运行时：
 
 - `domains/mongodb/metadata.yaml` 的 `components` 与资产 metadata 的 `component` 不再被视为同一枚举。
 - validator 至少能发现未知排查面字段值。
+
+任务：
+
+- [x] Task: 新增 triage surface taxonomy 并接入 MongoDB asset validator
+  - Acceptance: runbook/command/skill metadata 的 `component` 通过 `core/taxonomies/triage-surface-types.yaml` 校验；MongoDB 逻辑组件仍留在 `domains/mongodb/metadata.yaml`。
+  - Verify: `python3 -m pytest tests/tools -q` 或 `python3 tools/validators/validate-repo.py`
+  - Files: `core/taxonomies/triage-surface-types.yaml`、`core/taxonomies/README.md`、`tools/validators/mongodb_assets/contracts.py`、`tools/validators/mongodb_assets/domain_assets.py`
 
 ## 测试与门禁
 
@@ -329,16 +461,18 @@ python3 plugins/cursor/test-agent-cli.py
 - 文档更新可独立回滚，不影响 runtime。
 - taxonomy 先以新增和 warning 形式落地，不直接重命名字段。
 
-## Open Questions
+## 已决策事项
 
-1. multitrack 独立产物的标准文件名选哪个？
-   建议：`analysis.multitrack.yaml`，因为它与 `analysis.rules-fallback.yaml` 对称。
-2. `rs-status-collection-gap.spec.md` 更适合迁到 `docs/proposals/` 还是 `docs/analysis/`？
-   建议：如果保留为历史整改计划，迁到 proposals；如果保留为事件分析快照，迁到 analysis。
-3. Phase 4 rules engine 中期是否要从 Python 硬编码迁为 domain asset？
-   建议：暂不在本提案决策，只记录为后续 proposal。
-4. component taxonomy 应命名为 `component-types` 还是 `triage-surface-types`？
-   建议：如果保留现有字段名，先用 `component-types`；如果准备改字段，优先 `triage-surface-types`。
+1. multitrack 独立产物标准文件名为 `analysis.multitrack.yaml`。
+   原因：它与 `analysis.rules-fallback.yaml` 对称，且不会改变既有 `analysis.yaml` 消费者。
+2. `rs-status-collection-gap.spec.md` 迁到 `docs/analysis/rs-status-collection-gap.md`。
+   原因：内容是 MongoDB sandbox incident 的实现诊断记录，不是 L1 稳定规范。
+3. 排查面 taxonomy 命名为 `triage-surface-types.yaml`。
+   原因：现有资产字段名仍叫 `component`，但实际语义是排查面；taxonomy 名称先纠正概念边界。
+
+## 后续问题
+
+Phase 4 rules engine 中期是否要从 Python 硬编码迁为 domain asset，本提案不决策。建议另开 proposal 讨论 rules data model、domain asset schema 和 score gate 评价方式。
 
 ## 相邻问题
 
@@ -377,19 +511,62 @@ Pulsar 当前有 skeleton 资产、golden path、两个 MVP 脚本和 rules anal
 
 短期建议保持 README 的 Skeleton 定位，并在 analyse unsupported/supported 文案中区分 "rules analyser exists" 与 "Active MVP supported"。
 
-### A3. `queue-backlog` applicable middleware
+### A3. runtime root / workspace root 合同分裂
+
+当前安装态 runtime 和工作区产物依赖两类根路径：
+
+- `MIDSTACK_TRIAGE_RUNTIME_ROOT`：由 Claude/Cursor runtime wrapper 设置，用于 packaged runtime 内的 `src/`、`domains/`、`interfaces/`、`core/` 资产解析。
+- `MIDSTACK_TRIAGE_WORKSPACE`：由 slash command 层设置，用于 incident 输出、`.local/incidents` 和当前工作区定位。
+
+同时仍有若干模块直接以 `Path(__file__).resolve().parents[...]` 推导仓库或 runtime 根，例如：
+
+- `src/execution/remote/runtime_support.py`
+- `src/shared/workspace.py`
+- `src/shared/scenario_router.py`
+- `src/shared/skill_resolver.py`
+- `src/phases/phase4/rules/<middleware>.py`
+
+当前安装态能够工作，主要依赖 runtime bundle 目录结构与源码 checkout 结构一致；但接口上没有一个统一的 root contract。后续如果 runtime payload 继续裁剪、domain asset 索引下沉，或测试需要替换 runtime root，就容易出现 executor、scenario router、skill resolver 指向不同根目录的问题。
+
+建议另开 P1 小提案，定义统一路径接口，例如：
+
+- `runtime_root()`：packaged runtime / source checkout 中资产根。
+- `workspace_root()`：用户工作区与 incident 输出根。
+- `repo_root()` 或 `source_root()`：仅供仓库工程工具使用，不进入安装态 runtime contract。
+
+落地时应让 `runtime_support`、`scenario_router`、`skill_resolver`、rules common 和插件 wrapper 共用同一套解析规则。
+
+### A4. scenario / routing / domain assets 三方一致性
+
+当前 `tools/validators/validate-scenario-routing.py` 主要运行单元测试，尚未验证以下三方合同：
+
+1. `scenarios/<scenario>/scenario.yaml` 的 `applicable_middleware`。
+2. `core/routing/scenario-signal-map.yaml` 的 scenario / middleware 路由声明。
+3. `domains/<middleware>/` 下 runbook / skill / command / script 等资产是否存在对应 scenario。
+
+`queue-backlog` 是当前可见样例：
 
 `scenarios/queue-backlog/scenario.yaml` 当前包含：
 
 - `pulsar`
 - `mongodb`
 
-但当前 MongoDB 资产中没有对应 queue-backlog runbook/skill/command 链路。需要二选一：
+但 routing map 只对 `pulsar` 声明 `queue-backlog` 路由，且当前 MongoDB 资产中没有对应 queue-backlog runbook/skill/command 链路。
+
+单点修法是二选一：
 
 - 从 `queue-backlog` 的 `applicable_middleware` 移除 `mongodb`；
 - 或补齐 MongoDB backlog/data queue 语义下的对应资产，并明确与 `data-hotspot`、`latency-spike` 的边界。
 
-### A4. 领域资产 metadata version/status
+更稳妥的架构修法是新增 validator：
+
+- 每个 `scenario.yaml` 声明的 middleware，要么在 routing map 中有对应路由，要么明确标注为未路由 / skeleton。
+- routing map 中出现的 scenario / middleware，必须能在 `scenarios/` 和 `domains/` 中找到对应声明或资产。
+- domain asset metadata 中的 `scenario` / `primary_scenario` 不应指向不存在或未声明的 scenario。
+
+该治理不应混入本提案的 Phase 4 输出收敛；建议作为独立治理 slice 或后续 proposal。
+
+### A5. 领域资产 metadata version/status
 
 部分 core templates 已包含 `status`，但 runbook/skill/command metadata 并未全仓统一 `version` / `status` 字段。该问题属于 metadata governance，不应在 Phase 4 推理核收敛中顺手改。
 
@@ -402,11 +579,11 @@ Pulsar 当前有 skeleton 资产、golden path、两个 MVP 脚本和 rules anal
 
 ## 落地清单
 
-- [ ] 决策 `analysis.yaml` 唯一生产者。
-- [ ] 调整 Phase 4 multitrack 输出，不再覆盖生产 `analysis.yaml`。
-- [ ] 更新 README、architecture、implementation status 和 phase4 集成文档。
-- [ ] 迁移 `rs-status-collection-gap.spec.md`。
-- [ ] 更新 `.cursor/skills/midstack-architecture-review/`。
-- [ ] 新增或明确 component / triage surface taxonomy。
-- [ ] 补充对应测试或 validator。
-- [ ] 运行最小门禁和必要 replay/score gate。
+- [x] 决策 `analysis.yaml` 唯一生产者。
+- [x] 调整 Phase 4 multitrack 输出，不再覆盖生产 `analysis.yaml`。
+- [x] 更新 README、architecture、implementation status 和 phase4 集成文档。
+- [x] 迁移 `rs-status-collection-gap.spec.md`。
+- [x] 更新 `.cursor/skills/midstack-architecture-review/`。
+- [x] 新增或明确 component / triage surface taxonomy。
+- [x] 补充对应测试或 validator。
+- [x] 运行最小门禁和必要 replay/score gate。

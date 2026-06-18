@@ -28,6 +28,8 @@
 | 停止条件 | skill 是否定义输入、输出、停止/升级条件？ |
 | 结论结构 | 是否有 finding / evidence 模型或等价字段（severity、confidence、implies、excludes）？ |
 | 执行策略 | 是否有统一的只读/审批策略（`safety_constraints`、`core/policies/` 或 spec 约定）？ |
+| Phase 4 产物合同 | `analysis.yaml`、`analysis.rules-fallback.yaml`、`analysis.multitrack.yaml`、`reasoning-board.yaml` 的生产者是否清楚？ |
+| 安装态 runtime | Claude bundled runtime 与 Cursor workspace-local runtime 是否都能找到所需 `src/`、`domains/`、`core/`、`interfaces/` 资产？ |
 
 ---
 
@@ -74,7 +76,9 @@
 | slug 风格 | 目录、ID、taxonomy 是否统一 kebab-case？ |
 | 枚举一致 | `scenario` 字段、`scenarios/` 目录名、`core/taxonomies/` 是否同一词表？ |
 | ID 规范 | 是否遵循 `<domain>.<type>.<name>` 或项目约定？ |
-| 组件命名 | `component` 是否与 `domains/<mw>/metadata.yaml` 中 `components` 对齐？ |
+| 排查面命名 | runbook/skill/command metadata 的 `component` 是否与 `core/taxonomies/triage-surface-types.yaml` 对齐？ |
+| 逻辑组件边界 | `domains/<mw>/metadata.yaml` 中的 `components` 是否只表达产品逻辑组件，不与资产排查面混用？ |
+| 文档分层 | incident-specific 实现诊断是否放在 `docs/analysis/` 或 proposals，而不是 L1 `docs/specs/`？ |
 
 ---
 
@@ -90,7 +94,7 @@
 |--------|------|
 | 单链路 | 是否能裁剪到 1 个 scenario + 1 个 domain + 1 条 golden path？（参照 MongoDB `replica-inconsistency` 链路） |
 | MongoDB 对齐 | 新 domain 的结构与 `domains/mongodb/` 是否一致，而非另起一套？ |
-| 目录克制 | 是否延后 generators、importers、多插件、categories 物理目录？ |
+| 目录克制 | 是否延后未落地的 categories / 多插件物理目录，并避免把 `tools/generators`、`tools/importers` 误判为 runtime？ |
 | shared 准入 | `core/shared/` 新内容是否满足：2+ domain 复用、无产品语义、无专属工具？ |
 | 验证器 | `tools/validators/` 或 CI 是否计划校验 schema 与目录？ |
 | 接口解耦 | 知识是否在 `domains/`，`interfaces/` 仅放适配协议？ |
@@ -107,11 +111,11 @@
 | `core/catalog/` | 保留（路由索引） |
 | `core/shared/` | 保留但严控 |
 | `domains/` | 保留 |
+| `domains/*/components/` | 保留（当前作为资产排查面索引；不要与 `domains/<mw>/metadata.yaml.components` 逻辑组件混用） |
 | `scenarios/` 顶层 | 保留但做薄 |
 | `interfaces/` | 保留 |
 | `tools/validators/` | 保留 |
 | `tests/golden-paths/` | 保留 |
-| `tools/generators/`, `tools/importers/` | 延后 |
+| `tools/generators/`, `tools/importers/` | 保留（现行工程辅助路径；评审是否越界进入 runtime） |
 | `categories/` 物理目录 | 延后（第二个同类产品再建） |
-| `domains/*/components/` 物理目录 | 砍掉（用 metadata 双入口） |
 | 插件内第二份 runbook/skill | 砍掉 |

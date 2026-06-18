@@ -32,9 +32,11 @@ def test_e2e_cli_integration(tmp_path):
 
     # 验证Phase 4输出
     analysis_file = incident_dir / "analysis.yaml"
+    multitrack_analysis_file = incident_dir / "analysis.multitrack.yaml"
     board_file = incident_dir / "reasoning-board.yaml"
 
     assert analysis_file.exists(), "缺少analysis.yaml"
+    assert multitrack_analysis_file.exists(), "缺少analysis.multitrack.yaml"
     assert board_file.exists(), "缺少reasoning-board.yaml"
 
     # 验证analysis.yaml格式
@@ -44,6 +46,12 @@ def test_e2e_cli_integration(tmp_path):
     assert "conclusion_summary" in analysis
     assert "statement" in analysis["conclusion_summary"]
     assert "confidence" in analysis["conclusion_summary"]
+
+    with open(multitrack_analysis_file) as f:
+        multitrack_analysis = yaml.safe_load(f)
+
+    assert "reasoning_process" in multitrack_analysis
+    assert multitrack_analysis["reasoning_process"]["reasoning_board"] == "reasoning-board.yaml"
 
     # 验证reasoning-board.yaml格式
     with open(board_file) as f:

@@ -1,6 +1,6 @@
 ---
 status: draft
-last_updated: 2026-06-14
+last_updated: 2026-06-18
 supersedes: none
 superseded_by: none
 ---
@@ -17,8 +17,8 @@ superseded_by: none
 
 1. 第 1-3 段生成 `signal_bundle.yaml`、`structured_record.yaml`、`collection_report.yaml`
 2. `src/commands/analyse.py` 在 incident 目录上调用 `phases.phase4.reasoning.run_phase4_analysis()`
-3. Phase 4 落盘 `reasoning-board.yaml`
-4. 后续 analyse runner 继续生成 `analysis.yaml`、`report.md` 等终态文件
+3. Phase 4 落盘 `reasoning-board.yaml` 和 `analysis.multitrack.yaml`
+4. 后续 analyse runner 通过 rules fallback + guardrails 生成生产 `analysis.yaml`、`analysis.rules-fallback.yaml`、`report.md` 等终态文件
 
 当前不同适配器的入口只在外层不同：
 
@@ -54,11 +54,19 @@ superseded_by: none
 过程产物：
 
 - `reasoning-board.yaml`
+- `analysis.multitrack.yaml`
 
 后续终态：
 
 - `analysis.yaml`
+- `analysis.rules-fallback.yaml`
 - `report.md`
+
+当前生产合同：
+
+- `analysis.yaml` 的生产者是 `src/phases/phase4/rules/<middleware>.py` rules fallback + guardrails。
+- `analysis.multitrack.yaml` 是 multitrack renderer 产出的辅助诊断草稿，不替代 `analysis.yaml`。
+- `agent-reasoning-task.md` 是人工或 Agent refinement 合同，不代表默认真实 Claude API 推理已经自动闭环。
 
 ## 验证入口
 
@@ -83,3 +91,4 @@ python3 examples/phase4/demo_mongodb_timeout.py
 - Phase 4 默认仍使用 mock agent 路径
 - 真实 Claude API 推理仍是后续能力，不在这份集成说明里承诺为当前默认行为
 - 过程黑板 `reasoning-board.yaml` 已经是当前实现的一部分，但其结构仍以提案和代码为准，尚未上升为独立 L1 规范
+- 新中间件如需进入生产 analyse 主链路，除 `domains/<product>/` 资产外，还需要补 `src/phases/phase4/rules/<middleware>.py` 或明确保持 skeleton 状态

@@ -59,6 +59,7 @@ def taxonomy_ids(path: Path, errors: List[str]) -> set:
 def load_taxonomies(taxonomy_dir: Path, errors: List[str]) -> Dict[str, set]:
     risk_levels = taxonomy_ids(taxonomy_dir / "risk-levels.yaml", errors)
     scenario_types = taxonomy_ids(taxonomy_dir / "scenario-types.yaml", errors)
+    triage_surface_types = taxonomy_ids(taxonomy_dir / "triage-surface-types.yaml", errors)
     capability_types = taxonomy_ids(taxonomy_dir / "capability-types.yaml", errors)
 
     status_data = load_yaml(taxonomy_dir / "status-types.yaml")
@@ -82,6 +83,7 @@ def load_taxonomies(taxonomy_dir: Path, errors: List[str]) -> Dict[str, set]:
     return {
         "risk_levels": risk_levels or VALID_RISK_LEVELS,
         "scenario_types": scenario_types,
+        "triage_surface_types": triage_surface_types,
         "capability_types": capability_types,
         "script_output_status": status_types.get("script_output_status") or VALID_SCRIPT_STATUS,
         "remote_executor_status": status_types.get("remote_executor_status") or VALID_EXECUTOR_STATUS,

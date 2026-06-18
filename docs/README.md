@@ -143,6 +143,7 @@ superseded_by: none
 ### 分析与参考
 
 - [领域记录对照](analysis/domain-record-comparison.md)
+- [rs.status 采集缺口分析](analysis/rs-status-collection-gap.md)
 - [外部参考资料](references.md)
 - [汇报材料](presentation.md)
 

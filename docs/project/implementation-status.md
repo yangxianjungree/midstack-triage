@@ -18,7 +18,7 @@ superseded_by: none
 - Claude 适配器已支持 bundled runtime 打包、安装、自检和 sandbox 本地测试
 - Cursor 适配器已支持 workspace-local runtime、命令/rule 投影、自检和 sandbox smoke
 - `tools/plugin/midstack-local.py` 已收敛为本地 CLI 适配层，不再承载膨胀的正式实现
-- 第 4 段多轨推理正式实现已收敛到 `src/phases/phase4/multitrack/`
+- 第 4 段多轨推理实现已收敛到 `src/phases/phase4/multitrack/`；当前 `/midstack:analyse` 的生产 `analysis.yaml` 仍由 rules fallback + guardrails 生成，multitrack 输出为辅助产物
 - Replay fixture 已拆分为 `tests/fixtures/active/` 与 `tests/fixtures/legacy/`，默认 replay、score 和仓库门禁只读取 active 样本
 - Fixture hygiene gate 已覆盖 active、legacy 和 golden-path fixtures，阻断运行时生成物、疑似密钥和公网 IP；内网 IP 当前作为 warning 暴露
 - 历史兼容层和旧入口目录已清理：`tools/lib/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tests/replay/`、`tests/tools/analyse/`
@@ -73,9 +73,8 @@ superseded_by: none
   - `structured_record`
   - `signal_bundle`
   - `collection_report`
-- 执行第 4 段推理
-- 生成多条假设
-- 生成验证动作
+- 执行第 4 段过程推理，生成 `reasoning-board.yaml` 和 `analysis.multitrack.yaml`
+- 通过 rules fallback + guardrails 生成生产 `analysis.yaml`
 - 输出第 5 段阶段性结论
 - 输出知识沉淀候选
 - 可直接消费：

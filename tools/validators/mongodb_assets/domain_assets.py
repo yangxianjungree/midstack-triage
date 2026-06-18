@@ -31,7 +31,9 @@ def validate_scenario_reference(metadata_path: Path, scenario_id: str, scenarios
         fail(errors, "%s scenario reference does not exist: scenarios/%s/scenario.yaml" % (metadata_path, scenario_id))
 
 
-def validate_component_reference(metadata_path: Path, component: str, errors: List[str]) -> None:
+def validate_component_reference(metadata_path: Path, component: str, triage_surfaces: set, errors: List[str]) -> None:
+    if triage_surfaces and component not in triage_surfaces:
+        fail(errors, "%s component must be a triage surface in core/taxonomies/triage-surface-types.yaml" % metadata_path)
     component_readme = ROOT / "domains" / MIDDLEWARE / "components" / component / "README.md"
     if not component_readme.exists():
         fail(errors, "%s component reference does not exist: %s" % (metadata_path, component_readme))
@@ -44,7 +46,7 @@ def validate_runbook_metadata(metadata_path: Path, taxonomies: Dict[str, set], s
         fail(errors, "%s missing runbook metadata fields: %s" % (metadata_path, ", ".join(sorted(missing))))
     if data.get("middleware") != MIDDLEWARE:
         fail(errors, "%s middleware must be %s" % (metadata_path, MIDDLEWARE))
-    validate_component_reference(metadata_path, str(data.get("component") or ""), errors)
+    validate_component_reference(metadata_path, str(data.get("component") or ""), taxonomies["triage_surface_types"], errors)
     risk_levels = taxonomies["risk_levels"]
     if data.get("risk_level") not in risk_levels:
         fail(errors, "%s risk_level must be one of %s" % (metadata_path, sorted(risk_levels)))
@@ -67,7 +69,7 @@ def validate_command_metadata(metadata_path: Path, taxonomies: Dict[str, set], s
         fail(errors, "%s missing command metadata fields: %s" % (metadata_path, ", ".join(sorted(missing))))
     if data.get("middleware") != MIDDLEWARE:
         fail(errors, "%s middleware must be %s" % (metadata_path, MIDDLEWARE))
-    validate_component_reference(metadata_path, str(data.get("component") or ""), errors)
+    validate_component_reference(metadata_path, str(data.get("component") or ""), taxonomies["triage_surface_types"], errors)
     risk_levels = taxonomies["risk_levels"]
     if data.get("risk_level") not in risk_levels:
         fail(errors, "%s risk_level must be one of %s" % (metadata_path, sorted(risk_levels)))
@@ -100,7 +102,7 @@ def validate_skill_metadata(
         fail(errors, "%s missing skill metadata fields: %s" % (metadata_path, ", ".join(sorted(missing))))
     if data.get("middleware") != MIDDLEWARE:
         fail(errors, "%s middleware must be %s" % (metadata_path, MIDDLEWARE))
-    validate_component_reference(metadata_path, str(data.get("component") or ""), errors)
+    validate_component_reference(metadata_path, str(data.get("component") or ""), taxonomies["triage_surface_types"], errors)
     scenario_types = taxonomies["scenario_types"]
     if scenario_types and data.get("primary_scenario") not in scenario_types:
         fail(errors, "%s primary_scenario must be one of %s" % (metadata_path, sorted(scenario_types)))

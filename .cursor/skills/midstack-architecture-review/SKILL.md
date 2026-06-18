@@ -19,6 +19,8 @@ description: >-
 **使用：**
 
 - 新增或修改 `domains/`、`scenarios/`、`core/`、`interfaces/` 结构
+- 触及 `src/commands/`、`src/phases/`、`src/execution/`、`src/shared/` 的 runtime 边界
+- 触及 Claude bundled runtime 或 Cursor workspace-local runtime 的安装态合同
 - 评审架构提案、资产 metadata、路由模型
 - PR 触及 runbook/skill/command 组织方式
 - 验证新 domain 是否达到 MongoDB 样例同等完整度
@@ -95,6 +97,24 @@ description: >-
 - **单一事实来源**：runbook 只在 `domains/<product>/runbooks/` 存一份
 - **不重复存放**：顶层 `scenarios/` 不存产品专属命令/脚本/runbook
 - **不提前抽象**：`core/shared/` 仅放跨 2+ 中间件且无产品语义的内容
+
+### 当前 runtime 分层基准
+
+```text
+src/commands/   slash 命令、本地 CLI 和 adapter command 的正式编排入口
+src/phases/     5 段 control plane；Phase 4 下 rules fallback 和 multitrack 并存
+src/execution/  execution plane；远端接入、脚本投放、远程执行、结果回收
+src/shared/     跨命令和跨阶段复用能力
+plugins/claude/ Claude Code 插件源实现；安装后使用 bundled runtime
+plugins/cursor/ Cursor command/rule projection；安装后使用 workspace-local runtime
+tools/          薄入口、校验、回放、导入、生成和工程辅助工具
+```
+
+Phase 4 当前合同：
+
+- `analysis.yaml` 生产者是 `src/phases/phase4/rules/<middleware>.py` rules fallback + guardrails。
+- `src/phases/phase4/multitrack/` 写 `reasoning-board.yaml` 和 `analysis.multitrack.yaml`，不是生产 `analysis.yaml` 的唯一推理核。
+- `agent-reasoning-task.md` 是人工或 Agent refinement 合同，不代表默认真实 Agent 自动闭环。
 
 ### 资产主从关系
 

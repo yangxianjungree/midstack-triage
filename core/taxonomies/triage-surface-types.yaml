@@ -1,0 +1,20 @@
+taxonomy_id: midstack.triage_surface_types.v1
+values:
+  - id: connectivity
+    label: Connectivity
+    description: Client, service, endpoint, authentication, and routing-path diagnosis surface.
+  - id: kubernetes-runtime
+    label: Kubernetes Runtime
+    description: Kubernetes scheduling, Pod lifecycle, readiness, StatefulSet, Event, and node-runtime diagnosis surface.
+  - id: mongos
+    label: MongoDB mongos
+    description: MongoDB router-layer diagnosis surface for sharded clusters.
+  - id: replica-set
+    label: MongoDB Replica Set
+    description: Replica member health, election, replication, and topology diagnosis surface.
+  - id: shard
+    label: MongoDB Shard
+    description: Shard-level distribution, availability, and replica-set diagnosis surface.
+  - id: storage
+    label: Storage
+    description: PVC, PV, data directory, disk capacity, IO, filesystem, and storage-engine diagnosis surface.

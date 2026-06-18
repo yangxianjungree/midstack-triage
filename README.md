@@ -102,7 +102,8 @@ Cursor 适配器会把 workspace-local runtime 安装到 `.cursor/midstack-triag
 
 **已验证成果**：
 
-- 第 4 段多轨推理正式实现已收敛到 `src/phases/phase4/multitrack/`
+- `/midstack:analyse` 当前生产 `analysis.yaml` 来自 rules fallback + guardrails；第 4 段 multitrack 过程产物为 `reasoning-board.yaml` 和 `analysis.multitrack.yaml`
+- 第 4 段多轨推理实现已收敛到 `src/phases/phase4/multitrack/`，默认仍是辅助诊断路径，不作为生产 `analysis.yaml` 的唯一推理核
 - MongoDB fixture replay 与本地评分链路已打通，用于回归 analyse 效果
 - analyse 结果已能输出结构化报告与知识沉淀候选
 

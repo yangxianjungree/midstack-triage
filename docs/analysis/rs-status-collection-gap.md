@@ -1,3 +1,10 @@
+---
+status: archived
+last_updated: 2026-06-18
+supersedes: ../specs/rs-status-collection-gap.spec.md
+superseded_by: none
+---
+
 # Spec: rs.status Collection Reliability (Kubernetes Runtime Scenarios)
 
 Status: implemented — Phase 4 complete (pending live sandbox verification)  

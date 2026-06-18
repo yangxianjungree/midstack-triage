@@ -39,10 +39,12 @@ class MidstackAnalyseTest(unittest.TestCase):
             record_ref_names = {item["name"] for item in adapter["record_refs"]}
             self.assertEqual(adapter["status"], "completed")
             self.assertIn("analysis", record_ref_names)
+            self.assertIn("analysis_multitrack", record_ref_names)
             self.assertIn("analysis_rules_fallback", record_ref_names)
             self.assertIn("agent_reasoning_task", record_ref_names)
             self.assertIn("report", record_ref_names)
             self.assertTrue((output_dir / "analysis.yaml").exists())
+            self.assertTrue((output_dir / "analysis.multitrack.yaml").exists())
             self.assertTrue((output_dir / "analysis.rules-fallback.yaml").exists())
             self.assertTrue((output_dir / "agent-reasoning-task.md").exists())
             self.assertTrue((output_dir / "report.md").exists())

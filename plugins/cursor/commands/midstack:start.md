@@ -39,9 +39,15 @@ Extract fields from the user's natural-language request:
 - `customer_clue`: preserve the original symptom or fault clue from the user message when present.
 - `port`: default to `22` unless the user provides a different SSH port.
 
-Required CLI fields: `middleware`, at least one `--environment-ip`, `--username`, `--password`.
+Default environment mode is `remote`, which means the runtime can SSH into a jump host or fault-domain host and then use remote `kubectl`.
 
-Optional: `--customer-clue`, `--port` (default 22), `--namespace`, `--cluster-id`, `--incident-id`.
+Use `--environment-mode local` only when the agent/runtime is already on the fault cluster or control host. This mode is recognized by Phase 1 but currently returns blocked guidance until local collection is implemented.
+
+Use `--environment-mode offline` when the user only has existing incident artifacts, remote-run output, logs, screenshots, or pasted command output. This mode is recognized by Phase 1 and returns blocked guidance for offline analyse input.
+
+Required CLI fields for `remote`: `middleware`, at least one `--environment-ip`, `--username`, `--password`.
+
+Optional: `--customer-clue`, `--port` (default 22), `--namespace`, `--cluster-id`, `--incident-id`, `--environment-mode`.
 
 Example shell (replace paths and secrets):
 
@@ -62,3 +68,5 @@ After `start`, report whether the incident is `ready` or `blocked` from `adapter
 If `ready`, state exactly `next run /midstack:analyse`.
 
 If `blocked`, summarize blocking items. If multiple MongoDB namespaces were detected, list candidates and ask the user to choose one.
+
+Prefer `follow_up_questions` from `adapter-output.yaml` when present; ask those questions directly instead of inventing new ones.

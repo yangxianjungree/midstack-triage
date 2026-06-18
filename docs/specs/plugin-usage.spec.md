@@ -75,9 +75,9 @@ slash 命令与 5 阶段流程的简明说明见 [Slash 命令面说明](../proj
 必填：
 
 - 中间件类型
-- 环境 IP
-- 账号
-- 密码
+- `remote` 模式下的环境 IP
+- `remote` 模式下的账号
+- `remote` 模式下的密码
 
 可选（高价值，建议提供）：
 
@@ -88,12 +88,14 @@ slash 命令与 5 阶段流程的简明说明见 [Slash 命令面说明](../proj
 - 端口
 - namespace
 - cluster_id
+- environment_mode，默认 `remote`
 
 > 参数定义与默认值以[插件运行时规范](plugin-runtime.spec.md) §6 为准。
 
 ### 行为
 
 - 引导用户补齐最小输入
+- 判断当前属于 `remote`、`local` 还是 `offline` 环境模式
 - 保存原始故障线索
 - 尝试验证远程接入和基础 Kubernetes 能力
 - 保存 incident 目录和本地忽略的远程配置

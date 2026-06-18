@@ -32,14 +32,24 @@ superseded_by: none
 ### 最小必填输入
 
 - 中间件类型
-- K8s 环境 IP
-- 账号
-- 密码
+- 环境模式，默认 `remote`
+- `remote` 模式下的 K8s 环境 IP
+- `remote` 模式下的账号
+- `remote` 模式下的密码
 
 ### 高价值可选输入
 
 - 客户提供的原始故障线索
 - 端口
+
+### 环境模式
+
+- `remote`
+  - 当前默认主路径：Agent/runtime 通过 SSH 进入跳板机或故障环境，再用远端 `kubectl` 做只读确认和采集。
+- `local`
+  - 表示 Agent/runtime 已经在故障集群或控制面机器上。当前仅完成 Phase 1 识别和引导，本地 live executor 完成前不得隐式回退到 SSH。
+- `offline`
+  - 表示用户只有已有 incident、fixture、remote-run、日志、截图或手工命令输出。当前 `/start` 只完成识别和引导，正式分析走离线证据输入。
 
 ### 输出状态
 
@@ -53,6 +63,8 @@ superseded_by: none
 - 可执行基础 Kubernetes 操作
 - 已明确需要排查哪个中间件
 - 如已提供故障线索，线索内容可以被理解（线索本身为可选输入，缺失不构成 `blocked`）
+
+当前 `ready` 仅适用于 `remote` 主路径；`local` 和 `offline` 在对应执行/证据输入链路完成前返回 `blocked` 并提供结构化追问。
 
 ### 典型 `blocked` 条件
 

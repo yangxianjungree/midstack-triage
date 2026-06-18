@@ -30,6 +30,11 @@ Parse `$ARGUMENTS` for:
 - `username` and `password`: support forms such as `root/123` or `账号密码是root/123`.
 - `customer_clue`: preserve the original symptom text.
 - `port`: default `22` unless specified.
+- `environment_mode`: default `remote`; use `local` only when the runtime is already on the fault cluster/control host, or `offline` when the user only has existing artifacts or pasted command output.
+
+Default `remote` mode is the current main path and requires `--environment-ip`,
+`--username`, and `--password`. `local` and `offline` are recognized by Phase 1
+but currently return blocked guidance instead of running collection.
 
 Run:
 
@@ -42,6 +47,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py" start \
   --username <username> \
   --password '<password>' \
   --port 22 \
+  --environment-mode remote \
   --output-root "$MIDSTACK_TRIAGE_WORKSPACE/.local/incidents"
 ```
 
@@ -57,6 +63,7 @@ When `status=ready`:
 When `status=blocked`:
 
 - summarize `blocking_items`
+- prefer `follow_up_questions` when present and ask those questions directly
 - show the read-only `next_actions`
 
 Do not print passwords or tokens.

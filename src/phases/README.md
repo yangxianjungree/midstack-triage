@@ -4,8 +4,8 @@
 
 当前正式边界：
 
-- `phase1/startup.py`
-  第 1 段启动门面；实际远端接入能力来自 `src/execution/remote/access.py`。
+- `phase1/intake.py`、`phase1/startup.py`
+  第 1 段受理、环境模式识别、结构化追问和启动门面；实际远端接入能力来自 `src/execution/remote/access.py`。
 - `phase2/inventory.py`
   环境对象盘点、拓扑与 namespace 发现。
 - `phase3/`

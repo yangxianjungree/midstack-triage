@@ -158,6 +158,7 @@ def assert_cli_command_options_documented(
             "--namespace",
             "--cluster-id",
             "--incident-id",
+            "--environment-mode",
         },
         "analyse": {
             "--incident-dir",

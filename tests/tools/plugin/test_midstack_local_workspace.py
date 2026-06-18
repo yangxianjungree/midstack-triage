@@ -72,6 +72,9 @@ def test_start_ready_output_points_to_midstack_analyse(tmp_path, monkeypatch):
     current_incident = read_current_incident(tmp_path / ".local" / "incidents")
     output = load_yaml(current_incident / "adapter-output.yaml")
     assert output["status"] == "ready"
+    phase1_intake = load_yaml(current_incident / "phase1-intake.yaml")
+    assert phase1_intake["status"] == "ready_for_validation"
+    assert phase1_intake["environment_mode"] == "remote"
     assert output["next_actions"] == [
         "run /midstack:analyse",
         "or run /midstack:analyse %s" % current_incident.name,
@@ -80,6 +83,90 @@ def test_start_ready_output_points_to_midstack_analyse(tmp_path, monkeypatch):
         "local incident %s is ready; namespace auto-discovered as psmdb-test; next run /midstack:analyse"
         % current_incident.name
     )
+
+
+def test_start_blocked_writes_follow_up_questions_for_missing_remote_inputs(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="",
+        customer_clue="mongo node may be unhealthy",
+        environment_ip=[],
+        username="",
+        password="",
+        port=22,
+        namespace="",
+        cluster_id="",
+        output_root=".local/incidents",
+    )
+
+    rc = module.command_start(args)
+    assert rc == 0
+
+    current_incident = read_current_incident(tmp_path / ".local" / "incidents")
+    output = load_yaml(current_incident / "adapter-output.yaml")
+    intake = load_yaml(current_incident / "phase1-intake.yaml")
+    assert output["status"] == "blocked"
+    assert intake["status"] == "blocked"
+    assert [item["field"] for item in output["follow_up_questions"]] == [
+        "environment_ip",
+        "username",
+        "password",
+    ]
+    assert output["next_actions"] == [item["question"] for item in output["follow_up_questions"]]
+
+
+def test_start_local_mode_blocks_without_ssh_credentials(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="",
+        customer_clue="mongo node may be unhealthy",
+        environment_ip=[],
+        username="",
+        password="",
+        port=22,
+        namespace="",
+        cluster_id="",
+        environment_mode="local",
+        output_root=".local/incidents",
+    )
+
+    rc = module.command_start(args)
+    assert rc == 0
+
+    current_incident = read_current_incident(tmp_path / ".local" / "incidents")
+    output = load_yaml(current_incident / "adapter-output.yaml")
+    assert output["status"] == "blocked"
+    assert output["blocking_items"][0]["code"] == "local_start_not_implemented"
+
+
+def test_start_offline_mode_blocks_with_artifact_prompt(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="",
+        customer_clue="mongo node may be unhealthy",
+        environment_ip=[],
+        username="",
+        password="",
+        port=22,
+        namespace="",
+        cluster_id="",
+        environment_mode="offline",
+        output_root=".local/incidents",
+    )
+
+    rc = module.command_start(args)
+    assert rc == 0
+
+    current_incident = read_current_incident(tmp_path / ".local" / "incidents")
+    output = load_yaml(current_incident / "adapter-output.yaml")
+    assert output["status"] == "blocked"
+    assert output["blocking_items"][0]["code"] == "offline_start_needs_artifacts"
 
 
 def test_offline_analyse_does_not_call_remote_collection(tmp_path, monkeypatch):

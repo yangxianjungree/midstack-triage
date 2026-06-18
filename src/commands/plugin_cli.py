@@ -62,6 +62,12 @@ def build_parser() -> argparse.ArgumentParser:
     start.add_argument("--customer-clue", default="")
     start.add_argument("--namespace", default="")
     start.add_argument("--cluster-id", default="")
+    start.add_argument(
+        "--environment-mode",
+        choices=sorted(execution_mode_names()),
+        default="remote",
+        help="Start intake mode. remote is the default SSH path; local/offline are recognized but blocked until their evidence path is supplied.",
+    )
     start.add_argument("--incident-id")
     start.add_argument("--output-root", default=".local/incidents")
     start.add_argument("--environment-ip", action="append", default=[], help="Remote environment IP. May be repeated; the first IP is used as jump host.")

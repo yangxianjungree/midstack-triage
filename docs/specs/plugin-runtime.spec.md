@@ -161,9 +161,10 @@ superseded_by: none
 当前支持参数：
 
 - `middleware`：必填
-- `ips`：必填，支持一个或多个值
-- `username`：必填
-- `password`：必填
+- `environment_mode`：可选，默认 `remote`
+- `ips`：`remote` 模式必填，支持一个或多个值
+- `username`：`remote` 模式必填
+- `password`：`remote` 模式必填
 - `port`：可选，默认 `22`
 - `clue`：可选，支持直接传客户原始故障线索
 
@@ -171,6 +172,9 @@ superseded_by: none
 
 - 能直接传就直接传
 - 传不全就交互补齐
+- `remote` 是当前默认主路径，表示通过 SSH 进入跳板机或故障环境后执行只读采集
+- `local` 表示 runtime 已在故障集群或控制面机器上；当前只在 Phase 1 识别并返回 blocked 引导，不执行本地采集
+- `offline` 表示仅消费已有 incident、fixture、remote-run、日志或手工命令输出；当前 `/start` 只识别并返回 blocked 引导，正式分析应走 `/plugin:analyse --execution-mode offline`
 
 ### `/plugin:analyse`
 

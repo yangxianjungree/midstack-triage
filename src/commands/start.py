@@ -6,6 +6,7 @@ import secrets
 from datetime import datetime
 from typing import Any, Dict
 
+from phases.phase1.intake import build_start_intake
 from shared.workspace import adapter_output, now_iso, path_from_arg, write_current_incident, write_yaml
 
 
@@ -29,6 +30,8 @@ def unique_incident_id(middleware: str, output_root) -> str:
 
 
 def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int:
+    if not hasattr(args, "environment_mode"):
+        args.environment_mode = "remote"
     output_root = path_from_arg(args.output_root)
     incident_id = args.incident_id or unique_incident_id(args.middleware, output_root)
     env_ips = [item for item in (args.environment_ip or []) if item]
@@ -36,15 +39,9 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
     output_dir = output_root / incident_id
     created_at = now_iso()
 
-    blocking_items = []
-    if not args.middleware:
-        blocking_items.append({"code": "missing_middleware", "message": "middleware is required", "required_user_action": "provide middleware, for example mongodb"})
-    if not primary_ip:
-        blocking_items.append({"code": "missing_environment_ip", "message": "environment IP is required", "required_user_action": "provide at least one remote environment IP"})
-    if not args.username:
-        blocking_items.append({"code": "missing_username", "message": "remote username is required", "required_user_action": "provide remote username"})
-    if not args.password:
-        blocking_items.append({"code": "missing_password", "message": "remote password is required", "required_user_action": "provide remote password"})
+    intake = build_start_intake(args)
+    blocking_items = list(intake["blocking_items"])
+    follow_up_questions = list(intake["follow_up_questions"])
 
     remote_validation: Dict[str, Any] = {"status": "skipped", "checks": []}
     object_inventory: Dict[str, Any] = {"status": "skipped", "middleware": args.middleware}
@@ -55,7 +52,7 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
         "password": args.password,
         "port": args.port,
     }
-    if not blocking_items:
+    if intake["status"] == "ready_for_validation":
         remote_validation = validate_remote_environment(access)
         if remote_validation["status"] != "passed":
             blocking_items.append(
@@ -88,6 +85,7 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
                 )
 
     status = "ready" if not blocking_items else "blocked"
+    write_yaml(output_dir / "phase1-intake.yaml", intake)
     write_yaml(output_dir / "environment-check.yaml", {"remote_validation": remote_validation})
     write_yaml(output_dir / "object-inventory.yaml", object_inventory)
     write_yaml(
@@ -103,6 +101,8 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
             "namespace": args.namespace,
             "cluster_id": args.cluster_id,
             "owner": "local",
+            "environment_mode": intake["environment_mode"],
+            "execution_mode": intake["execution_mode"],
             "remote_validation": remote_validation,
         },
     )
@@ -115,12 +115,14 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
             "cluster_id": args.cluster_id,
             "customer_clue": args.customer_clue,
             "input_source": "local-cli",
+            "environment_mode": intake["environment_mode"],
+            "execution_mode": intake["execution_mode"],
             "environment_ips": env_ips,
             "remote_port": args.port,
             "received_at": created_at,
         },
     )
-    if primary_ip:
+    if primary_ip and intake["environment_mode"] == "remote":
         write_yaml(
             output_dir / "remote-config.yaml",
             {
@@ -150,6 +152,8 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
         output["user_message"] = "%s; next run /midstack:analyse" % output["summary"]
     else:
         output["blocking_items"] = blocking_items
+        output["follow_up_questions"] = follow_up_questions
+        output["next_actions"] = [item["question"] for item in follow_up_questions]
         output["warnings"].append("incident is blocked until required input and remote validation pass")
     write_current_incident(output_root, output_dir)
     write_yaml(output_dir / "adapter-output.yaml", output)

@@ -18,6 +18,8 @@
   signal bundle 到 scenario 的路由推断。
 - `skill_resolver.py`
   scenario 到 skill / asset 的解析。
+- `asset_resolver.py`
+  domain metadata 到 knowledge candidate 的共享解析。
 
 规则：
 

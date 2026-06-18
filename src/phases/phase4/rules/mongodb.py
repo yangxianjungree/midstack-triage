@@ -8,11 +8,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple
 
 try:
+    from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from .common import load_yaml, runtime_root, write_yaml
 except ImportError:  # pragma: no cover - supports direct file execution
     RULES_DIR = Path(__file__).resolve().parent
     if str(RULES_DIR) not in sys.path:
         sys.path.insert(0, str(RULES_DIR))
+    SRC_DIR = RULES_DIR.parents[2]
+    if str(SRC_DIR) not in sys.path:
+        sys.path.insert(0, str(SRC_DIR))
+    from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from common import load_yaml, runtime_root, write_yaml
 
 
@@ -337,29 +342,7 @@ def knowledge_candidates_for_scenario(scenario: str, primary_cause_category: str
     if scenario in ("", "unknown", "baseline"):
         return []
 
-    candidates: List[Dict[str, str]] = []
-    roots = [
-        ("runbook", ROOT / "domains" / "mongodb" / "runbooks"),
-        ("command", ROOT / "domains" / "mongodb" / "commands"),
-        ("skill", ROOT / "domains" / "mongodb" / "skills"),
-    ]
-    for candidate_type, root in roots:
-        if not root.exists():
-            continue
-        for metadata_file in sorted(root.glob("**/metadata.yaml")):
-            metadata = load_yaml(metadata_file)
-            asset_scenario = metadata.get("scenario") or metadata.get("primary_scenario")
-            if asset_scenario != scenario:
-                continue
-            candidates.append(
-                {
-                    "candidate_type": candidate_type,
-                    "title": str(metadata.get("title") or metadata_file.parent.name),
-                    "asset_path": str(metadata_file.parent.relative_to(ROOT)),
-                    "reason": "Existing MongoDB %s asset matches scenario %s." % (candidate_type, scenario),
-                }
-            )
-    return candidates
+    return shared_knowledge_candidates_for_scenario("mongodb", scenario, ROOT)
 
 
 def has_critical_gap(gaps: List[Dict[str, Any]]) -> bool:

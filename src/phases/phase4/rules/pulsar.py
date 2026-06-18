@@ -7,11 +7,16 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 try:
+    from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from .common import load_yaml, runtime_root, write_yaml
 except ImportError:  # pragma: no cover - supports direct file execution
     RULES_DIR = Path(__file__).resolve().parent
     if str(RULES_DIR) not in sys.path:
         sys.path.insert(0, str(RULES_DIR))
+    SRC_DIR = RULES_DIR.parents[2]
+    if str(SRC_DIR) not in sys.path:
+        sys.path.insert(0, str(SRC_DIR))
+    from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from common import load_yaml, runtime_root, write_yaml
 
 ROOT = runtime_root()
@@ -65,29 +70,7 @@ def hypothesis(hid: str, statement: str, evidence: List[Dict[str, str]], gaps: L
 def knowledge_candidates_for_scenario(scenario: str) -> List[Dict[str, str]]:
     if scenario in ("", "unknown", "baseline"):
         return []
-    candidates: List[Dict[str, str]] = []
-    roots = [
-        ("runbook", ROOT / "domains" / "pulsar" / "runbooks"),
-        ("command", ROOT / "domains" / "pulsar" / "commands"),
-        ("skill", ROOT / "domains" / "pulsar" / "skills"),
-    ]
-    for candidate_type, root in roots:
-        if not root.exists():
-            continue
-        for metadata_file in sorted(root.glob("**/metadata.yaml")):
-            metadata = load_yaml(metadata_file)
-            asset_scenario = metadata.get("scenario") or metadata.get("primary_scenario")
-            if asset_scenario != scenario:
-                continue
-            candidates.append(
-                {
-                    "candidate_type": candidate_type,
-                    "title": str(metadata.get("title") or metadata_file.parent.name),
-                    "asset_path": str(metadata_file.parent.relative_to(ROOT)),
-                    "reason": "Existing Pulsar %s asset matches scenario %s." % (candidate_type, scenario),
-                }
-            )
-    return candidates
+    return shared_knowledge_candidates_for_scenario("pulsar", scenario, ROOT)
 
 
 def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collection_report: Dict[str, Any]) -> Dict[str, Any]:

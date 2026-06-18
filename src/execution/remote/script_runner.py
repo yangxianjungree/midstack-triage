@@ -17,22 +17,19 @@ from execution.remote.contracts import (
     build_run_result,
     text_tail,
 )
+from execution.remote.error_contract import (
+    classify_remote_error,
+    error_payload,
+    status_from_error_code,
+)
 from execution.remote.executor_preflight import validate_executor_capabilities as validate_preflight_capabilities
 from execution.remote.runtime_support import now_iso, try_load_yaml, write_json, write_yaml
 from execution.remote.script_output_contract import validate_script_output_contract
 from execution.remote.transport import FunctionRemoteTransport, RemoteTransport
 
 
-def classify_remote_error(detail: str, default_code: str) -> Dict[str, str]:
-    return remote_capabilities.classify_remote_error(detail, default_code)
-
-
 def default_remote_transport() -> RemoteTransport:
     return FunctionRemoteTransport(run_ssh, scp_to, scp_from)
-
-
-error_payload = remote_capabilities.error_payload
-status_from_error_code = remote_capabilities.status_from_error_code
 
 
 def remote_kubectl_get_pods(access: Dict[str, Any], namespace: str, transport: RemoteTransport | None = None):
@@ -161,7 +158,7 @@ def run_script(
     process = {"exit_code": -1, "stdout_tail": "", "stderr_tail": ""}
     retrieved_files: Dict[str, str] = {}
     warnings: List[str] = []
-    error = remote_capabilities.error_payload()
+    error = error_payload()
     status = "failed"
     output_valid = False
     script_capability_checks = list(capability_checks)
@@ -174,7 +171,7 @@ def run_script(
         warnings.extend(capability_warnings)
         if not capabilities_ok:
             error = capability_error
-            status = remote_capabilities.status_from_error_code(error["code"])
+            status = status_from_error_code(error["code"])
         context_path = local_script_dir / "context.yaml"
         write_json(context_path, context)
         if not capabilities_ok:
@@ -184,13 +181,13 @@ def run_script(
         if mkdir_proc.returncode != 0:
             process = {"exit_code": mkdir_proc.returncode, "stdout_tail": text_tail(mkdir_proc.stdout), "stderr_tail": text_tail(mkdir_proc.stderr)}
             error = classify_remote_error(mkdir_proc.stderr or mkdir_proc.stdout, "remote_workspace_unavailable")
-            status = remote_capabilities.status_from_error_code(error["code"])
+            status = status_from_error_code(error["code"])
             return build_executor_result(request, status, started_at, script_capability_checks, process, retrieved_files, error, warnings)
         try:
             transport.copy_to(access, context_path, remote_context)
         except RuntimeError as exc:
             error = classify_remote_error(str(exc), "remote_workspace_unavailable")
-            status = remote_capabilities.status_from_error_code(error["code"])
+            status = status_from_error_code(error["code"])
             return build_executor_result(request, status, started_at, script_capability_checks, process, retrieved_files, error, warnings)
 
         runner = "python3" if str(entry["runtime"]) == "python" else "bash"
@@ -209,9 +206,9 @@ def run_script(
             retrieved_files["output_file"] = str(local_script_dir / "output.yaml")
             output_valid, _, contract_error = validate_script_output_contract(local_script_dir / "output.yaml", script_id)
             if not output_valid:
-                error = remote_capabilities.error_payload("script_contract_failed", contract_error)
+                error = error_payload("script_contract_failed", contract_error)
         except RuntimeError as exc:
-            error = remote_capabilities.error_payload("output_retrieval_failed", str(exc))
+            error = error_payload("output_retrieval_failed", str(exc))
 
         artifact_dest = local_script_dir / "artifacts"
         if artifact_dest.exists():
@@ -225,20 +222,20 @@ def run_script(
 
         if proc.returncode == 0 and output_valid:
             status = "partial" if warnings else "success"
-            error = remote_capabilities.error_payload()
+            error = error_payload()
         elif proc.returncode == 0:
             status = "failed"
             if not error["code"]:
-                error = remote_capabilities.error_payload("script_contract_failed", "script did not produce a valid retrievable output.yaml")
+                error = error_payload("script_contract_failed", "script did not produce a valid retrievable output.yaml")
         else:
             status = "failed"
             if output_valid:
-                error = remote_capabilities.error_payload(
+                error = error_payload(
                     "script_contract_failed",
                     "script returned non-zero exit code %s after writing output.yaml" % proc.returncode,
                 )
             elif not error["code"]:
-                error = remote_capabilities.error_payload("script_runtime_failed", proc.stderr.strip() or "script exited with code %s" % proc.returncode)
+                error = error_payload("script_runtime_failed", proc.stderr.strip() or "script exited with code %s" % proc.returncode)
     finally:
         result = build_executor_result(request, status, started_at, script_capability_checks, process, retrieved_files, error, warnings)
         write_yaml(local_script_dir / "remote-executor-result.yaml", result)

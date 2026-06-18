@@ -8,6 +8,8 @@
   SSH/SSHPass transport、基础环境校验、scp 收发。
 - `transport.py`
   执行编排使用的 transport 接口；当前默认实现仍委托 `access.py` 的 SSH/scp 函数。
+- `error_contract.py`
+  remote executor 的错误码、状态映射、capability check 条目和通用错误分类。
 - `capabilities.py`
   脚本级远端 capability check、错误分类、Pod 目标解析与 pod 内工具探测。
 - `executor_preflight.py`

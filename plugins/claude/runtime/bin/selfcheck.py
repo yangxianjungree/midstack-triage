@@ -65,6 +65,7 @@ def main() -> int:
         (RUNTIME_ROOT / "src" / "execution" / "__init__.py", "execution package"),
         (RUNTIME_ROOT / "src" / "execution" / "remote" / "__init__.py", "remote execution package"),
         (RUNTIME_ROOT / "src" / "execution" / "remote" / "access.py", "remote access runtime"),
+        (RUNTIME_ROOT / "src" / "execution" / "remote" / "error_contract.py", "remote error contract"),
         (RUNTIME_ROOT / "src" / "execution" / "remote" / "executor.py", "remote executor runtime"),
         (RUNTIME_ROOT / "src" / "execution" / "remote" / "executor_preflight.py", "remote executor preflight"),
         (RUNTIME_ROOT / "src" / "execution" / "remote" / "mongodb_collection_runtime.py", "mongodb remote collection runtime"),

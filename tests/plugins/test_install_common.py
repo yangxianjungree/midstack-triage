@@ -27,6 +27,7 @@ def test_runtime_bundle_layout_projects_common_dirs_with_optional_prefix():
 def test_runtime_markers_share_common_runtime_files_with_optional_prefix():
     assert "src/shared/asset_resolver.py" in COMMON_RUNTIME_MARKER_FILES
     assert "src/shared/workspace.py" in COMMON_RUNTIME_MARKER_FILES
+    assert "src/execution/remote/error_contract.py" in COMMON_RUNTIME_MARKER_FILES
     assert "src/execution/remote/executor_preflight.py" in COMMON_RUNTIME_MARKER_FILES
     assert "src/execution/remote/runtime_support.py" in COMMON_RUNTIME_MARKER_FILES
     assert "src/execution/remote/script_output_contract.py" in COMMON_RUNTIME_MARKER_FILES

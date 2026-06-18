@@ -31,6 +31,15 @@ from execution.remote.context import (
     context_profile_from_inventory,
     default_context_profile,
 )
+from execution.remote.error_contract import (
+    BLOCKED_ERROR_CODES,
+    capability_result,
+    classify_kubectl_error,
+    classify_remote_error as _classify_remote_error,
+    classify_ssh_error,
+    error_payload,
+    status_from_error_code,
+)
 from execution.remote.contracts import (
     aggregate_run_status,
     build_executor_request,
@@ -48,17 +57,11 @@ from execution.remote.script_runner import (
 )
 from execution.remote.transport import FunctionRemoteTransport, RemoteTransport
 
-BLOCKED_ERROR_CODES = remote_capabilities.BLOCKED_ERROR_CODES
 SCRIPT_IDS_REQUIRING_MONGOSH = remote_capabilities.SCRIPT_IDS_REQUIRING_MONGOSH
 SCRIPT_ID_MONGOS_SHARD_MAP = remote_capabilities.SCRIPT_ID_MONGOS_SHARD_MAP
 SCRIPT_ID_REPLICASET_STATUS = remote_capabilities.SCRIPT_ID_REPLICASET_STATUS
 SCRIPT_OUTPUT_REQUIRED_FIELDS = remote_capabilities.SCRIPT_OUTPUT_REQUIRED_FIELDS
 SCRIPT_OUTPUT_ALLOWED_STATUSES = remote_capabilities.SCRIPT_OUTPUT_ALLOWED_STATUSES
-error_payload = remote_capabilities.error_payload
-status_from_error_code = remote_capabilities.status_from_error_code
-capability_result = remote_capabilities.capability_result
-classify_ssh_error = remote_capabilities.classify_ssh_error
-classify_kubectl_error = remote_capabilities.classify_kubectl_error
 shell_candidates = remote_capabilities.shell_candidates
 build_required_capabilities = remote_capabilities.build_required_capabilities
 pod_name = remote_capabilities.pod_name
@@ -74,7 +77,7 @@ record_pod_tool_probe_summary = remote_capabilities.record_pod_tool_probe_summar
 
 
 def classify_remote_error(detail: str, default_code: str) -> Dict[str, str]:
-    return remote_capabilities.classify_remote_error(detail, default_code)
+    return _classify_remote_error(detail, default_code)
 
 
 def validate_script_output_contract(output_path: Path, expected_script_id: str):

@@ -10,17 +10,13 @@ from commands import finalize as finalize_command
 from commands import review as review_command
 from commands import start as start_command
 from phases.phase2.inventory import discover_mongodb_inventory
-from phases.phase3.collection import (
-    apply_scenario_routing_if_needed,
-    build_incident_from_remote_run,
-    enrich_skill_runtime_context,
-    load_remote_executor_run_result,
-    normalize_collection_report_gaps,
-    remote_executor_next_actions,
-    remote_executor_required_user_action,
-    run_directed_recollection_if_needed,
-    run_remote_collection,
-)
+from phases.phase3.incident_build import build_incident_from_remote_run
+from phases.phase3.recollection_run import run_directed_recollection_if_needed
+from phases.phase3.remote_collection import run_remote_collection
+from phases.phase3.remote_run import load_remote_executor_run_result, remote_executor_next_actions, remote_executor_required_user_action
+from phases.phase3.report_gaps import normalize_collection_report_gaps
+from phases.phase3.scenario_routing import apply_scenario_routing_if_needed
+from phases.phase3.skill_runtime import enrich_skill_runtime_context
 
 def command_start(args: argparse.Namespace) -> int:
     return start_command.run(

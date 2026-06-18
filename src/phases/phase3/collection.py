@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional
-
-from . import remote_collection as _remote_collection
 from .incident_build import build_incident_from_remote_run
 from .remote_collection import merge_remote_run_outputs, run_remote_collection
 from .remote_run import (
@@ -51,6 +47,7 @@ from .recollection import (
     signal_object_pods,
     text_has_direct_error_terms,
 )
+from .recollection_run import run_directed_recollection_if_needed
 from .report_gaps import (
     drop_closed_evidence_gaps,
     infer_gap_type,
@@ -63,17 +60,3 @@ from .skill_runtime import (
     resolve_skill_runtime,
     write_skill_runtime_context,
 )
-
-subprocess = _remote_collection.subprocess
-
-
-def run_directed_recollection_if_needed(args, output_dir: Path, skill_pool: Optional[set[str]] = None) -> bool:
-    if not args.remote_config:
-        return False
-    script_ids = directed_recollection_script_ids(output_dir, skill_pool=skill_pool)
-    if not script_ids:
-        return False
-    trace_dir = output_dir / "directed-recollection"
-    remote_run_dir = run_remote_collection(args, trace_dir, script_ids)
-    merge_remote_run_outputs(remote_run_dir, output_dir)
-    return True

@@ -12,6 +12,7 @@ if str(SRC_DIR) not in sys.path:
 FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "active" / "mongodb"
 
 from phases.phase3 import collection as phase3_collection
+from phases.phase3 import remote_collection as phase3_remote_collection
 
 
 def write_yaml(path: Path, payload) -> None:
@@ -258,7 +259,7 @@ def test_run_remote_collection_invokes_execution_module(tmp_path, monkeypatch):
 
         return Result()
 
-    monkeypatch.setattr(phase3_collection.subprocess, "run", fake_run)
+    monkeypatch.setattr(phase3_remote_collection.subprocess, "run", fake_run)
     args = SimpleNamespace(
         remote_config=str(remote_config),
         remote_output_dir=str(remote_output_dir),
@@ -266,7 +267,7 @@ def test_run_remote_collection_invokes_execution_module(tmp_path, monkeypatch):
         object_inventory="",
     )
 
-    result = phase3_collection.run_remote_collection(args, output_dir)
+    result = phase3_remote_collection.run_remote_collection(args, output_dir)
 
     assert result == remote_run_dir
     assert captured["command"][:3] == [sys.executable, "-m", "execution.remote.executor"]

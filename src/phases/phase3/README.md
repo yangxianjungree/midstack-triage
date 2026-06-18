@@ -14,6 +14,8 @@
   remote executor 输出目录契约、脚本输出合并、remote-executor 结果写入采集报告。
 - `recollection.py`
   基于已有证据选择定向补采脚本，不负责启动远程执行。
+- `recollection_run.py`
+  执行定向补采：选择脚本后调用 remote collection，并把结果合并回 incident。
 - `report_gaps.py`
   采集报告 evidence gap 的归一化、收口和补采缺口记录。
 - `scenario_routing.py`

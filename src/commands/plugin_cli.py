@@ -69,7 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--environment-mode",
         choices=sorted(execution_mode_names()),
         default="",
-        help="Start intake mode. remote is the default SSH path; local/offline are recognized but blocked until their evidence path is supplied.",
+        help="Start intake mode. remote is the default SSH path; local uses this machine's kubectl context; offline uses existing artifacts.",
     )
     start.add_argument("--incident-id")
     start.add_argument("--output-root", default=".local/incidents")
@@ -98,7 +98,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--execution-mode",
         choices=sorted(execution_mode_names()),
         default="remote",
-        help="Evidence collection mode. remote is the current default; offline only consumes existing artifacts.",
+        help="Evidence collection mode. remote uses SSH, local uses this machine, offline only consumes existing artifacts.",
     )
     analyse.set_defaults(func=command_analyse)
 

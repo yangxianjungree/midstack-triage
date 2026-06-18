@@ -47,6 +47,7 @@ def _load_prior_start_values(output_dir: Path) -> Dict[str, Any]:
                 "environment_ip": input_data.get("environment_ips") or [],
                 "port": input_data.get("remote_port") or None,
                 "artifact_source": input_data.get("artifact_source") or "",
+                "manual_evidence_ref": input_data.get("manual_evidence_ref") or "",
             }
         )
     remote_config_file = output_dir / "remote-config.yaml"
@@ -65,7 +66,17 @@ def _load_prior_start_values(output_dir: Path) -> Dict[str, Any]:
 
 def _merge_start_args(args: Any, prior_values: Dict[str, Any]) -> Any:
     merged = vars(args).copy()
-    for field in ("middleware", "customer_clue", "namespace", "cluster_id", "environment_mode", "username", "password", "artifact_source"):
+    for field in (
+        "middleware",
+        "customer_clue",
+        "namespace",
+        "cluster_id",
+        "environment_mode",
+        "username",
+        "password",
+        "artifact_source",
+        "manual_evidence_ref",
+    ):
         if not merged.get(field) and prior_values.get(field):
             merged[field] = prior_values[field]
     if not merged.get("environment_ip") and prior_values.get("environment_ip"):
@@ -86,6 +97,8 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
         args.artifact_source = ""
     if not hasattr(args, "pasted_evidence"):
         args.pasted_evidence = ""
+    if not hasattr(args, "manual_evidence_ref"):
+        args.manual_evidence_ref = ""
     output_root = path_from_arg(args.output_root)
     prior_values: Dict[str, Any] = {}
     if args.incident_id:
@@ -184,8 +197,9 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
     }
     if args.artifact_source:
         input_payload["artifact_source"] = args.artifact_source
-    if args.pasted_evidence:
-        input_payload["manual_evidence_ref"] = "logs/raw/manual-evidence.txt"
+    manual_evidence_ref = "logs/raw/manual-evidence.txt" if args.pasted_evidence else args.manual_evidence_ref
+    if manual_evidence_ref:
+        input_payload["manual_evidence_ref"] = manual_evidence_ref
     write_yaml(output_dir / "input.yaml", input_payload)
     if args.pasted_evidence:
         raw_file = output_dir / "logs" / "raw" / "manual-evidence.txt"

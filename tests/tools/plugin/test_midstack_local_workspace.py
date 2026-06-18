@@ -328,6 +328,58 @@ def test_start_manual_offline_pasted_evidence_is_saved_as_raw_only(tmp_path, mon
     assert not (incident_dir / "collection_report.yaml").exists()
 
 
+def test_start_manual_offline_continuation_preserves_raw_evidence_ref(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    first_args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="manual-evidence-continue",
+        customer_clue="ToDesk 环境，只能粘贴命令输出",
+        environment_ip=[],
+        username="",
+        password="",
+        port=22,
+        namespace="",
+        cluster_id="",
+        environment_mode="offline",
+        artifact_source="",
+        pasted_evidence="kubectl get pods\npod-a CrashLoopBackOff\n",
+        output_root=".local/incidents",
+    )
+
+    assert module.command_start(first_args) == 0
+
+    second_args = SimpleNamespace(
+        middleware="",
+        incident_id="manual-evidence-continue",
+        customer_clue="",
+        environment_ip=[],
+        username="",
+        password="",
+        port=None,
+        namespace="",
+        cluster_id="",
+        environment_mode="",
+        artifact_source="",
+        pasted_evidence="",
+        output_root=".local/incidents",
+    )
+
+    assert module.command_start(second_args) == 0
+
+    incident_dir = tmp_path / ".local" / "incidents" / "manual-evidence-continue"
+    input_data = load_yaml(incident_dir / "input.yaml")
+    intake = load_yaml(incident_dir / "phase1-intake.yaml")
+    raw_file = incident_dir / "logs" / "raw" / "manual-evidence.txt"
+    assert input_data["manual_evidence_ref"] == "logs/raw/manual-evidence.txt"
+    assert intake["manual_evidence"] == {
+        "status": "captured",
+        "kind": "pasted_text",
+        "ref": "logs/raw/manual-evidence.txt",
+    }
+    assert raw_file.read_text(encoding="utf-8") == "kubectl get pods\npod-a CrashLoopBackOff\n"
+
+
 def test_offline_analyse_does_not_call_remote_collection(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
     fixture = ROOT / "tests" / "fixtures" / "active" / "mongodb" / "kubernetes-crashloop-sample"

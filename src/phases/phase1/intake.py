@@ -167,6 +167,7 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
     env_ips = [str(item) for item in (getattr(args, "environment_ip", []) or []) if item]
     primary_ip = env_ips[0] if env_ips else ""
     pasted_evidence = str(getattr(args, "pasted_evidence", "") or "")
+    manual_evidence_ref = str(getattr(args, "manual_evidence_ref", "") or "")
     blocking_items: List[Dict[str, str]] = []
     follow_up_questions: List[Dict[str, str]] = []
     manual_evidence: Dict[str, str] = {
@@ -183,11 +184,13 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
     if not middleware:
         blocking_items.append(_blocking_item("missing_middleware", "middleware is required", "provide middleware, for example mongodb", "middleware"))
         follow_up_questions.append(_follow_up("middleware", "要排查的中间件是什么？", "middleware name, for example mongodb"))
-    if pasted_evidence:
+    if pasted_evidence or manual_evidence_ref:
         manual_evidence = {
             "status": "captured",
             "kind": "pasted_text",
         }
+        if manual_evidence_ref:
+            manual_evidence["ref"] = manual_evidence_ref
 
     if mode.name == "remote":
         remote_blocks, remote_questions = _remote_required_items(args, primary_ip)

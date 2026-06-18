@@ -5,11 +5,13 @@ from __future__ import annotations
 import shlex
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 from execution.remote.access import run_ssh
 from execution.remote import mongodb_collection_runtime as mcr
 from execution.remote.runtime_support import write_json, load_config
+
+RunSshFn = Callable[[Dict[str, Any], str, int], subprocess.CompletedProcess]
 
 
 def default_targets(namespace: str) -> Dict[str, Any]:
@@ -65,9 +67,9 @@ def context_profile_from_inventory(inventory_path: str, namespace: str) -> Dict[
     return profile
 
 
-def choose_namespace(access: Dict[str, Any], preferred: List[str]) -> str:
+def choose_namespace(access: Dict[str, Any], preferred: List[str], run_ssh_fn: RunSshFn = run_ssh) -> str:
     ns_list = " ".join(shlex.quote(item) for item in preferred)
-    proc = run_ssh(
+    proc = run_ssh_fn(
         access,
         "for ns in %s; do kubectl get namespace \"$ns\" -o name >/dev/null 2>&1 && echo \"$ns\" && exit 0; done; echo default" % ns_list,
     )
@@ -76,7 +78,7 @@ def choose_namespace(access: Dict[str, Any], preferred: List[str]) -> str:
     return (proc.stdout.strip() or "default").splitlines()[-1]
 
 
-def collect_inventory(access: Dict[str, Any], local_dir: Path) -> subprocess.CompletedProcess:
+def collect_inventory(access: Dict[str, Any], local_dir: Path, run_ssh_fn: RunSshFn = run_ssh) -> subprocess.CompletedProcess:
     remote = r"""
 set -o pipefail
 echo "## kubectl client"
@@ -92,7 +94,7 @@ kubectl get services -A | head -n 200
 echo "## pods"
 kubectl get pods -A -o wide | head -n 200
 """
-    proc = run_ssh(access, remote, timeout=90)
+    proc = run_ssh_fn(access, remote, timeout=90)
     (local_dir / "inventory.stdout.txt").write_text(proc.stdout, encoding="utf-8")
     (local_dir / "inventory.stderr.txt").write_text(proc.stderr, encoding="utf-8")
     return proc

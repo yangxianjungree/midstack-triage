@@ -6,6 +6,8 @@
 
 - `workspace.py`
   工作区路径、incident marker、adapter-output、文件 I/O 合同。
+- `io.py`
+  打包运行时代码可复用的 YAML 轻量 I/O 与时间戳辅助。
 - `analysis_common.py`
   analysis payload 的轻量通用读取辅助，如 `analysis_text()`。
 - `analysis_runtime.py`

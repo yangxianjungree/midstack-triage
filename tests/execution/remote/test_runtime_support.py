@@ -3,6 +3,8 @@ import os
 import sys
 from pathlib import Path
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SRC_DIR = ROOT / "src"
@@ -32,3 +34,11 @@ def test_source_checkout_root_points_to_repo_root(monkeypatch):
     assert module.ROOT == ROOT
     assert module.DEFAULT_MANIFEST == ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml"
     assert module.DEFAULT_RUNTIME_MAP == ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
+
+
+def test_load_config_reads_yaml_object(tmp_path):
+    module = importlib.import_module("execution.remote.runtime_support")
+    target = tmp_path / "config.yaml"
+    target.write_text(yaml.safe_dump({"status": "ok"}), encoding="utf-8")
+
+    assert module.load_config(target) == {"status": "ok"}

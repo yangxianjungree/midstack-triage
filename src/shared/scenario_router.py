@@ -3,18 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-import yaml
+from shared.io import load_yaml_object as load_yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MAP_PATH = ROOT / "core" / "routing" / "scenario-signal-map.yaml"
-
-
-def load_yaml(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a YAML object" % path)
-    return data
 
 
 def load_routing_map(path: Optional[Path] = None) -> Dict[str, Any]:
@@ -186,4 +178,3 @@ def infer_scenario(
             "matched_signals": list(top.get("matched_signals") or []),
         },
     }
-

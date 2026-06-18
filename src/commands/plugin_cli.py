@@ -5,11 +5,11 @@ from __future__ import annotations
 import argparse
 
 from execution.modes import execution_mode_names
-from execution.remote.access import validate_remote_environment
 from commands import analyse as analyse_command
 from commands import finalize as finalize_command
 from commands import review as review_command
 from commands import start as start_command
+from phases.phase1.startup import validate_remote_environment
 from phases.phase2.inventory import discover_mongodb_inventory
 from phases.phase3.incident_build import build_incident_from_remote_run
 from phases.phase3.recollection_run import run_directed_recollection_if_needed

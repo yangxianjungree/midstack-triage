@@ -1,10 +1,11 @@
 """ReasoningBoard - 共享推理黑板"""
 
-from pathlib import Path
-from typing import List, Optional, Dict, Any
-from threading import Lock
 from datetime import datetime, timezone
-import yaml
+from pathlib import Path
+from threading import Lock
+from typing import Any, Dict, List, Optional
+
+from shared.io import load_yaml_object, write_yaml_object
 
 
 class ReasoningBoard:
@@ -40,13 +41,11 @@ class ReasoningBoard:
 
     def _load(self) -> None:
         """从文件加载"""
-        with open(self.board_path) as f:
-            self._data = yaml.safe_load(f)
+        self._data = load_yaml_object(self.board_path)
 
     def _save(self) -> None:
         """保存到文件（线程安全）"""
-        with open(self.board_path, 'w') as f:
-            yaml.dump(self._data, f, allow_unicode=True, sort_keys=False)
+        write_yaml_object(self.board_path, self._data, allow_unicode=True)
 
     def _now(self) -> str:
         """当前时间戳"""

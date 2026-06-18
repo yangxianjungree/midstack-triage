@@ -3,17 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-import yaml
+from shared.io import load_yaml_object as load_yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-
-
-def load_yaml(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a YAML object" % path)
-    return data
 
 
 def load_manifest_readonly_scripts(middleware: str) -> Set[str]:
@@ -206,4 +198,3 @@ def extract_skill_workflow(skill_md_path: Path, max_lines: int = 30) -> str:
             if len(lines) >= max_lines:
                 break
     return "\n".join(lines).strip()
-

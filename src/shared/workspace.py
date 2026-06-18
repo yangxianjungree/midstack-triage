@@ -3,32 +3,25 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-import yaml
+from shared.io import load_yaml_object, now_iso as runtime_now_iso, write_yaml_object
 
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+    return runtime_now_iso()
 
 
 def load_yaml(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a YAML object" % path)
-    return data
+    return load_yaml_object(path)
 
 
 def write_yaml(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
-        yaml.safe_dump(payload, fh, sort_keys=False, allow_unicode=False)
+    write_yaml_object(path, payload)
 
 
 def adapter_output(command: str, incident_id: str, middleware: str, status: str, summary: str, output_dir: Path) -> Dict[str, Any]:
@@ -143,4 +136,3 @@ def copy_if_exists(source_dir: Path, output_dir: Path, filename: str) -> None:
         target = output_dir / filename
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
-

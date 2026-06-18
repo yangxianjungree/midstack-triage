@@ -40,6 +40,7 @@ from execution.remote.runtime_support import (
     write_json,
     write_yaml,
 )
+from execution.remote.transport import FunctionRemoteTransport, RemoteTransport
 BLOCKED_ERROR_CODES = remote_capabilities.BLOCKED_ERROR_CODES
 SCRIPT_IDS_REQUIRING_MONGOSH = remote_capabilities.SCRIPT_IDS_REQUIRING_MONGOSH
 SCRIPT_ID_MONGOS_SHARD_MAP = remote_capabilities.SCRIPT_ID_MONGOS_SHARD_MAP
@@ -73,12 +74,18 @@ def validate_script_output_contract(output_path: Path, expected_script_id: str):
     return remote_capabilities.validate_script_output_contract(output_path, expected_script_id, load_config_fn=load_config)
 
 
-def remote_kubectl_get_pods(access: Dict[str, Any], namespace: str):
-    return remote_capabilities.remote_kubectl_get_pods(access, namespace, run_ssh_fn=run_ssh)
+def default_remote_transport() -> RemoteTransport:
+    return FunctionRemoteTransport(run_ssh, scp_to, scp_from)
 
 
-def probe_pod_tool(access: Dict[str, Any], namespace: str, pod: str, candidates: List[str]):
-    return remote_capabilities.probe_pod_tool(access, namespace, pod, candidates, run_ssh_fn=run_ssh)
+def remote_kubectl_get_pods(access: Dict[str, Any], namespace: str, transport: RemoteTransport | None = None):
+    transport = transport or default_remote_transport()
+    return remote_capabilities.remote_kubectl_get_pods(access, namespace, run_ssh_fn=transport.run)
+
+
+def probe_pod_tool(access: Dict[str, Any], namespace: str, pod: str, candidates: List[str], transport: RemoteTransport | None = None):
+    transport = transport or default_remote_transport()
+    return remote_capabilities.probe_pod_tool(access, namespace, pod, candidates, run_ssh_fn=transport.run)
 
 
 def probe_pod_container_shell(
@@ -86,8 +93,10 @@ def probe_pod_container_shell(
     namespace: str,
     pod_item: Dict[str, Any],
     mongo_exec: Dict[str, Any],
+    transport: RemoteTransport | None = None,
 ):
-    return remote_capabilities.probe_pod_container_shell(access, namespace, pod_item, mongo_exec, run_ssh_fn=run_ssh)
+    transport = transport or default_remote_transport()
+    return remote_capabilities.probe_pod_container_shell(access, namespace, pod_item, mongo_exec, run_ssh_fn=transport.run)
 
 
 def validate_script_capabilities(
@@ -96,19 +105,22 @@ def validate_script_capabilities(
     script_id: str,
     context: Dict[str, Any],
     inherited_checks: List[Dict[str, str]],
+    transport: RemoteTransport | None = None,
 ):
+    transport = transport or default_remote_transport()
     return remote_capabilities.validate_script_capabilities(
         access,
         namespace,
         script_id,
         context,
         inherited_checks,
-        run_ssh_fn=run_ssh,
+        run_ssh_fn=transport.run,
     )
 
 
-def validate_executor_capabilities(access: Dict[str, Any]):
-    return remote_capabilities.validate_executor_capabilities(access, run_ssh_fn=run_ssh, which_fn=shutil.which)
+def validate_executor_capabilities(access: Dict[str, Any], transport: RemoteTransport | None = None):
+    transport = transport or default_remote_transport()
+    return remote_capabilities.validate_executor_capabilities(access, run_ssh_fn=transport.run, which_fn=shutil.which)
 
 
 def print_run_pointer(incident_id: str, namespace: str, local_dir: Path) -> None:
@@ -175,7 +187,10 @@ def run_script(
     context_profile: Dict[str, Any],
     plugin_name: str,
     capability_checks: List[Dict[str, str]],
+    *,
+    transport: RemoteTransport | None = None,
 ) -> Dict[str, Any]:
+    transport = transport or default_remote_transport()
     script_id = str(entry["script_id"])
     remote_workspace = build_remote_workspace(remote_root, incident_id, script_id, str(entry["runtime_path"]))
     remote_context = remote_workspace["context_file"]
@@ -197,7 +212,7 @@ def run_script(
     try:
         context = build_context(incident_id, script_id, namespace, local_script_dir / "artifacts", remote_root, script_ids, context_profile, access)
         capabilities_ok, context, script_capability_checks, capability_error, capability_warnings = validate_script_capabilities(
-            access, namespace, script_id, context, capability_checks
+            access, namespace, script_id, context, capability_checks, transport=transport
         )
         warnings.extend(capability_warnings)
         if not capabilities_ok:
@@ -208,14 +223,14 @@ def run_script(
         if not capabilities_ok:
             return build_executor_result(request, status, started_at, script_capability_checks, process, retrieved_files, error, warnings)
 
-        mkdir_proc = run_ssh(access, "mkdir -p %s %s" % (shlex.quote(remote_workspace["run_root"]), shlex.quote(remote_artifacts)))
+        mkdir_proc = transport.run(access, "mkdir -p %s %s" % (shlex.quote(remote_workspace["run_root"]), shlex.quote(remote_artifacts)))
         if mkdir_proc.returncode != 0:
             process = {"exit_code": mkdir_proc.returncode, "stdout_tail": text_tail(mkdir_proc.stdout), "stderr_tail": text_tail(mkdir_proc.stderr)}
             error = classify_remote_error(mkdir_proc.stderr or mkdir_proc.stdout, "remote_workspace_unavailable")
             status = status_from_error_code(error["code"])
             return build_executor_result(request, status, started_at, script_capability_checks, process, retrieved_files, error, warnings)
         try:
-            scp_to(access, context_path, remote_context)
+            transport.copy_to(access, context_path, remote_context)
         except RuntimeError as exc:
             error = classify_remote_error(str(exc), "remote_workspace_unavailable")
             status = status_from_error_code(error["code"])
@@ -226,7 +241,7 @@ def run_script(
             "%s %s --context-file %s --output-file %s --artifact-dir %s"
             % (runner, shlex.quote(remote_workspace["script_path"]), shlex.quote(remote_context), shlex.quote(remote_output), shlex.quote(remote_artifacts))
         )
-        proc = run_ssh(access, command, timeout=120)
+        proc = transport.run(access, command, timeout=120)
         process = {"exit_code": proc.returncode, "stdout_tail": text_tail(proc.stdout), "stderr_tail": text_tail(proc.stderr)}
         (local_script_dir / "remote.stdout.txt").write_text(proc.stdout, encoding="utf-8")
         (local_script_dir / "remote.stderr.txt").write_text(proc.stderr, encoding="utf-8")
@@ -234,7 +249,7 @@ def run_script(
 
         output_retrieved = False
         try:
-            scp_from(access, remote_output, local_script_dir / "output.yaml")
+            transport.copy_from(access, remote_output, local_script_dir / "output.yaml")
             output_retrieved = True
             retrieved_files["output_file"] = str(local_script_dir / "output.yaml")
             output_valid, _, contract_error = validate_script_output_contract(local_script_dir / "output.yaml", script_id)
@@ -247,7 +262,7 @@ def run_script(
         if artifact_dest.exists():
             shutil.rmtree(artifact_dest)
         try:
-            scp_from(access, remote_artifacts, artifact_dest, recursive=True)
+            transport.copy_from(access, remote_artifacts, artifact_dest, recursive=True)
             retrieved_files["artifact_dir"] = str(artifact_dest)
         except RuntimeError as exc:
             warnings.append(str(exc))
@@ -308,10 +323,11 @@ def main(argv: List[str] | None = None) -> int:
     try:
         cfg = load_config(Path(args.config))
         access = cfg["access"]
+        transport = default_remote_transport()
         selected_ip = str(access.get("primary_ip") or "")
         script_entries = load_script_entries(Path(args.manifest), Path(args.runtime_map), [str(item) for item in (args.script_id or []) if item])
         script_ids = [str(item["script_id"]) for item in script_entries]
-        capabilities_ok, capability_checks, capability_error = validate_executor_capabilities(access)
+        capabilities_ok, capability_checks, capability_error = validate_executor_capabilities(access, transport=transport)
         write_yaml(local_dir / "capability-checks.yaml", {"checks": capability_checks, "error": capability_error})
         if not capabilities_ok:
             return finalize_run(
@@ -331,7 +347,7 @@ def main(argv: List[str] | None = None) -> int:
             )
 
         remote_script_roots = sorted({posixpath.dirname(remote_path(remote_root, str(item["runtime_path"]))) for item in script_entries})
-        prep = run_ssh(access, "mkdir -p %s" % " ".join(shlex.quote(item) for item in remote_script_roots))
+        prep = transport.run(access, "mkdir -p %s" % " ".join(shlex.quote(item) for item in remote_script_roots))
         if prep.returncode != 0:
             error = classify_remote_error(prep.stderr or prep.stdout, "remote_workspace_unavailable")
             return finalize_run(
@@ -352,7 +368,7 @@ def main(argv: List[str] | None = None) -> int:
 
         for entry in script_entries:
             try:
-                scp_to(access, Path(entry["source_path"]), remote_path(remote_root, str(entry["runtime_path"])))
+                transport.copy_to(access, Path(entry["source_path"]), remote_path(remote_root, str(entry["runtime_path"])))
             except RuntimeError as exc:
                 error = classify_remote_error(str(exc), "script_stage_failed")
                 return finalize_run(
@@ -373,7 +389,7 @@ def main(argv: List[str] | None = None) -> int:
 
         remote_shell_paths = [remote_path(remote_root, str(item["runtime_path"])) for item in script_entries if str(item["runtime"]) == "shell"]
         if remote_shell_paths:
-            chmod = run_ssh(access, "chmod +x %s" % " ".join(shlex.quote(item) for item in remote_shell_paths))
+            chmod = transport.run(access, "chmod +x %s" % " ".join(shlex.quote(item) for item in remote_shell_paths))
             if chmod.returncode != 0:
                 error = classify_remote_error(chmod.stderr or chmod.stdout, "script_stage_failed")
                 return finalize_run(
@@ -393,9 +409,9 @@ def main(argv: List[str] | None = None) -> int:
                 )
 
         if not namespace:
-            namespace = choose_namespace(access, [item.strip() for item in args.namespace_candidates.split(",") if item.strip()])
+            namespace = choose_namespace(access, [item.strip() for item in args.namespace_candidates.split(",") if item.strip()], run_ssh_fn=transport.run)
         (local_dir / "selected_namespace.txt").write_text(namespace, encoding="utf-8")
-        inventory_proc = collect_inventory(access, local_dir)
+        inventory_proc = collect_inventory(access, local_dir, run_ssh_fn=transport.run)
         if inventory_proc.returncode != 0:
             error = classify_remote_error(inventory_proc.stderr or inventory_proc.stdout, "inventory_collection_failed")
             return finalize_run(
@@ -418,7 +434,7 @@ def main(argv: List[str] | None = None) -> int:
         write_yaml(local_dir / "context-profile.yaml", context_profile)
 
         for entry in script_entries:
-            result = run_script(access, incident_id, entry, namespace, local_dir, remote_root, script_ids, context_profile, plugin_name, capability_checks)
+            result = run_script(access, incident_id, entry, namespace, local_dir, remote_root, script_ids, context_profile, plugin_name, capability_checks, transport=transport)
             output = try_load_yaml(local_dir / str(entry["script_id"]) / "output.yaml")
             script_results.append(build_script_result_summary(result, output))
 

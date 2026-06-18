@@ -5,11 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict
 
-import yaml
-
 from .multitrack.lead_orchestrator import LeadOrchestrator
 from .planner import plan_initial_hypotheses
 from .renderer import format_analysis_output
+from shared.io import load_yaml_object, write_yaml_object
 
 
 def load_signal_bundle(incident_dir: Path) -> Dict[str, Any]:
@@ -17,14 +16,12 @@ def load_signal_bundle(incident_dir: Path) -> Dict[str, Any]:
     if not signal_bundle_path.exists():
         raise FileNotFoundError("missing signal_bundle.yaml: %s" % signal_bundle_path)
 
-    with signal_bundle_path.open("r", encoding="utf-8") as fh:
-        return yaml.safe_load(fh) or {}
+    return load_yaml_object(signal_bundle_path)
 
 
 def write_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> None:
     analysis_path = incident_dir / "analysis.yaml"
-    with analysis_path.open("w", encoding="utf-8") as fh:
-        yaml.safe_dump(analysis, fh, allow_unicode=True, sort_keys=False)
+    write_yaml_object(analysis_path, analysis, allow_unicode=True)
 
 
 def run_phase4_analysis(incident_dir: Path) -> Dict[str, Any]:

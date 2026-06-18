@@ -6,6 +6,8 @@
 
 - `access.py`
   SSH/SSHPass transport、基础环境校验、scp 收发。
+- `transport.py`
+  执行编排使用的 transport 接口；当前默认实现仍委托 `access.py` 的 SSH/scp 函数。
 - `capabilities.py`
   远端 capability check、错误分类、Pod 目标解析与 pod 内工具探测。
 - `mongodb_collection_runtime.py`
@@ -14,6 +16,8 @@
   远端执行 runtime 的时间戳、YAML/JSON IO、runtime-map 解析等底层支持。
 - `context.py`
   context profile、目标集、namespace 选择、inventory 采集与执行上下文构建。
+- `kubectl.py`
+  远端 `kubectl get ... -o json` 的执行面 helper；Phase2 只保留兼容转发。
 - `contracts.py`
   remote workspace、request/result、run summary 等合同对象构建。
 - `executor.py`

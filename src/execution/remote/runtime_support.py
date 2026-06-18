@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-import yaml
+from shared.io import load_yaml_object, now_iso as runtime_now_iso, write_json_object, write_yaml_object
 
 
 RUNTIME_ROOT = Path(os.environ.get("MIDSTACK_TRIAGE_RUNTIME_ROOT", "")).expanduser().resolve() if os.environ.get("MIDSTACK_TRIAGE_RUNTIME_ROOT") else None
@@ -25,25 +24,19 @@ def now_id() -> str:
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+    return runtime_now_iso()
 
 
 def load_config(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        return yaml.safe_load(fh) or {}
+    return load_yaml_object(path)
 
 
 def write_yaml(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
-        yaml.safe_dump(payload, fh, sort_keys=False, allow_unicode=False)
+    write_yaml_object(path, payload)
 
 
 def write_json(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2, sort_keys=False)
-        fh.write("\n")
+    write_json_object(path, payload)
 
 
 def try_load_yaml(path: Path) -> Dict[str, Any]:

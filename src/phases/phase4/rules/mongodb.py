@@ -3,27 +3,20 @@
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple
 
-import yaml
+try:
+    from .common import load_yaml, write_yaml
+except ImportError:  # pragma: no cover - supports direct file execution
+    RULES_DIR = Path(__file__).resolve().parent
+    if str(RULES_DIR) not in sys.path:
+        sys.path.insert(0, str(RULES_DIR))
+    from common import load_yaml, write_yaml
 
 
 ROOT = Path(__file__).resolve().parents[4]
-
-
-def load_yaml(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a YAML object" % path)
-    return data
-
-
-def write_yaml(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
-        yaml.safe_dump(payload, fh, sort_keys=False, allow_unicode=False)
 
 
 def parse_args() -> argparse.Namespace:

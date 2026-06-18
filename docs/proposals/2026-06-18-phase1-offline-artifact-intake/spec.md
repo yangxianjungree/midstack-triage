@@ -44,6 +44,8 @@ scenarios without implementing local live collection or manual command loops.
   - `input.yaml.artifact_source`
   - no `remote-config.yaml`
   - next action pointing to offline analyse.
+- Offline analyse on that ready incident consumes `artifact_source` and copies
+  the collected input files into the incident directory before analysis.
 - Remote start behavior remains unchanged.
 
 ## Commands
@@ -73,6 +75,10 @@ git diff --check
   - Acceptance: valid artifact source produces ready incident without remote config and points to offline analyse.
   - Verify: `python3 -m pytest tests/tools/plugin/test_midstack_local_workspace.py -q`
   - Files: `src/commands/start.py`, `tests/tools/plugin/test_midstack_local_workspace.py`
+- [x] Task: Let offline analyse consume start artifact references
+  - Acceptance: a ready offline incident with `input.yaml.artifact_source` completes `analyse --execution-mode offline`.
+  - Verify: `python3 -m pytest tests/tools/plugin/test_midstack_analyse.py::MidstackAnalyseTest::test_analyse_offline_incident_uses_artifact_source_from_start -q`
+  - Files: `src/commands/analyse.py`, `tests/tools/plugin/test_midstack_analyse.py`
 - [x] Task: Document offline artifact intake
   - Acceptance: runtime/usage specs and slash command docs mention `--artifact-source`.
   - Verify: `git diff --check`

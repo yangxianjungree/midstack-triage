@@ -44,6 +44,14 @@ def _missing_collected_input_files(incident_dir: Path) -> list[str]:
     return [filename for filename in COLLECTED_INPUT_FILES if not (incident_dir / filename).exists()]
 
 
+def _copy_collected_input_files(source_dir: Path, output_dir: Path, *, preserve_existing_input: bool = False) -> None:
+    filenames = COLLECTED_INPUT_FILES + ("expected_analysis.yaml",)
+    if preserve_existing_input:
+        filenames = tuple(filename for filename in filenames if filename != "input.yaml")
+    for filename in filenames:
+        copy_if_exists(source_dir, output_dir, filename)
+
+
 def _restore_incident_status(incident_mode: bool, incident_dir: Path | None, previous_incident_status: str) -> None:
     if incident_mode and incident_dir is not None and previous_incident_status:
         update_incident_meta(incident_dir, {"status": previous_incident_status, "current_command": "analyse"})
@@ -110,9 +118,10 @@ def _prepare_analysis_inputs(
         remote_run_result = load_remote_executor_run_result(remote_run_dir)
         build_incident_from_remote_run(remote_run_dir, output_dir, args)
         return remote_run_result
+    if not args.input_dir:
+        return {}
     input_dir = resolve_path(args.input_dir)
-    for filename in ("input.yaml", "structured_record.yaml", "signal_bundle.yaml", "collection_report.yaml", "expected_analysis.yaml"):
-        copy_if_exists(input_dir, output_dir, filename)
+    _copy_collected_input_files(input_dir, output_dir)
     return {}
 
 
@@ -382,6 +391,12 @@ def run(
         args.scenario = args.scenario or str(input_data.get("scenario") or "unknown")
         if execution_mode.name == "offline":
             missing_files = _missing_collected_input_files(incident_dir)
+            artifact_source = str(input_data.get("artifact_source") or "")
+            if missing_files and artifact_source:
+                _copy_collected_input_files(resolve_path(artifact_source), incident_dir, preserve_existing_input=True)
+                input_data = load_yaml(incident_dir / "input.yaml")
+                args.incident_input = input_data
+                missing_files = _missing_collected_input_files(incident_dir)
             if missing_files:
                 return write_blocked_output(
                     "analyse",

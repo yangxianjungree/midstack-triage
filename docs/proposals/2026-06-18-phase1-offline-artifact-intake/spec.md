@@ -1,5 +1,5 @@
 ---
-status: draft
+status: completed
 last_updated: 2026-06-18
 supersedes: none
 superseded_by: none
@@ -65,15 +65,15 @@ git diff --check
 
 ## Tasks
 
-- [ ] Task: Add offline artifact-source CLI and intake validation
+- [x] Task: Add offline artifact-source CLI and intake validation
   - Acceptance: pure tests cover missing, nonexistent, incomplete, and valid artifact sources.
   - Verify: `python3 -m pytest tests/phases/phase1 -q`
   - Files: `src/phases/phase1/intake.py`, `src/commands/plugin_cli.py`, `tests/phases/phase1/test_intake.py`
-- [ ] Task: Wire ready offline start output
+- [x] Task: Wire ready offline start output
   - Acceptance: valid artifact source produces ready incident without remote config and points to offline analyse.
   - Verify: `python3 -m pytest tests/tools/plugin/test_midstack_local_workspace.py -q`
   - Files: `src/commands/start.py`, `tests/tools/plugin/test_midstack_local_workspace.py`
-- [ ] Task: Document offline artifact intake
+- [x] Task: Document offline artifact intake
   - Acceptance: runtime/usage specs and slash command docs mention `--artifact-source`.
   - Verify: `git diff --check`
   - Files: `docs/specs/*.spec.md`, `plugins/*/commands/*start*.md`

@@ -2,6 +2,8 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SRC_DIR = ROOT / "src"
@@ -78,3 +80,33 @@ def test_start_ready_output_points_to_midstack_analyse(tmp_path, monkeypatch):
         "local incident %s is ready; namespace auto-discovered as psmdb-test; next run /midstack:analyse"
         % current_incident.name
     )
+
+
+def test_offline_analyse_does_not_call_remote_collection(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+    fixture = ROOT / "tests" / "fixtures" / "active" / "mongodb" / "kubernetes-crashloop-sample"
+    output_dir = tmp_path / ".local" / "incidents" / "offline"
+
+    def fail_remote_collection(*_args, **_kwargs):
+        raise AssertionError("offline analyse must not call remote collection")
+
+    monkeypatch.setattr(module, "run_remote_collection", fail_remote_collection)
+
+    args = SimpleNamespace(
+        input_dir=str(fixture),
+        remote_run_dir=None,
+        remote_config=None,
+        incident_dir=None,
+        output_dir=str(output_dir),
+        output_root=".local/incidents",
+        scenario=None,
+        customer_clue=None,
+        remote_output_dir=".local/remote-runs",
+        remote_namespace="",
+        object_inventory="",
+        execution_mode="offline",
+    )
+
+    assert module.command_analyse(args) == 0
+    adapter = yaml.safe_load((output_dir / "adapter-output.yaml").read_text(encoding="utf-8"))
+    assert adapter["status"] == "completed"

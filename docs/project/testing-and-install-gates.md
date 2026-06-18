@@ -146,6 +146,7 @@ Cursor slash smoke 建议在 Cursor 里验证：
 | Cursor command / installer / runtime bundle | Cursor 单测 + `test-agent-cli.py` + `test-sandbox.py` |
 | 安装态回归收口 | `tools/validators/validate-installed-adapters.py` |
 | 远程执行或采集脚本 | validator + replay + 真实远程采集回归 |
+| execution mode / analyse 入口 | `tests/execution/test_modes.py` + `tests/tools/plugin/test_midstack_local_workspace.py` + `tests/tools/plugin/test_midstack_analyse.py` |
 | 推理、规则、review、报告输出 | replay + score gate + 相关 phase 测试 |
 
 ## 常见回归信号
@@ -156,5 +157,6 @@ Cursor slash smoke 建议在 Cursor 里验证：
 - Claude incident 写入 `.claude/marketplaces/.../runtime/.local/`
 - Cursor smoke 在源码仓库 cwd 下通过，但 sandbox 中失败
 - Agent 在 `/midstack:start` 里绕过 runtime 自行执行排障动作
+- `--execution-mode offline` 仍触发 remote collection、SSH 或 sshpass
 
 出现以上任一情况，应先修安装态合同和门禁，再讨论 analyse 排障效果本身。

@@ -1,15 +1,18 @@
 """Phase 2 inventory package."""
 
-from .hints import (
+from .auth import (
     append_auth_secret_ref_candidate,
-    append_unique,
     auth_secret_ref_score,
     build_auth_hints,
+    container_specs_for_auth,
+    mongodb_auth_secret_refs,
+)
+from .hints import (
+    append_unique,
     build_mongodb_targets,
     build_topology_hints,
     deployment_architecture_candidates,
     inventory_scope_objects,
-    mongodb_auth_secret_refs,
     related_event,
 )
 from .inventory import (
@@ -37,6 +40,7 @@ __all__ = [
     "build_topology_hints",
     "compact_k8s_object",
     "condition_summary",
+    "container_specs_for_auth",
     "deployment_architecture_candidates",
     "deployment_architecture_hints",
     "discover_mongodb_inventory",

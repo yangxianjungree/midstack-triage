@@ -4,14 +4,16 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from .hints import (
+from .auth import (
     append_auth_secret_ref_candidate,
     build_auth_hints,
+    mongodb_auth_secret_refs,
+)
+from .hints import (
     build_mongodb_targets,
     build_topology_hints,
     deployment_architecture_candidates,
     inventory_scope_objects,
-    mongodb_auth_secret_refs,
     related_event,
 )
 from .objects import (

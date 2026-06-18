@@ -96,6 +96,25 @@ def _environment_mode_question(local_context: Dict[str, str] | None = None) -> D
     )
 
 
+def _local_execution_mode_question(local_context: Dict[str, str]) -> Dict[str, str]:
+    question = "当前插件是否就在故障集群控制面机器上？如果是，先提供已有采集产物走 offline；否则提供 SSH 信息走 remote。"
+    if local_context.get("status") == "available":
+        current_context = str(local_context.get("current_context") or "")
+        question = "%s 本机检测到可用 kubectl context%s，但本地采集 executor 尚未实现。" % (
+            question,
+            " %s" % current_context if current_context else "",
+        )
+    elif local_context.get("status") == "unreachable":
+        current_context = str(local_context.get("current_context") or "")
+        question = "%s 本机 kubectl context%s 当前不可访问，请提供完整离线证据或改走 remote。" % (
+            question,
+            " %s" % current_context if current_context else "",
+        )
+    elif local_context.get("status") == "unavailable":
+        question = "%s 本机未检测到可用 kubectl，请提供完整离线证据或改走 remote。" % question
+    return _follow_up("execution_mode", question, "remote or offline")
+
+
 def _offline_follow_up_question(intake_scenario: Dict[str, str]) -> Dict[str, str]:
     scenario_id = str(intake_scenario.get("id") or "")
     if scenario_id == "offline_production":
@@ -218,7 +237,7 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
             )
         )
         follow_up_questions.append(
-            _follow_up("execution_mode", "当前插件是否就在故障集群控制面机器上？如果是，先提供已有采集产物走 offline；否则提供 SSH 信息走 remote。", "remote or offline")
+            _local_execution_mode_question(local_context)
         )
     elif mode.name == "offline":
         artifact_source = str(getattr(args, "artifact_source", "") or "")

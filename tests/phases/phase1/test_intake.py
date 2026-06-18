@@ -77,6 +77,26 @@ def test_local_intake_does_not_require_ssh_credentials_but_blocks_until_executor
     assert intake["follow_up_questions"][0]["field"] == "execution_mode"
 
 
+def test_local_intake_follow_up_mentions_available_local_context():
+    intake = build_start_intake(
+        args(
+            environment_mode="local",
+            environment_ip=[],
+            username="",
+            password="",
+            local_context={
+                "status": "available",
+                "reason": "",
+                "current_context": "prod-cluster",
+            },
+        )
+    )
+
+    assert intake["status"] == "blocked"
+    assert intake["local_context"]["current_context"] == "prod-cluster"
+    assert "prod-cluster" in intake["follow_up_questions"][0]["question"]
+
+
 def test_offline_intake_guides_user_to_existing_artifacts():
     intake = build_start_intake(args(environment_mode="offline", environment_ip=[], username="", password=""))
 

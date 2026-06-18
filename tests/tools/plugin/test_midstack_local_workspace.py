@@ -410,6 +410,38 @@ def test_start_local_mode_blocks_without_ssh_credentials(tmp_path, monkeypatch):
     assert output["blocking_items"][0]["code"] == "local_start_not_implemented"
 
 
+def test_start_local_mode_follow_up_mentions_available_local_context(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="local-context-follow-up",
+        customer_clue="我就在故障集群控制面机器上",
+        environment_ip=[],
+        username="",
+        password="",
+        port=22,
+        namespace="",
+        cluster_id="",
+        environment_mode="local",
+        output_root=".local/incidents",
+    )
+
+    assert module.command_start(
+        args,
+        probe_local_context=lambda: {
+            "status": "available",
+            "reason": "",
+            "current_context": "prod-cluster",
+        },
+    ) == 0
+
+    output = load_yaml(tmp_path / ".local" / "incidents" / "local-context-follow-up" / "adapter-output.yaml")
+    assert output["status"] == "blocked"
+    assert output["follow_up_questions"][0]["field"] == "execution_mode"
+    assert "prod-cluster" in output["follow_up_questions"][0]["question"]
+
+
 def test_start_offline_mode_blocks_with_artifact_prompt(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
 

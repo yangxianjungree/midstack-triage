@@ -94,6 +94,8 @@ superseded_by: none
 `phase1-intake.yaml.local_context`。该字段只用于提示当前机器是否存在可用
 Kubernetes context，帮助用户判断是否应切换到 `local`、继续提供 SSH 信息，
 或改用 `offline` 证据路径。当前不会基于 `local_context` 返回 `ready`。
+显式 `local` 模式返回 `blocked` 时，应在追问中说明本机 kubectl context
+状态，避免用户误以为已经进入本地采集链路。
 
 ### 典型 `blocked` 条件
 

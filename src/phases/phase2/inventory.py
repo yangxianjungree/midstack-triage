@@ -6,12 +6,9 @@ from typing import Any, Dict, List
 
 from .hints import (
     append_auth_secret_ref_candidate,
-    append_unique,
-    auth_secret_ref_score,
     build_auth_hints,
     build_mongodb_targets,
     build_topology_hints,
-    container_specs_for_auth,
     deployment_architecture_candidates,
     inventory_scope_objects,
     mongodb_auth_secret_refs,
@@ -23,7 +20,6 @@ from .objects import (
     mongodb_role_hints,
     object_matches_mongodb,
     object_name,
-    object_namespace,
 )
 from .kubectl import run_remote_kubectl_json as _run_remote_kubectl_json
 

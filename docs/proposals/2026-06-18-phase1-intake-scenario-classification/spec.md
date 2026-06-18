@@ -42,6 +42,8 @@ Current IDs:
 - Local mode records `local_fault_cluster` and remains blocked.
 - Offline production clues are distinguished from generic artifact replay.
 - Manual/ToDesk clues are distinguished from production platform artifacts.
+- Offline follow-up questions are scenario-specific instead of using one generic
+  artifact prompt for production and manual guided environments.
 - Classification is pure intake logic; it does not run local commands, remote
   commands, filesystem scans, or platform adapters.
 
@@ -75,6 +77,10 @@ git diff --check
   - Acceptance: workflow/runtime specs explain the separation from `execution_mode`.
   - Verify: `git diff --check`
   - Files: `docs/specs/triage-workflow.spec.md`, `docs/specs/plugin-runtime.spec.md`
+- [x] Task: Make offline follow-up prompts scenario-specific
+  - Acceptance: production offline asks for alert/SRE references; manual offline asks for pasted output, screenshots, or logs.
+  - Verify: `python3 -m pytest tests/phases/phase1 -q`
+  - Files: `src/phases/phase1/intake.py`, `tests/phases/phase1/test_intake.py`
 
 ## Open Questions
 

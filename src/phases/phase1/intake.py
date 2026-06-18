@@ -87,6 +87,27 @@ def _environment_mode_question() -> Dict[str, str]:
     )
 
 
+def _offline_follow_up_question(intake_scenario: Dict[str, str]) -> Dict[str, str]:
+    scenario_id = str(intake_scenario.get("id") or "")
+    if scenario_id == "offline_production":
+        return _follow_up(
+            "incident_reference",
+            "你有告警单号、SRE 事件编号、监控链接，或者已有证据目录吗？",
+            "incident id, alert id, monitoring link, or artifact path",
+        )
+    if scenario_id == "manual_guided_offline":
+        return _follow_up(
+            "manual_input",
+            "请贴出命令输出、截图内容，或者给出日志文件路径。",
+            "pasted command output, screenshot path, or log file path",
+        )
+    return _follow_up(
+        "artifact_source",
+        "你现在已有哪类证据？incident 目录、remote-run、日志文件，还是手工命令输出？",
+        "existing artifact path or pasted command output",
+    )
+
+
 def _remote_required_items(args: Any, primary_ip: str) -> tuple[List[Dict[str, str]], List[Dict[str, str]]]:
     blocking_items: List[Dict[str, str]] = []
     follow_up_questions: List[Dict[str, str]] = []
@@ -150,9 +171,7 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
                 "artifact_source",
             )
         )
-        follow_up_questions.append(
-            _follow_up("artifact_source", "你现在已有哪类证据？incident 目录、remote-run、日志文件、还是手工命令输出？", "existing artifact path or pasted command output")
-        )
+        follow_up_questions.append(_offline_follow_up_question(intake_scenario))
 
     status = "ready_for_validation" if not blocking_items else "blocked"
     return {

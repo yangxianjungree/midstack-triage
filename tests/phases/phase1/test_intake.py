@@ -96,6 +96,8 @@ def test_offline_production_clue_is_classified_separately_from_existing_artifact
         "evidence_source": "existing_artifacts",
         "readiness": "blocked_until_artifacts_supplied",
     }
+    assert intake["follow_up_questions"][0]["field"] == "incident_reference"
+    assert "SRE 事件编号" in intake["follow_up_questions"][0]["question"]
 
 
 def test_manual_offline_clue_is_classified_for_todesk_style_guidance():
@@ -103,3 +105,4 @@ def test_manual_offline_clue_is_classified_for_todesk_style_guidance():
 
     assert intake["intake_scenario"]["id"] == "manual_guided_offline"
     assert intake["intake_scenario"]["access_pattern"] == "operator_paste"
+    assert intake["follow_up_questions"][0]["field"] == "manual_input"

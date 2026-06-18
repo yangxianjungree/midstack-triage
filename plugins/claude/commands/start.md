@@ -31,10 +31,13 @@ Parse `$ARGUMENTS` for:
 - `customer_clue`: preserve the original symptom text.
 - `port`: default `22` unless specified.
 - `environment_mode`: default `remote`; use `local` only when the runtime is already on the fault cluster/control host, or `offline` when the user only has existing artifacts or pasted command output.
+- `artifact_source`: for `offline`, provide an existing local artifact directory when one exists.
 
 Default `remote` mode is the current main path and requires `--environment-ip`,
-`--username`, and `--password`. `local` and `offline` are recognized by Phase 1
-but currently return blocked guidance instead of running collection.
+`--username`, and `--password`. `local` is recognized by Phase 1 but returns
+blocked guidance until local collection exists. `offline` returns blocked
+guidance unless `--artifact-source` points at a complete offline evidence
+directory.
 
 If a previous `start` returned `blocked` and `$ARGUMENTS` appears to answer its
 follow-up questions, run `start` again with the same `--incident-id`. Fields
@@ -56,6 +59,17 @@ python3 "${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py" start \
   --output-root "$MIDSTACK_TRIAGE_WORKSPACE/.local/incidents"
 ```
 
+Offline example:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py" start \
+  --middleware mongodb \
+  --environment-mode offline \
+  --artifact-source "$MIDSTACK_TRIAGE_WORKSPACE/.local/incidents/mongodb-offline" \
+  --incident-id mongodb-offline \
+  --output-root "$MIDSTACK_TRIAGE_WORKSPACE/.local/incidents"
+```
+
 Read `.local/incidents/<incident-id>/adapter-output.yaml` and report only the
 safe fields.
 
@@ -63,6 +77,7 @@ When `status=ready`:
 
 - show incident id, namespace, and output directory
 - state exactly: `next run /midstack:analyse`
+- if `environment_mode=offline`, state exactly: `next run /midstack:analyse --execution-mode offline`
 - do not ask a follow-up confirmation question
 
 When `status=blocked`:

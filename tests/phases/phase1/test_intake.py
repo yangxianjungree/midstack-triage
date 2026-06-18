@@ -22,6 +22,7 @@ def args(**overrides):
         "customer_clue": "MongoDB member is unhealthy",
         "namespace": "",
         "cluster_id": "",
+        "artifact_source": "",
     }
     values.update(overrides)
     return SimpleNamespace(**values)
@@ -106,3 +107,52 @@ def test_manual_offline_clue_is_classified_for_todesk_style_guidance():
     assert intake["intake_scenario"]["id"] == "manual_guided_offline"
     assert intake["intake_scenario"]["access_pattern"] == "operator_paste"
     assert intake["follow_up_questions"][0]["field"] == "manual_input"
+
+
+def test_offline_intake_blocks_when_artifact_source_does_not_exist(tmp_path):
+    missing = tmp_path / "missing-artifacts"
+    intake = build_start_intake(args(environment_mode="offline", artifact_source=str(missing)))
+
+    assert intake["status"] == "blocked"
+    assert intake["offline_artifact"]["status"] == "not_found"
+    assert intake["blocking_items"][0]["code"] == "offline_artifact_source_not_found"
+
+
+def test_offline_intake_blocks_when_artifact_source_is_incomplete(tmp_path):
+    artifact_dir = tmp_path / "incomplete-artifacts"
+    artifact_dir.mkdir()
+    (artifact_dir / "input.yaml").write_text("middleware: mongodb\n", encoding="utf-8")
+
+    intake = build_start_intake(args(environment_mode="offline", artifact_source=str(artifact_dir)))
+
+    assert intake["status"] == "blocked"
+    assert intake["offline_artifact"]["status"] == "incomplete"
+    assert intake["offline_artifact"]["missing_files"] == [
+        "structured_record.yaml",
+        "signal_bundle.yaml",
+        "collection_report.yaml",
+    ]
+    assert intake["blocking_items"][0]["code"] == "offline_artifacts_incomplete"
+
+
+def test_offline_intake_ready_when_artifact_source_has_required_files(tmp_path):
+    artifact_dir = tmp_path / "ready-artifacts"
+    artifact_dir.mkdir()
+    for filename in ("input.yaml", "structured_record.yaml", "signal_bundle.yaml", "collection_report.yaml"):
+        (artifact_dir / filename).write_text("{}\n", encoding="utf-8")
+
+    intake = build_start_intake(args(environment_mode="offline", artifact_source=str(artifact_dir)))
+
+    assert intake["status"] == "ready_for_validation"
+    assert intake["offline_artifact"] == {
+        "status": "ready",
+        "source": str(artifact_dir),
+        "required_files": [
+            "input.yaml",
+            "structured_record.yaml",
+            "signal_bundle.yaml",
+            "collection_report.yaml",
+        ],
+        "missing_files": [],
+    }
+    assert intake["blocking_items"] == []

@@ -49,7 +49,7 @@ superseded_by: none
 - `local`
   - 表示 Agent/runtime 已经在故障集群或控制面机器上。当前仅完成 Phase 1 识别和引导，本地 live executor 完成前不得隐式回退到 SSH。
 - `offline`
-  - 表示用户只有已有 incident、fixture、remote-run、日志、截图或手工命令输出。当前 `/start` 只完成识别和引导，正式分析走离线证据输入。
+  - 表示用户只有已有 incident、fixture、remote-run、日志、截图或手工命令输出。若提供完整离线证据目录，`/start` 可直接进入 `ready` 并转向离线分析。
 
 ### 接入场景分类
 
@@ -85,7 +85,7 @@ superseded_by: none
 - 已明确需要排查哪个中间件
 - 如已提供故障线索，线索内容可以被理解（线索本身为可选输入，缺失不构成 `blocked`）
 
-当前 `ready` 仅适用于 `remote` 主路径；`local` 和 `offline` 在对应执行/证据输入链路完成前返回 `blocked` 并提供结构化追问。
+当前 `ready` 适用于 `remote` 主路径，以及具备完整 `artifact_source` 的 `offline` 证据目录；`local` 在对应执行链路完成前返回 `blocked` 并提供结构化追问。
 
 ### 典型 `blocked` 条件
 

@@ -251,6 +251,50 @@ def test_start_offline_mode_blocks_with_artifact_prompt(tmp_path, monkeypatch):
     assert output["blocking_items"][0]["code"] == "offline_start_needs_artifacts"
 
 
+def test_start_offline_mode_ready_with_valid_artifact_source(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+    artifact_dir = tmp_path / "artifacts" / "mongodb-offline"
+    artifact_dir.mkdir(parents=True)
+    for filename in ("input.yaml", "structured_record.yaml", "signal_bundle.yaml", "collection_report.yaml"):
+        (artifact_dir / filename).write_text("{}\n", encoding="utf-8")
+
+    def fail_remote_validation(_access):
+        raise AssertionError("offline start must not validate remote access")
+
+    monkeypatch.setattr(module, "validate_remote_environment", fail_remote_validation)
+
+    args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="offline-artifact-start",
+        customer_clue="线上生产告警，已有证据目录",
+        environment_ip=[],
+        username="",
+        password="",
+        port=22,
+        namespace="",
+        cluster_id="",
+        environment_mode="offline",
+        artifact_source=str(artifact_dir),
+        output_root=".local/incidents",
+    )
+
+    assert module.command_start(args) == 0
+
+    incident_dir = tmp_path / ".local" / "incidents" / "offline-artifact-start"
+    output = load_yaml(incident_dir / "adapter-output.yaml")
+    intake = load_yaml(incident_dir / "phase1-intake.yaml")
+    input_data = load_yaml(incident_dir / "input.yaml")
+    assert output["status"] == "ready"
+    assert intake["offline_artifact"]["status"] == "ready"
+    assert input_data["artifact_source"] == str(artifact_dir)
+    assert input_data["execution_mode"] == "offline"
+    assert not (incident_dir / "remote-config.yaml").exists()
+    assert output["next_actions"] == [
+        "run /midstack:analyse --execution-mode offline",
+        "or run /midstack:analyse offline-artifact-start --execution-mode offline",
+    ]
+
+
 def test_offline_analyse_does_not_call_remote_collection(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
     fixture = ROOT / "tests" / "fixtures" / "active" / "mongodb" / "kubernetes-crashloop-sample"

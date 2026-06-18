@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict, List
 
 from execution.modes import resolve_execution_mode
 
 
+OFFLINE_REQUIRED_FILES = ["input.yaml", "structured_record.yaml", "signal_bundle.yaml", "collection_report.yaml"]
 PRODUCTION_HINTS = ("production", "prod", "online", "线上", "生产", "告警", "监控", "sre", "incident", "alert")
 DEVELOPMENT_TEST_HINTS = ("dev", "development", "test", "testing", "研发", "测试")
 MANUAL_OFFLINE_HINTS = ("todesk", "remote desktop", "远程桌面", "手工", "人工", "粘贴", "截图", "命令输出", "paste", "screenshot", "command output")
@@ -108,9 +110,35 @@ def _offline_follow_up_question(intake_scenario: Dict[str, str]) -> Dict[str, st
     )
 
 
+def _offline_artifact_status(artifact_source: str) -> Dict[str, Any]:
+    if not artifact_source:
+        return {
+            "status": "missing",
+            "source": "",
+            "required_files": list(OFFLINE_REQUIRED_FILES),
+            "missing_files": list(OFFLINE_REQUIRED_FILES),
+        }
+    path = Path(artifact_source).expanduser()
+    if not path.exists() or not path.is_dir():
+        return {
+            "status": "not_found",
+            "source": str(path),
+            "required_files": list(OFFLINE_REQUIRED_FILES),
+            "missing_files": list(OFFLINE_REQUIRED_FILES),
+        }
+    missing_files = [filename for filename in OFFLINE_REQUIRED_FILES if not (path / filename).exists()]
+    return {
+        "status": "ready" if not missing_files else "incomplete",
+        "source": str(path),
+        "required_files": list(OFFLINE_REQUIRED_FILES),
+        "missing_files": missing_files,
+    }
+
+
 def _remote_required_items(args: Any, primary_ip: str) -> tuple[List[Dict[str, str]], List[Dict[str, str]]]:
     blocking_items: List[Dict[str, str]] = []
     follow_up_questions: List[Dict[str, str]] = []
+    offline_artifact: Dict[str, Any] = {}
     if not primary_ip:
         follow_up_questions.append(_environment_mode_question())
         blocking_items.append(
@@ -141,6 +169,12 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
     primary_ip = env_ips[0] if env_ips else ""
     blocking_items: List[Dict[str, str]] = []
     follow_up_questions: List[Dict[str, str]] = []
+    offline_artifact: Dict[str, Any] = {
+        "status": "unconfigured",
+        "source": "",
+        "required_files": list(OFFLINE_REQUIRED_FILES),
+        "missing_files": list(OFFLINE_REQUIRED_FILES),
+    }
 
     if not middleware:
         blocking_items.append(_blocking_item("missing_middleware", "middleware is required", "provide middleware, for example mongodb", "middleware"))
@@ -163,15 +197,38 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
             _follow_up("execution_mode", "当前插件是否就在故障集群控制面机器上？如果是，先提供已有采集产物走 offline；否则提供 SSH 信息走 remote。", "remote or offline")
         )
     elif mode.name == "offline":
-        blocking_items.append(
-            _blocking_item(
-                "offline_start_needs_artifacts",
-                "offline start mode needs existing evidence artifacts",
-                "run analyse with --execution-mode offline and provide an incident, fixture, remote-run, logs, or pasted command output",
-                "artifact_source",
+        artifact_source = str(getattr(args, "artifact_source", "") or "")
+        offline_artifact = _offline_artifact_status(artifact_source)
+        if offline_artifact["status"] == "missing":
+            blocking_items.append(
+                _blocking_item(
+                    "offline_start_needs_artifacts",
+                    "offline start mode needs existing evidence artifacts",
+                    "run start again with --artifact-source pointing to an incident, fixture, or remote-run artifact directory",
+                    "artifact_source",
+                )
             )
-        )
-        follow_up_questions.append(_offline_follow_up_question(intake_scenario))
+            follow_up_questions.append(_offline_follow_up_question(intake_scenario))
+        elif offline_artifact["status"] == "not_found":
+            blocking_items.append(
+                _blocking_item(
+                    "offline_artifact_source_not_found",
+                    "offline artifact source directory does not exist",
+                    "provide an existing local artifact directory",
+                    "artifact_source",
+                )
+            )
+            follow_up_questions.append(_offline_follow_up_question(intake_scenario))
+        elif offline_artifact["status"] == "incomplete":
+            blocking_items.append(
+                _blocking_item(
+                    "offline_artifacts_incomplete",
+                    "offline artifact source is missing required files: %s" % ", ".join(offline_artifact["missing_files"]),
+                    "provide a complete offline artifact directory or run analyse with an explicit input source",
+                    "artifact_source",
+                )
+            )
+            follow_up_questions.append(_offline_follow_up_question(intake_scenario))
 
     status = "ready_for_validation" if not blocking_items else "blocked"
     return {
@@ -184,6 +241,7 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
         "primary_ip": primary_ip,
         "requires_remote_access": mode.requires_transport,
         "collects_live_evidence": mode.collects_live_evidence,
+        "offline_artifact": offline_artifact,
         "blocking_items": blocking_items,
         "follow_up_questions": follow_up_questions,
     }

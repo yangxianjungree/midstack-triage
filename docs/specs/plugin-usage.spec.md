@@ -78,6 +78,7 @@ slash 命令与 5 阶段流程的简明说明见 [Slash 命令面说明](../proj
 - `remote` 模式下的环境 IP
 - `remote` 模式下的账号
 - `remote` 模式下的密码
+- `offline` 模式如要启动为 `ready`，需要提供已有离线证据目录
 
 可选（高价值，建议提供）：
 
@@ -89,6 +90,7 @@ slash 命令与 5 阶段流程的简明说明见 [Slash 命令面说明](../proj
 - namespace
 - cluster_id
 - environment_mode，默认 `remote`
+- artifact_source，`offline` 模式下指向已有 incident、fixture 或 remote-run 证据目录
 
 > 参数定义与默认值以[插件运行时规范](plugin-runtime.spec.md) §6 为准。
 
@@ -99,6 +101,7 @@ slash 命令与 5 阶段流程的简明说明见 [Slash 命令面说明](../proj
 - 保存原始故障线索
 - 尝试验证远程接入和基础 Kubernetes 能力
 - 保存 incident 目录和本地忽略的远程配置
+- `offline` 模式提供完整 artifact source 时，保存离线证据引用，不执行远程校验
 - 做环境确认与对象盘点的前置动作
 
 ### 输出
@@ -117,6 +120,7 @@ slash 命令与 5 阶段流程的简明说明见 [Slash 命令面说明](../proj
 ### `ready` 时的行为
 
 - 提示用户可执行 `/midstack:analyse`
+- `offline` 模式提示用户执行 `/midstack:analyse --execution-mode offline`
 
 ## 4. `/midstack:analyse`
 

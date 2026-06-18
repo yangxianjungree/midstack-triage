@@ -46,6 +46,7 @@ def _load_prior_start_values(output_dir: Path) -> Dict[str, Any]:
                 "environment_mode": input_data.get("environment_mode") or "",
                 "environment_ip": input_data.get("environment_ips") or [],
                 "port": input_data.get("remote_port") or None,
+                "artifact_source": input_data.get("artifact_source") or "",
             }
         )
     remote_config_file = output_dir / "remote-config.yaml"
@@ -64,7 +65,7 @@ def _load_prior_start_values(output_dir: Path) -> Dict[str, Any]:
 
 def _merge_start_args(args: Any, prior_values: Dict[str, Any]) -> Any:
     merged = vars(args).copy()
-    for field in ("middleware", "customer_clue", "namespace", "cluster_id", "environment_mode", "username", "password"):
+    for field in ("middleware", "customer_clue", "namespace", "cluster_id", "environment_mode", "username", "password", "artifact_source"):
         if not merged.get(field) and prior_values.get(field):
             merged[field] = prior_values[field]
     if not merged.get("environment_ip") and prior_values.get("environment_ip"):
@@ -81,6 +82,8 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
         args.environment_mode = ""
     if not hasattr(args, "port"):
         args.port = None
+    if not hasattr(args, "artifact_source"):
+        args.artifact_source = ""
     output_root = path_from_arg(args.output_root)
     prior_values: Dict[str, Any] = {}
     if args.incident_id:
@@ -110,7 +113,7 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
         "password": args.password,
         "port": args.port,
     }
-    if intake["status"] == "ready_for_validation":
+    if intake["status"] == "ready_for_validation" and intake["environment_mode"] == "remote":
         remote_validation = validate_remote_environment(access)
         if remote_validation["status"] != "passed":
             blocking_items.append(
@@ -164,22 +167,22 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
             "remote_validation": remote_validation,
         },
     )
-    write_yaml(
-        output_dir / "input.yaml",
-        {
-            "middleware": args.middleware,
-            "incident_id": incident_id,
-            "namespace": args.namespace,
-            "cluster_id": args.cluster_id,
-            "customer_clue": args.customer_clue,
-            "input_source": "local-cli",
-            "environment_mode": intake["environment_mode"],
-            "execution_mode": intake["execution_mode"],
-            "environment_ips": env_ips,
-            "remote_port": args.port,
-            "received_at": created_at,
-        },
-    )
+    input_payload = {
+        "middleware": args.middleware,
+        "incident_id": incident_id,
+        "namespace": args.namespace,
+        "cluster_id": args.cluster_id,
+        "customer_clue": args.customer_clue,
+        "input_source": "local-cli",
+        "environment_mode": intake["environment_mode"],
+        "execution_mode": intake["execution_mode"],
+        "environment_ips": env_ips,
+        "remote_port": args.port,
+        "received_at": created_at,
+    }
+    if args.artifact_source:
+        input_payload["artifact_source"] = args.artifact_source
+    write_yaml(output_dir / "input.yaml", input_payload)
     if primary_ip and intake["environment_mode"] == "remote":
         write_yaml(
             output_dir / "remote-config.yaml",
@@ -199,15 +202,39 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
                 },
             },
         )
+    elif intake["environment_mode"] == "offline" and args.artifact_source:
+        write_yaml(
+            output_dir / "offline-config.yaml",
+            {
+                "name": "%s-offline" % incident_id,
+                "purpose": "offline incident evidence source",
+                "created_at": created_at,
+                "artifact_source": args.artifact_source,
+                "offline_artifact": intake.get("offline_artifact") or {},
+            },
+        )
     output = adapter_output("start", incident_id, args.middleware, status, "local incident %s is %s" % (incident_id, status), output_dir)
     if status == "ready":
-        if object_inventory.get("namespace_source") == "auto_discovered":
+        if intake["environment_mode"] == "offline":
+            output["summary"] = "%s; offline artifact source ready" % output["summary"]
+            output["next_actions"] = [
+                "run /midstack:analyse --execution-mode offline",
+                "or run /midstack:analyse %s --execution-mode offline" % incident_id,
+            ]
+            output["user_message"] = "%s; next run /midstack:analyse --execution-mode offline" % output["summary"]
+        elif object_inventory.get("namespace_source") == "auto_discovered":
             output["summary"] = "%s; namespace auto-discovered as %s" % (output["summary"], object_inventory.get("selected_namespace"))
-        output["next_actions"] = [
-            "run /midstack:analyse",
-            "or run /midstack:analyse %s" % incident_id,
-        ]
-        output["user_message"] = "%s; next run /midstack:analyse" % output["summary"]
+            output["next_actions"] = [
+                "run /midstack:analyse",
+                "or run /midstack:analyse %s" % incident_id,
+            ]
+            output["user_message"] = "%s; next run /midstack:analyse" % output["summary"]
+        else:
+            output["next_actions"] = [
+                "run /midstack:analyse",
+                "or run /midstack:analyse %s" % incident_id,
+            ]
+            output["user_message"] = "%s; next run /midstack:analyse" % output["summary"]
     else:
         output["blocking_items"] = blocking_items
         output["follow_up_questions"] = follow_up_questions

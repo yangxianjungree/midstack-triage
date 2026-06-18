@@ -21,6 +21,10 @@ Command boundary:
 - Do not create or edit `analysis.yaml` before `midstack-local.py analyse` succeeds.
 - If `analyse` returns `blocked`, summarize `blocking_items` and stop.
 - Do not print passwords or tokens in the user-facing response; redact credentials in summaries.
+- `--execution-mode remote` is the default live-collection mode. Use
+  `--execution-mode offline` only when analysing existing incident artifacts or
+  a remote-run directory; local execution is reserved and currently returns
+  blocked.
 
 If the user just ran `/midstack:start` and does not provide an incident directory, run `analyse` without `--incident-dir` (uses `.local/incidents/.current-incident`).
 

@@ -177,11 +177,15 @@ superseded_by: none
 第一版当前仅保留：
 
 - `incident_id`：可选
+- `execution_mode`：可选，默认 `remote`
 
 规则：
 
 - 无显式 `incident_id` 时，默认分析当前目标记录
 - 如存在多个未结束 incident，优先命中当前会话最近目标记录
+- `remote` 是当前默认实装路径，可触发远程采集
+- `offline` 只消费已有 incident、fixture 或 remote-run 产物，不执行远程采集；缺少采集产物时返回 blocked
+- `local` 为预留执行方式；在本地 executor 完成前返回 blocked，不得隐式回退到 SSH/SSHPass
 
 后续版本预留但暂不实现：
 

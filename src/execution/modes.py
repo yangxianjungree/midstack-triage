@@ -55,3 +55,10 @@ def resolve_execution_mode(value: str | None) -> ExecutionMode:
 def execution_mode_names() -> Iterable[str]:
     return SUPPORTED_EXECUTION_MODES.keys()
 
+
+def mode_allows_remote_collection(mode: ExecutionMode) -> bool:
+    return mode.name == "remote"
+
+
+def mode_allows_existing_artifacts(mode: ExecutionMode) -> bool:
+    return mode.name in {"remote", "offline"}

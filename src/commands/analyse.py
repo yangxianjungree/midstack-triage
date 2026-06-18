@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
+from execution.modes import mode_allows_remote_collection, resolve_execution_mode
 from phases.phase4.rules import generate_rule_analysis, supported_middlewares
 from shared.workspace import (
     adapter_output,
@@ -31,6 +32,16 @@ from shared.analysis_runtime import (
 
 
 ANALYSABLE_STATUSES = ("ready", "analysed")
+COLLECTED_INPUT_FILES = (
+    "input.yaml",
+    "structured_record.yaml",
+    "signal_bundle.yaml",
+    "collection_report.yaml",
+)
+
+
+def _missing_collected_input_files(incident_dir: Path) -> list[str]:
+    return [filename for filename in COLLECTED_INPUT_FILES if not (incident_dir / filename).exists()]
 
 
 def _restore_incident_status(incident_mode: bool, incident_dir: Path | None, previous_incident_status: str) -> None:
@@ -237,10 +248,44 @@ def run(
     run_phase4_analysis,
 ) -> int:
     output_root = path_from_arg(args.output_root)
+    try:
+        execution_mode = resolve_execution_mode(getattr(args, "execution_mode", None))
+    except ValueError as exc:
+        return write_blocked_output(
+            "analyse",
+            "none",
+            "mongodb",
+            output_root,
+            "unsupported execution mode",
+            [
+                {
+                    "code": "unsupported_execution_mode",
+                    "message": str(exc),
+                    "required_user_action": "use --execution-mode remote, local, or offline",
+                }
+            ],
+            ["rerun analyse with a supported execution mode"],
+        )
     incident_dir = None
     incident_mode = False
     previous_incident_status = ""
     remote_run_result: Dict[str, Any] = {}
+    if execution_mode.name == "local":
+        return write_blocked_output(
+            "analyse",
+            "none",
+            "mongodb",
+            output_root,
+            "local execution mode is not implemented",
+            [
+                {
+                    "code": "local_execution_not_implemented",
+                    "message": "local execution mode is reserved but no local executor is available yet",
+                    "required_user_action": "use --execution-mode remote or offline",
+                }
+            ],
+            ["use --execution-mode remote for live collection or offline for existing artifacts"],
+        )
     if not (args.incident_dir or args.remote_config or args.remote_run_dir or args.input_dir):
         try:
             args.incident_dir = str(read_current_incident(output_root))
@@ -260,6 +305,22 @@ def run(
                 ],
                 ["run /midstack:start with remote access information"],
             )
+    if args.remote_config and not mode_allows_remote_collection(execution_mode):
+        return write_blocked_output(
+            "analyse",
+            "none",
+            "mongodb",
+            output_root,
+            "execution mode does not allow remote collection",
+            [
+                {
+                    "code": "execution_mode_remote_collection_disabled",
+                    "message": "--remote-config requires --execution-mode remote",
+                    "required_user_action": "use --execution-mode remote or provide --input-dir/--remote-run-dir",
+                }
+            ],
+            ["rerun analyse with --execution-mode remote or use existing collected artifacts"],
+        )
     if args.incident_dir:
         incident_mode = True
         incident_dir = resolve_path(args.incident_dir)
@@ -312,7 +373,26 @@ def run(
         args.remote_namespace = args.remote_namespace or str(input_data.get("namespace") or "")
         args.customer_clue = args.customer_clue or str(input_data.get("customer_clue") or "")
         args.scenario = args.scenario or str(input_data.get("scenario") or "unknown")
-        if not Path(args.remote_config).exists():
+        if execution_mode.name == "offline":
+            missing_files = _missing_collected_input_files(incident_dir)
+            if missing_files:
+                return write_blocked_output(
+                    "analyse",
+                    str(input_data.get("incident_id") or incident_dir.name),
+                    str(input_data.get("middleware") or "mongodb"),
+                    incident_dir,
+                    "offline analyse needs existing collected artifacts",
+                    [
+                        {
+                            "code": "offline_artifacts_missing",
+                            "message": "missing required incident files: %s" % ", ".join(missing_files),
+                            "required_user_action": "run remote analyse first or provide --input-dir/--remote-run-dir",
+                        }
+                    ],
+                    ["run /midstack:analyse with --execution-mode remote or provide existing artifacts"],
+                )
+            args.remote_config = ""
+        elif not Path(args.remote_config).exists():
             return write_blocked_output(
                 "analyse",
                 str(input_data.get("incident_id") or incident_dir.name),

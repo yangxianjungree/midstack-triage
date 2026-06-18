@@ -30,6 +30,7 @@ superseded_by: none
 
 - `start` 负责把自然语言线索转成可执行 incident。
 - `analyse` 负责把 incident 推进到推理、结论和报告。
+- `analyse` 的默认执行方式是 `remote`；`offline` 只分析已有产物，`local` 仍是预留方式。
 - `review` 负责给已有分析打分，不替代 `analyse`。
 - `validate` 负责维护者安装态检查，不对外承诺排障效果。
 

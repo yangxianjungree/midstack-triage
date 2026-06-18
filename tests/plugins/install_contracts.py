@@ -165,6 +165,7 @@ def assert_cli_command_options_documented(
             "--remote-run-dir",
             "--remote-config",
             "--remote-output-dir",
+            "--execution-mode",
         },
         "review": {
             "--incident-dir",

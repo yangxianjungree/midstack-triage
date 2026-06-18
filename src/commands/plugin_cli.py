@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from execution.modes import execution_mode_names
 from execution.remote.access import validate_remote_environment
 from commands import analyse as analyse_command
 from commands import finalize as finalize_command
@@ -82,6 +83,12 @@ def build_parser() -> argparse.ArgumentParser:
     analyse.add_argument("--remote-output-dir", default=".local/remote-runs")
     analyse.add_argument("--remote-namespace", default="")
     analyse.add_argument("--object-inventory", default="")
+    analyse.add_argument(
+        "--execution-mode",
+        choices=sorted(execution_mode_names()),
+        default="remote",
+        help="Evidence collection mode. remote is the current default; offline only consumes existing artifacts.",
+    )
     analyse.set_defaults(func=command_analyse)
 
     review = subparsers.add_parser("review")

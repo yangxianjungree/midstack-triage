@@ -1,8 +1,6 @@
 """测试ClaudeAgent的tool use功能"""
 
-import pytest
-from pathlib import Path
-from phases.phase4.multitrack.agent_interface import ClaudeAgent
+from phases.phase4.multitrack.agents import ClaudeAgent
 
 
 def test_claude_agent_list_files_tool(tmp_path):

@@ -1,7 +1,7 @@
 """Agent接口单元测试"""
 
 import pytest
-from phases.phase4.multitrack.agent_interface import MockAgent, AgentFactory, ClaudeAgent
+from phases.phase4.multitrack.agents import MockAgent, AgentFactory, ClaudeAgent
 
 
 def test_mock_agent_basic():

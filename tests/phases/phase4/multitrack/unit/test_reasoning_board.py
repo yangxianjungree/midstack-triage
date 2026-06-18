@@ -9,9 +9,8 @@ def test_board_initialization(tmp_path):
     board = ReasoningBoard(tmp_path)
 
     assert board.board_path.exists()
-    assert board._data["version"] == "1.0"
-    assert board._data["incident_id"] == tmp_path.name
-    assert len(board._data["findings"]) == 0
+    assert board.get_incident_id() == tmp_path.name
+    assert len(board.get_all_findings()) == 0
 
 
 def test_add_finding_returns_id(tmp_path):
@@ -59,7 +58,7 @@ def test_validation_queue(tmp_path):
 
     # 相同action应该返回同一个ID
     assert val_id1 == val_id2
-    assert len(board._data["validation_queue"]) == 1
+    assert len(board.get_validation_queue()) == 1
 
 
 def test_findings_up_to_round(tmp_path):

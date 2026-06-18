@@ -76,5 +76,5 @@ def test_e2e_validation_flow(tmp_path):
 
     orch._run_phase_v()
 
-    completed = orch.board._data["executed_validations"]
+    completed = orch.board.get_executed_validations()
     assert len(completed) > 0

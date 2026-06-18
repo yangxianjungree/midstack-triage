@@ -142,7 +142,7 @@ class LeadOrchestrator:
     def _generate_final_report(self) -> Dict:
         """生成最终报告"""
         return {
-            "incident_id": self.board._data["incident_id"],
+            "incident_id": self.board.get_incident_id(),
             "total_rounds": self.current_round,
             "hypotheses": [
                 {
@@ -154,5 +154,5 @@ class LeadOrchestrator:
                 for track in self.tracks.values()
             ],
             "all_findings": self.board.get_all_findings(),
-            "cross_refutations": self.board._data["cross_refutations"]
+            "cross_refutations": self.board.get_cross_refutations()
         }

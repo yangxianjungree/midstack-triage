@@ -80,6 +80,10 @@ class ReasoningBoard:
         """获取所有假设状态"""
         return self._data["hypothesis_status"].copy()
 
+    def get_incident_id(self) -> str:
+        """获取incident ID"""
+        return str(self._data.get("incident_id") or "")
+
     # ==================== 验证队列 ====================
 
     def request_validation(
@@ -259,6 +263,18 @@ class ReasoningBoard:
             v for v in self._data["validation_queue"]
             if v["status"] == "pending"
         ]
+
+    def get_validation_queue(self) -> List[Dict]:
+        """获取验证队列快照"""
+        return self._data["validation_queue"].copy()
+
+    def get_executed_validations(self) -> Dict[str, Dict]:
+        """获取已执行验证快照"""
+        return self._data["executed_validations"].copy()
+
+    def get_cross_refutations(self) -> List[Dict]:
+        """获取跨轨反证快照"""
+        return self._data["cross_refutations"].copy()
 
     def get_critical_gaps_for_track(self, track_id: str) -> List[Dict]:
         """获取某轨的关键证据缺口"""

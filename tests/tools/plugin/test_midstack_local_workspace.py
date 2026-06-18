@@ -186,6 +186,116 @@ def test_start_can_continue_blocked_incident_with_missing_remote_answers(tmp_pat
     assert calls[-1]["port"] == 22022
 
 
+def test_start_remote_validation_failure_writes_follow_up_question(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    monkeypatch.setattr(
+        module,
+        "validate_remote_environment",
+        lambda access: {
+            "status": "failed",
+            "checks": [{"name": "ssh", "status": "blocked", "error_code": "ssh_auth_failed"}],
+        },
+    )
+
+    args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="remote-validation-follow-up",
+        customer_clue="mongo node may be unhealthy",
+        environment_ip=["192.168.154.251"],
+        username="root",
+        password="bad",
+        port=22,
+        namespace="",
+        cluster_id="",
+        environment_mode="remote",
+        output_root=".local/incidents",
+    )
+
+    assert module.command_start(args) == 0
+
+    output = load_yaml(tmp_path / ".local" / "incidents" / "remote-validation-follow-up" / "adapter-output.yaml")
+    assert output["status"] == "blocked"
+    assert output["blocking_items"][0]["code"] == "remote_environment_validation_failed"
+    assert output["follow_up_questions"][0]["field"] == "remote_access"
+    assert output["next_actions"] == [output["follow_up_questions"][0]["question"]]
+
+
+def test_start_ambiguous_mongodb_namespaces_writes_namespace_follow_up(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    monkeypatch.setattr(module, "validate_remote_environment", lambda access: {"status": "passed", "checks": []})
+    monkeypatch.setattr(
+        module,
+        "discover_mongodb_inventory",
+        lambda access, namespace: {
+            "status": "ambiguous",
+            "candidate_namespaces": ["mongo-a", "mongo-b"],
+            "namespace_source": "ambiguous",
+        },
+    )
+
+    args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="namespace-ambiguous-follow-up",
+        customer_clue="mongo node may be unhealthy",
+        environment_ip=["192.168.154.251"],
+        username="root",
+        password="123",
+        port=22,
+        namespace="",
+        cluster_id="",
+        environment_mode="remote",
+        output_root=".local/incidents",
+    )
+
+    assert module.command_start(args) == 0
+
+    output = load_yaml(tmp_path / ".local" / "incidents" / "namespace-ambiguous-follow-up" / "adapter-output.yaml")
+    assert output["status"] == "blocked"
+    assert output["blocking_items"][0]["code"] == "multiple_mongodb_namespaces_detected"
+    assert output["follow_up_questions"][0]["field"] == "namespace"
+    assert "mongo-a, mongo-b" in output["follow_up_questions"][0]["question"]
+    assert output["next_actions"] == [output["follow_up_questions"][0]["question"]]
+
+
+def test_start_mongodb_namespace_not_found_writes_namespace_follow_up(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    monkeypatch.setattr(module, "validate_remote_environment", lambda access: {"status": "passed", "checks": []})
+    monkeypatch.setattr(
+        module,
+        "discover_mongodb_inventory",
+        lambda access, namespace: {
+            "status": "not_found",
+            "candidate_namespaces": [],
+            "namespace_source": "not_found",
+        },
+    )
+
+    args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="namespace-not-found-follow-up",
+        customer_clue="mongo node may be unhealthy",
+        environment_ip=["192.168.154.251"],
+        username="root",
+        password="123",
+        port=22,
+        namespace="",
+        cluster_id="",
+        environment_mode="remote",
+        output_root=".local/incidents",
+    )
+
+    assert module.command_start(args) == 0
+
+    output = load_yaml(tmp_path / ".local" / "incidents" / "namespace-not-found-follow-up" / "adapter-output.yaml")
+    assert output["status"] == "blocked"
+    assert output["blocking_items"][0]["code"] == "mongodb_namespace_not_detected"
+    assert output["follow_up_questions"][0]["field"] == "namespace"
+    assert output["next_actions"] == [output["follow_up_questions"][0]["question"]]
+
+
 def test_start_without_middleware_is_runtime_blocked_instead_of_argparse_error(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
 

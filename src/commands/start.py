@@ -86,6 +86,38 @@ def _merge_start_args(args: Any, prior_values: Dict[str, Any]) -> Any:
     return SimpleNamespace(**merged)
 
 
+def _follow_up(field: str, question: str, expected_answer: str) -> Dict[str, str]:
+    return {
+        "field": field,
+        "question": question,
+        "expected_answer": expected_answer,
+    }
+
+
+def _remote_access_follow_up() -> Dict[str, str]:
+    return _follow_up(
+        "remote_access",
+        "远程接入或 kubectl 校验失败。请确认环境 IP、端口、用户名、密码，以及远端 kubectl 是否能访问目标集群。",
+        "corrected remote access fields or confirmation that kubectl works on the remote host",
+    )
+
+
+def _namespace_ambiguous_follow_up(candidate_namespaces: Any) -> Dict[str, str]:
+    candidates = ", ".join(str(item) for item in (candidate_namespaces or []))
+    question = "检测到多个 MongoDB namespace，请指定要排查的 namespace。"
+    if candidates:
+        question = "%s候选：%s" % (question, candidates)
+    return _follow_up("namespace", question, "one namespace from the candidate list")
+
+
+def _namespace_not_found_follow_up() -> Dict[str, str]:
+    return _follow_up(
+        "namespace",
+        "未能自动发现 MongoDB 对象。请提供目标 namespace，或确认 middleware 和远程集群是否正确。",
+        "target namespace or corrected middleware/remote cluster information",
+    )
+
+
 def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int:
     if not hasattr(args, "middleware"):
         args.middleware = ""
@@ -138,19 +170,22 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
                     "required_user_action": "fix remote access, install sshpass locally, or ensure kubectl can access the cluster on the jump host",
                 }
             )
+            follow_up_questions.append(_remote_access_follow_up())
         elif args.middleware == "mongodb":
             object_inventory = discover_mongodb_inventory(access, args.namespace)
             if not args.namespace and object_inventory["status"] == "passed":
                 args.namespace = str(object_inventory.get("selected_namespace") or "")
             elif not args.namespace and object_inventory["status"] == "ambiguous":
+                candidate_namespaces = object_inventory.get("candidate_namespaces") or []
                 blocking_items.append(
                     {
                         "code": "multiple_mongodb_namespaces_detected",
                         "message": "multiple MongoDB candidate namespaces were detected",
                         "required_user_action": "provide namespace explicitly",
-                        "candidate_namespaces": object_inventory.get("candidate_namespaces") or [],
+                        "candidate_namespaces": candidate_namespaces,
                     }
                 )
+                follow_up_questions.append(_namespace_ambiguous_follow_up(candidate_namespaces))
             elif not args.namespace and object_inventory["status"] == "not_found":
                 blocking_items.append(
                     {
@@ -159,6 +194,7 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory) -> int
                         "required_user_action": "provide namespace explicitly",
                     }
                 )
+                follow_up_questions.append(_namespace_not_found_follow_up())
 
     status = "ready" if not blocking_items else "blocked"
     write_yaml(output_dir / "phase1-intake.yaml", intake)

@@ -106,6 +106,11 @@ def validate_skill_metadata(
         fail(errors, "%s missing skill metadata fields: %s" % (metadata_path, ", ".join(sorted(missing))))
     if data.get("middleware") != MIDDLEWARE:
         fail(errors, "%s middleware must be %s" % (metadata_path, MIDDLEWARE))
+    asset_status = taxonomies["asset_status"]
+    if data.get("status") not in asset_status:
+        fail(errors, "%s status must be one of %s" % (metadata_path, sorted(asset_status)))
+    if not isinstance(data.get("version"), str) or not data.get("version"):
+        fail(errors, "%s version must be a non-empty string" % metadata_path)
     validate_component_reference(metadata_path, str(data.get("component") or ""), taxonomies["triage_surface_types"], errors)
     scenario_types = taxonomies["scenario_types"]
     if scenario_types and data.get("primary_scenario") not in scenario_types:

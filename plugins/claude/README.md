@@ -121,7 +121,7 @@ Midstack source checkout at runtime.
 It is not self-contained in the stronger "single binary with no external
 requirements" sense. Live triage still depends on:
 
-- local host tools: `python3`, `bash`, `claude`, `ssh`, `sshpass`, `PyYAML`
+- local host tools: Python 3.10+ as `python3`, `bash`, `claude`, `ssh`, `sshpass`, `PyYAML`
 - remote access: a reachable jump host and valid SSH credentials
 - remote environment: `kubectl`, usable kube context, and the cluster-side
   permissions/scripts needed by the selected MongoDB collection flow

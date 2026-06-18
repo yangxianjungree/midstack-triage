@@ -13,6 +13,11 @@ adapter_output_status:
   - blocked
   - completed
   - failed
+asset_status:
+  - active
+  - draft
+  - deprecated
+  - experimental
 review_score:
   - high
   - medium

@@ -11,10 +11,18 @@ _ANALYSER_MODULES = {
     "mongodb": "phases.phase4.rules.mongodb",
     "pulsar": "phases.phase4.rules.pulsar",
 }
+_SUPPORT_STATES = {
+    "mongodb": "active_mvp",
+    "pulsar": "contract_path",
+}
 
 
 def supported_middlewares() -> Tuple[str, ...]:
     return tuple(sorted(_ANALYSER_MODULES))
+
+
+def middleware_support_state(middleware: str) -> str:
+    return _SUPPORT_STATES.get(middleware, "unsupported")
 
 
 def generate_rule_analysis(middleware: str, input_dir: Path) -> Dict[str, Any]:
@@ -26,4 +34,4 @@ def generate_rule_analysis(middleware: str, input_dir: Path) -> Dict[str, Any]:
 
 generate_rule_draft = generate_rule_analysis
 
-__all__ = ["generate_rule_analysis", "generate_rule_draft", "supported_middlewares"]
+__all__ = ["generate_rule_analysis", "generate_rule_draft", "middleware_support_state", "supported_middlewares"]

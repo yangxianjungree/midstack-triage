@@ -17,6 +17,7 @@ superseded_by: none
 - 正式运行时代码已集中到 `src/`，按 `commands/`、`phases/`、`execution/`、`shared/` 划分
 - Claude 适配器已支持 bundled runtime 打包、安装、自检和 sandbox 本地测试
 - Cursor 适配器已支持 workspace-local runtime、命令/rule 投影、自检和 sandbox smoke
+- 本地仓库工具、validator、replay、`src/` runtime 和插件安装态 runtime 的最低版本为 Python 3.10+
 - `tools/plugin/midstack-local.py` 已收敛为本地 CLI 适配层，不再承载膨胀的正式实现
 - 第 4 段多轨推理实现已收敛到 `src/phases/phase4/multitrack/`；当前 `/midstack:analyse` 的生产 `analysis.yaml` 仍由 rules fallback + guardrails 生成，multitrack 输出为辅助产物
 - Replay fixture 已拆分为 `tests/fixtures/active/` 与 `tests/fixtures/legacy/`，默认 replay、score 和仓库门禁只读取 active 样本
@@ -173,7 +174,7 @@ superseded_by: none
 
 ### 其他中间件
 
-- Pulsar 正式支持
+- Pulsar Active MVP 正式支持（当前仅为 Skeleton / contract path：资产、首条 golden path、脚本合同和 rules analyser 已在）
 - Redis 正式支持
 - Elasticsearch 正式支持
 - Kafka 正式支持

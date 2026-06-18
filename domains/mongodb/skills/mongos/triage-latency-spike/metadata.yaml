@@ -1,4 +1,6 @@
 id: mongodb-triage-latency-spike
+version: "1.0"
+status: active
 title: Triage MongoDB Latency Spike
 middleware: mongodb
 component: mongos

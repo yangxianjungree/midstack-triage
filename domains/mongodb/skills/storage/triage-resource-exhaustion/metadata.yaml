@@ -1,4 +1,6 @@
 id: mongodb-triage-resource-exhaustion
+version: "1.0"
+status: active
 title: Triage MongoDB Resource Exhaustion
 middleware: mongodb
 component: storage

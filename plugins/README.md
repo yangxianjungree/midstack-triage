@@ -148,6 +148,11 @@ but live triage still requires host tools such as `python3` and `sshpass`, plus
 the remote Kubernetes/MongoDB environment that the incident collection flow
 targets.
 
+Repository tools, validators, replay commands, `src/` runtime code and installed
+Claude/Cursor runtime payloads require Python 3.10+ with PyYAML. Remote
+third-stage collection scripts keep their separate jump-host compatibility
+boundary documented in `docs/specs/plugin-runtime.spec.md`.
+
 ## Shared Install Contract
 
 Claude and Cursor use different installation layouts, but they share one

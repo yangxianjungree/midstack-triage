@@ -1,4 +1,6 @@
 id: mongodb-triage-connection-failure
+version: "1.0"
+status: active
 title: Triage MongoDB Connection Failure
 middleware: mongodb
 component: connectivity

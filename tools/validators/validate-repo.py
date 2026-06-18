@@ -12,6 +12,8 @@ if str(TOOLS_DIR) not in sys.path:
 
 from support.common import ROOT, run_command  # noqa: E402
 
+MIN_PYTHON_VERSION = (3, 10)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the repository validation suite.")
@@ -21,6 +23,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--score-min-level", choices=["low", "medium", "high"], default="medium")
     parser.add_argument("--format", choices=["text", "json"], default="text")
     return parser.parse_args()
+
+
+def check_python_version() -> Dict[str, Any]:
+    version_text = "%d.%d.%d" % sys.version_info[:3]
+    passed = sys.version_info >= MIN_PYTHON_VERSION
+    return {
+        "check_id": "python-runtime-version",
+        "command": [sys.executable, "--version"],
+        "status": "passed" if passed else "failed",
+        "exit_code": 0 if passed else 1,
+        "stdout": "Python %s" % version_text,
+        "stderr": "" if passed else "Midstack local/plugin runtime requires Python 3.10+",
+    }
 
 
 def run_check(check_id: str, command: List[str]) -> Dict[str, Any]:
@@ -106,7 +121,9 @@ def checks(args: argparse.Namespace) -> List[Dict[str, Any]]:
 
 def main() -> int:
     args = parse_args()
-    results = [run_check(item["check_id"], item["command"]) for item in checks(args)]
+    results = [check_python_version()]
+    if results[0]["status"] == "passed":
+        results.extend(run_check(item["check_id"], item["command"]) for item in checks(args))
     failed = [item for item in results if item["status"] != "passed"]
 
     if args.format == "json":

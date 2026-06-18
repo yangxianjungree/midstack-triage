@@ -1,4 +1,6 @@
 id: mongodb-triage-kubernetes-runtime-failure
+version: "1.0"
+status: active
 title: Triage MongoDB Kubernetes Runtime Failure
 middleware: mongodb
 component: kubernetes-runtime

@@ -1,4 +1,6 @@
 id: mongodb-triage-data-hotspot
+version: "1.0"
+status: active
 title: Triage MongoDB Data Hotspot
 middleware: mongodb
 component: shard

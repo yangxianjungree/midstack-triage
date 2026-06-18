@@ -4,6 +4,8 @@ description: Metadata contract for an Agent-facing workflow skill.
 
 required:
   - id
+  - version
+  - status
   - title
   - middleware
   - component
@@ -16,6 +18,11 @@ required:
 fields:
   id:
     type: string
+  version:
+    type: string
+  status:
+    type: enum
+    values_ref: core/taxonomies/status-types.yaml#asset_status
   title:
     type: string
   middleware:

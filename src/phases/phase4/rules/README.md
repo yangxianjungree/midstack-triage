@@ -7,9 +7,9 @@
 - `mongodb.py`
   MongoDB 规则分析器；根据 incident 目录里的输入、信号和采集结果生成基础 `analysis.yaml` 草稿。
 - `pulsar.py`
-  Pulsar 规则分析器。
+  Pulsar 规则分析器；当前服务于 Skeleton / contract path，不代表 Pulsar 已达到 MongoDB Active MVP。
 - `__init__.py`
-  middleware -> analyser 的正式调度入口，供 `src/commands/analyse.py` 直接调用。
+  middleware -> analyser 的正式调度入口，供 `src/commands/analyse.py` 直接调用；同时暴露 middleware support state，区分 Active MVP 与 contract path。
 
 规则：
 

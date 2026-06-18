@@ -64,7 +64,7 @@ def load_taxonomies(taxonomy_dir: Path, errors: List[str]) -> Dict[str, set]:
 
     status_data = load_yaml(taxonomy_dir / "status-types.yaml")
     status_types: Dict[str, set] = {}
-    for key in ("script_output_status", "remote_executor_status", "adapter_output_status", "review_score"):
+    for key in ("script_output_status", "remote_executor_status", "adapter_output_status", "asset_status", "review_score"):
         value = status_data.get(key)
         if not isinstance(value, list) or not value:
             fail(errors, "%s %s must be a non-empty list" % (taxonomy_dir / "status-types.yaml", key))
@@ -88,6 +88,7 @@ def load_taxonomies(taxonomy_dir: Path, errors: List[str]) -> Dict[str, set]:
         "script_output_status": status_types.get("script_output_status") or VALID_SCRIPT_STATUS,
         "remote_executor_status": status_types.get("remote_executor_status") or VALID_EXECUTOR_STATUS,
         "adapter_output_status": status_types.get("adapter_output_status") or VALID_ADAPTER_STATUS,
+        "asset_status": status_types.get("asset_status") or {"active", "draft", "deprecated", "experimental"},
     }
 
 

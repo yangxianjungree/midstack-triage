@@ -698,6 +698,8 @@ MongoDB 认证来源原则：
 
 真实跳板机环境不应假设具备完整开发机依赖。
 
+本节只约束被投放到远端跳板机/Pod 环境执行的第 3 段采集脚本。本地仓库工具、validator、replay、`src/` runtime 和 Claude/Cursor 插件安装态 runtime 的最低版本为 Python 3.10+。
+
 第一版建议：
 
 - 第 3 段脚本优先使用 Python 标准库

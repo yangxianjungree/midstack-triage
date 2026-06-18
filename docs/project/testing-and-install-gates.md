@@ -28,6 +28,7 @@ SANDBOX="$(realpath ../midstack-sandbox)"
 
 Claude 和 Cursor 的安装目录不同，但必须满足同一组合同：
 
+- 本地仓库工具、validator、replay、`src/` runtime 和插件安装态 runtime 要求 Python 3.10+ 与 PyYAML；远端第 3 段采集脚本的跳板机兼容要求另见 `docs/specs/plugin-runtime.spec.md`。
 - 安装态 runtime 自包含，不依赖源码 checkout、源码 `tools/plugin/midstack-local.py` 或某个开发者机器路径。
 - incident 输出只进入目标 workspace 的 `.local/incidents/`。
 - workspace state 不允许回退到历史 `engine_root` 字段。
@@ -52,6 +53,7 @@ git diff --check
 
 `validate-repo.py` 当前覆盖：
 
+- Python 3.10+ 本地/plugin runtime 版本合同
 - MongoDB / Pulsar 资产合同
 - golden path
 - patch merge

@@ -290,6 +290,15 @@ class MidstackAnalyseTest(unittest.TestCase):
             self.assertEqual(adapter["blocking_items"][0]["code"], "unsupported_middleware_analyse")
             self.assertFalse((output_dir / "analysis.yaml").exists())
 
+    def test_phase4_rules_expose_support_state_separately_from_registration(self) -> None:
+        sys.path.insert(0, str(ROOT / "src"))
+        from phases.phase4.rules import middleware_support_state, supported_middlewares
+
+        self.assertEqual(supported_middlewares(), ("mongodb", "pulsar"))
+        self.assertEqual(middleware_support_state("mongodb"), "active_mvp")
+        self.assertEqual(middleware_support_state("pulsar"), "contract_path")
+        self.assertEqual(middleware_support_state("redis"), "unsupported")
+
     def test_analyse_incident_dir_missing_remote_config_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)

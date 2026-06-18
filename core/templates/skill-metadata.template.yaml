@@ -1,4 +1,6 @@
 id: <middleware>-<skill-purpose>
+version: "1.0"
+status: draft
 title: <Skill Title>
 middleware: <middleware>
 component: <component>

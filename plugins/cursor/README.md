@@ -96,6 +96,6 @@ When `plugin.json` `version` changes, rerun `--upgrade --workspace-init` on each
 | You provide | Notes |
 |-------------|-------|
 | Cursor Agent CLI + LLM | Required |
-| Python 3 + PyYAML | Required |
+| Python 3.10+ + PyYAML | Required |
 | `sshpass` | Live `/midstack:start` only |
 | SSH / K8s / MongoDB cluster | Live triage only |

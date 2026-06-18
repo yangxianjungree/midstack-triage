@@ -112,6 +112,8 @@ REQUIRED_COMMAND_FIELDS = {
 }
 REQUIRED_SKILL_FIELDS = {
     "id",
+    "version",
+    "status",
     "title",
     "middleware",
     "component",

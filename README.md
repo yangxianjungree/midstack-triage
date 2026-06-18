@@ -52,6 +52,8 @@ Midstack 当前对外保持 3 个主命令：
 
 以下命令默认在 `midstack-triage` 仓库根目录执行。
 
+本地仓库工具、`src/` runtime、validator、replay 和 Claude/Cursor 插件安装态 runtime 要求 Python 3.10+ 与 PyYAML。远端第 3 段采集脚本仍按跳板机约束保持更低依赖边界，详见插件运行时规范。
+
 ### 安装到 Claude sandbox
 
 ```bash
@@ -98,7 +100,7 @@ Cursor 适配器会把 workspace-local runtime 安装到 `.cursor/midstack-triag
 | MongoDB | Active MVP | 已打通 `start -> analyse` 主路径；`review` 用于质量反馈；第 3 段只读采集脚本已形成第一批 MVP |
 | Claude Code 插件 | 可用 | bundled runtime 打包、安装、自检和 sandbox 测试；不依赖 sandbox 内再 checkout 源仓库 |
 | Cursor 适配器 | 可用 | workspace-local runtime、命令/rule 投影、sandbox smoke 和安装态依赖检查已打通 |
-| Pulsar | Skeleton | 结构和样例已在，正式分析链路未完成 |
+| Pulsar | Skeleton / contract path | 已有结构化资产、首条 golden path、Pulsar rules analyser 和脚本合同；尚未达到 MongoDB Active MVP 的生产主链路完整度 |
 
 **已验证成果**：
 
@@ -122,7 +124,7 @@ midstack-triage/
 ├── core/                         模型、模板、taxonomy 与共享诊断能力
 ├── domains/
 │   ├── mongodb/                  MongoDB 专属资产
-│   └── pulsar/                   Pulsar 领域样例
+│   └── pulsar/                   Pulsar 领域样例与 contract path
 ├── scenarios/                    跨中间件标准场景定义
 ├── interfaces/                   跨适配器接口定义与示例合同
 ├── plugins/

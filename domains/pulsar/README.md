@@ -2,6 +2,8 @@
 
 本目录存放 Apache Pulsar 专属排障资产。
 
+当前状态：Skeleton / contract path。这里已有 `queue-backlog` 首条 golden path、脚本合同和 Phase 4 rules analyser，用于结构验证、回放和扩展模板；尚未达到 MongoDB Active MVP 的生产 `start -> analyse` 主链路完整度。
+
 当前已包含：
 
 - 领域元数据

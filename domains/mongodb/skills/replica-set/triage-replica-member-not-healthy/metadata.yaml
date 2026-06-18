@@ -1,4 +1,6 @@
 id: mongodb-triage-replica-member-not-healthy
+version: "1.0"
+status: active
 title: Triage MongoDB Replica Member Not Healthy
 middleware: mongodb
 component: replica-set

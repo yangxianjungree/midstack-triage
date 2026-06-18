@@ -18,6 +18,8 @@ superseded_by: none
 
 ```yaml
 id: string
+version: string
+status: string  # 枚举见 core/taxonomies/status-types.yaml 的 asset_status
 title: string
 middleware: string
 component: string
@@ -38,6 +40,8 @@ safety_constraints:
 
 - 路径字符串（过渡期）
 - 结构化引用：`type` + `id`，见[跨资产引用规范](asset-reference.spec.md)
+
+当前治理试点要求 `domains/mongodb/skills/**/metadata.yaml` 必须声明 `version` 和 `status`。其他 asset family 后续按 proposal 分批推广。
 
 ## 组织规则
 

@@ -7,7 +7,6 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, List
 
-from execution.remote import capabilities as remote_capabilities
 from execution.remote.access import run_ssh, scp_from, scp_to
 from execution.remote.runtime_support import (
     DEFAULT_LOCAL_OUTPUT,
@@ -40,6 +39,7 @@ from execution.remote.error_contract import (
     error_payload,
     status_from_error_code,
 )
+from execution.remote.executor_preflight import validate_executor_capabilities as validate_preflight_capabilities
 from execution.remote.contracts import (
     aggregate_run_status,
     build_executor_request,
@@ -55,25 +55,33 @@ from execution.remote.script_runner import (
     print_script_results,
     run_script as _run_script,
 )
+from execution.remote.script_capabilities import (
+    SCRIPT_IDS_REQUIRING_MONGOSH,
+    SCRIPT_ID_MONGOS_SHARD_MAP,
+    SCRIPT_ID_REPLICASET_STATUS,
+    build_required_capabilities,
+    classify_pod_exec_error,
+    mongos_pod_score,
+    pod_label_text,
+    pod_name,
+    pod_phase,
+    pod_tool_probe_script,
+    probe_pod_container_shell as probe_script_pod_container_shell,
+    probe_pod_tool as probe_script_pod_tool,
+    record_pod_tool_probe_summary,
+    remote_kubectl_get_pods as script_remote_kubectl_get_pods,
+    replicaset_pod_score,
+    resolve_mongos_target_pod,
+    resolve_replicaset_target_pods,
+    shell_candidates,
+    validate_script_capabilities as validate_script_runtime_capabilities,
+)
+from execution.remote.script_output_contract import (
+    SCRIPT_OUTPUT_ALLOWED_STATUSES,
+    SCRIPT_OUTPUT_REQUIRED_FIELDS,
+    validate_script_output_contract as validate_output_contract,
+)
 from execution.remote.transport import FunctionRemoteTransport, RemoteTransport
-
-SCRIPT_IDS_REQUIRING_MONGOSH = remote_capabilities.SCRIPT_IDS_REQUIRING_MONGOSH
-SCRIPT_ID_MONGOS_SHARD_MAP = remote_capabilities.SCRIPT_ID_MONGOS_SHARD_MAP
-SCRIPT_ID_REPLICASET_STATUS = remote_capabilities.SCRIPT_ID_REPLICASET_STATUS
-SCRIPT_OUTPUT_REQUIRED_FIELDS = remote_capabilities.SCRIPT_OUTPUT_REQUIRED_FIELDS
-SCRIPT_OUTPUT_ALLOWED_STATUSES = remote_capabilities.SCRIPT_OUTPUT_ALLOWED_STATUSES
-shell_candidates = remote_capabilities.shell_candidates
-build_required_capabilities = remote_capabilities.build_required_capabilities
-pod_name = remote_capabilities.pod_name
-pod_phase = remote_capabilities.pod_phase
-pod_label_text = remote_capabilities.pod_label_text
-mongos_pod_score = remote_capabilities.mongos_pod_score
-replicaset_pod_score = remote_capabilities.replicaset_pod_score
-resolve_mongos_target_pod = remote_capabilities.resolve_mongos_target_pod
-resolve_replicaset_target_pods = remote_capabilities.resolve_replicaset_target_pods
-classify_pod_exec_error = remote_capabilities.classify_pod_exec_error
-pod_tool_probe_script = remote_capabilities.pod_tool_probe_script
-record_pod_tool_probe_summary = remote_capabilities.record_pod_tool_probe_summary
 
 
 def classify_remote_error(detail: str, default_code: str) -> Dict[str, str]:
@@ -81,7 +89,7 @@ def classify_remote_error(detail: str, default_code: str) -> Dict[str, str]:
 
 
 def validate_script_output_contract(output_path: Path, expected_script_id: str):
-    return remote_capabilities.validate_script_output_contract(output_path, expected_script_id, load_config_fn=load_config)
+    return validate_output_contract(output_path, expected_script_id, load_config_fn=load_config)
 
 
 def default_remote_transport() -> RemoteTransport:
@@ -90,12 +98,12 @@ def default_remote_transport() -> RemoteTransport:
 
 def remote_kubectl_get_pods(access: Dict[str, Any], namespace: str, transport: RemoteTransport | None = None):
     transport = transport or default_remote_transport()
-    return remote_capabilities.remote_kubectl_get_pods(access, namespace, run_ssh_fn=transport.run)
+    return script_remote_kubectl_get_pods(access, namespace, run_ssh_fn=transport.run)
 
 
 def probe_pod_tool(access: Dict[str, Any], namespace: str, pod: str, candidates: List[str], transport: RemoteTransport | None = None):
     transport = transport or default_remote_transport()
-    return remote_capabilities.probe_pod_tool(access, namespace, pod, candidates, run_ssh_fn=transport.run)
+    return probe_script_pod_tool(access, namespace, pod, candidates, run_ssh_fn=transport.run)
 
 
 def probe_pod_container_shell(
@@ -106,7 +114,7 @@ def probe_pod_container_shell(
     transport: RemoteTransport | None = None,
 ):
     transport = transport or default_remote_transport()
-    return remote_capabilities.probe_pod_container_shell(access, namespace, pod_item, mongo_exec, run_ssh_fn=transport.run)
+    return probe_script_pod_container_shell(access, namespace, pod_item, mongo_exec, run_ssh_fn=transport.run)
 
 
 def validate_script_capabilities(
@@ -118,7 +126,7 @@ def validate_script_capabilities(
     transport: RemoteTransport | None = None,
 ):
     transport = transport or default_remote_transport()
-    return remote_capabilities.validate_script_capabilities(
+    return validate_script_runtime_capabilities(
         access,
         namespace,
         script_id,
@@ -130,7 +138,7 @@ def validate_script_capabilities(
 
 def validate_executor_capabilities(access: Dict[str, Any], transport: RemoteTransport | None = None):
     transport = transport or default_remote_transport()
-    return remote_capabilities.validate_executor_capabilities(access, run_ssh_fn=transport.run, which_fn=shutil.which)
+    return validate_preflight_capabilities(access, run_ssh_fn=transport.run, which_fn=shutil.which)
 
 
 def run_script(

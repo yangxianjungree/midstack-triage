@@ -11,8 +11,12 @@ if str(SRC_DIR) not in sys.path:
 
 FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "active" / "mongodb"
 
-from phases.phase3 import collection as phase3_collection
+from phases.phase3 import incident_build as phase3_incident_build
+from phases.phase3 import recollection as phase3_recollection
 from phases.phase3 import remote_collection as phase3_remote_collection
+from phases.phase3 import report_gaps as phase3_report_gaps
+from phases.phase3 import scenario_routing as phase3_scenario_routing
+from phases.phase3 import skill_runtime as phase3_skill_runtime
 
 
 def write_yaml(path: Path, payload) -> None:
@@ -28,7 +32,7 @@ def test_normalize_collection_report_gaps_assigns_gap_types():
         ]
     }
 
-    phase3_collection.normalize_collection_report_gaps(collection_report)
+    phase3_report_gaps.normalize_collection_report_gaps(collection_report)
 
     assert collection_report["evidence_gaps"][0]["gap_type"] == "critical_gap"
     assert collection_report["evidence_gaps"][1]["gap_type"] == "expected_gap"
@@ -50,7 +54,7 @@ def test_apply_scenario_routing_sets_unknown_scenario(tmp_path):
     write_yaml(output_dir / "structured_record.yaml", yaml.safe_load((fixture_root / "structured_record.yaml").read_text(encoding="utf-8")))
 
     args = SimpleNamespace(customer_clue="")
-    updated = phase3_collection.apply_scenario_routing_if_needed(output_dir, args)
+    updated = phase3_scenario_routing.apply_scenario_routing_if_needed(output_dir, args)
 
     assert updated["scenario"] == "connection-failure"
     assert updated["scenario_inference"]["confidence"] in ("high", "medium")
@@ -77,7 +81,7 @@ def test_enrich_skill_runtime_context_records_missing_scripts(tmp_path):
         },
     )
 
-    runtime = phase3_collection.enrich_skill_runtime_context(
+    runtime = phase3_skill_runtime.enrich_skill_runtime_context(
         output_dir,
         {"middleware": "mongodb", "scenario": "kubernetes-runtime"},
     )
@@ -106,7 +110,7 @@ def test_resolve_skill_runtime_returns_pure_context(tmp_path):
     )
     collection_report = yaml.safe_load((output_dir / "collection_report.yaml").read_text(encoding="utf-8"))
 
-    runtime = phase3_collection.resolve_skill_runtime(
+    runtime = phase3_skill_runtime.resolve_skill_runtime(
         {"middleware": "mongodb", "scenario": "kubernetes-runtime"},
         output_dir,
         collection_report,
@@ -151,17 +155,17 @@ def test_directed_recollection_prefers_dns_path_and_skill_pool(tmp_path):
         },
     )
 
-    selected = phase3_collection.directed_recollection_script_ids(
+    selected = phase3_recollection.directed_recollection_script_ids(
         output_dir,
         skill_pool={
-            phase3_collection.SCRIPT_DNS_COREDNS,
-            phase3_collection.SCRIPT_NETWORK_OVERLAY,
+            phase3_recollection.SCRIPT_DNS_COREDNS,
+            phase3_recollection.SCRIPT_NETWORK_OVERLAY,
         },
     )
 
     assert selected == [
-        phase3_collection.SCRIPT_DNS_COREDNS,
-        phase3_collection.SCRIPT_NETWORK_OVERLAY,
+        phase3_recollection.SCRIPT_DNS_COREDNS,
+        phase3_recollection.SCRIPT_NETWORK_OVERLAY,
     ]
 
 
@@ -179,31 +183,31 @@ def test_select_directed_recollection_script_ids_is_pure_dns_path():
         ]
     }
 
-    selected = phase3_collection.select_directed_recollection_script_ids(
+    selected = phase3_recollection.select_directed_recollection_script_ids(
         structured_record,
         signal_bundle,
         collection_report,
     )
 
     assert selected == [
-        phase3_collection.SCRIPT_DNS_COREDNS,
-        phase3_collection.SCRIPT_NETWORK_OVERLAY,
-        phase3_collection.SCRIPT_LOG_NODE_FILE_TAIL,
+        phase3_recollection.SCRIPT_DNS_COREDNS,
+        phase3_recollection.SCRIPT_NETWORK_OVERLAY,
+        phase3_recollection.SCRIPT_LOG_NODE_FILE_TAIL,
     ]
 
 
 def test_filter_recollection_scripts_by_skill_pool_marks_miss_when_empty_overlap():
-    selected, miss = phase3_collection.filter_recollection_scripts_by_skill_pool(
+    selected, miss = phase3_recollection.filter_recollection_scripts_by_skill_pool(
         [
-            phase3_collection.SCRIPT_DNS_COREDNS,
-            phase3_collection.SCRIPT_NETWORK_OVERLAY,
+            phase3_recollection.SCRIPT_DNS_COREDNS,
+            phase3_recollection.SCRIPT_NETWORK_OVERLAY,
         ],
         {"mongodb.collect.pods.state"},
     )
 
     assert selected == [
-        phase3_collection.SCRIPT_DNS_COREDNS,
-        phase3_collection.SCRIPT_NETWORK_OVERLAY,
+        phase3_recollection.SCRIPT_DNS_COREDNS,
+        phase3_recollection.SCRIPT_NETWORK_OVERLAY,
     ]
     assert miss is True
 
@@ -232,9 +236,9 @@ def test_directed_recollection_falls_back_when_skill_pool_misses(tmp_path):
         },
     )
 
-    selected = phase3_collection.directed_recollection_script_ids(output_dir, skill_pool={"mongodb.collect.pods.state"})
+    selected = phase3_recollection.directed_recollection_script_ids(output_dir, skill_pool={"mongodb.collect.pods.state"})
 
-    assert phase3_collection.SCRIPT_LOG_SINK_DISCOVER in selected
+    assert phase3_recollection.SCRIPT_LOG_SINK_DISCOVER in selected
     collection_report = yaml.safe_load((output_dir / "collection_report.yaml").read_text(encoding="utf-8"))
     assert "skill_pool_miss" in collection_report["warnings"][0]
 
@@ -346,7 +350,7 @@ def test_build_incident_from_remote_run_merges_and_copies_outputs(tmp_path):
     output_dir = tmp_path / "incident"
     args = SimpleNamespace(scenario="", customer_clue="", incident_input={})
 
-    phase3_collection.build_incident_from_remote_run(remote_run_dir, output_dir, args)
+    phase3_incident_build.build_incident_from_remote_run(remote_run_dir, output_dir, args)
 
     input_data = yaml.safe_load((output_dir / "input.yaml").read_text(encoding="utf-8"))
     structured_record = yaml.safe_load((output_dir / "structured_record.yaml").read_text(encoding="utf-8"))

@@ -4,8 +4,6 @@
 
 当前边界：
 
-- `collection.py`
-  兼容聚合入口，保留旧测试和少量工具的导入面；新代码应直接依赖下面的具体模块。
 - `incident_build.py`
   从 remote run 输出还原 incident 工作目录，生成 `input.yaml`、`structured_record.yaml`、`signal_bundle.yaml` 和 `collection_report.yaml`。
 - `remote_collection.py`
@@ -27,6 +25,5 @@
 
 - 第 3 段负责证据构建和治理，不直接给出最终分析结论。
 - 远程执行器的正式实现已经下沉到 `src/execution/remote/executor.py`。
-- `collection.py` 作为 control plane 编排层调用 execution plane，不重复承载 transport 实现。
-- 新运行时代码不要继续向 `collection.py` 堆实现；需要复用时从具体模块导入。
+- Phase 3 不保留聚合壳；新运行时代码必须从具体模块导入。
 - 仓库不再保留 `tools/remote-*` 兼容壳；工程验证和插件 runtime 统一直接调用 `execution.remote.executor`。

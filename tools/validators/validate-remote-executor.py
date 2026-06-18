@@ -18,7 +18,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from phases.phase2 import build_auth_hints, mongodb_auth_secret_refs  # noqa: E402
-from phases.phase3.collection import directed_recollection_script_ids  # noqa: E402
+from phases.phase3.recollection import directed_recollection_script_ids  # noqa: E402
 
 
 def load_remote_executor_module() -> Any:

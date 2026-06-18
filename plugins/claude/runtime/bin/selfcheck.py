@@ -67,6 +67,7 @@ def main() -> int:
         (RUNTIME_ROOT / "src" / "execution" / "remote" / "access.py", "remote access runtime"),
         (RUNTIME_ROOT / "src" / "execution" / "remote" / "executor.py", "remote executor runtime"),
         (RUNTIME_ROOT / "src" / "execution" / "remote" / "mongodb_collection_runtime.py", "mongodb remote collection runtime"),
+        (RUNTIME_ROOT / "src" / "execution" / "remote" / "script_output_contract.py", "remote script output contract"),
         (RUNTIME_ROOT / "src" / "execution" / "remote" / "script_runner.py", "remote script runner runtime"),
         (RUNTIME_ROOT / "src" / "phases" / "phase4" / "rules" / "__init__.py", "phase4 rules package"),
         (RUNTIME_ROOT / "src" / "phases" / "phase4" / "rules" / "mongodb.py", "mongodb rules analyser"),

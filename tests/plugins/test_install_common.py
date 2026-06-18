@@ -28,6 +28,7 @@ def test_runtime_markers_share_common_runtime_files_with_optional_prefix():
     assert "src/shared/asset_resolver.py" in COMMON_RUNTIME_MARKER_FILES
     assert "src/shared/workspace.py" in COMMON_RUNTIME_MARKER_FILES
     assert "src/execution/remote/runtime_support.py" in COMMON_RUNTIME_MARKER_FILES
+    assert "src/execution/remote/script_output_contract.py" in COMMON_RUNTIME_MARKER_FILES
     assert "src/execution/remote/script_runner.py" in COMMON_RUNTIME_MARKER_FILES
     assert prefixed_runtime_markers("runtime")[:2] == (
         "runtime/tools/plugin/midstack-local.py",

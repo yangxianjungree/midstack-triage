@@ -8,7 +8,7 @@
 
 - `remote/`
   SSH/SSHPass 远端接入、capability check、上下文构建、脚本投放与回收。
-  其中 `transport.py` 定义执行编排使用的 transport 接口，`access.py` 提供当前 SSH/scp 实现，`capabilities.py` 管远端能力与目标探测，`script_runner.py` 管单脚本执行编排，`executor.py` 管兼容门面，`cli.py` 管远程执行器 CLI。
+  其中 `transport.py` 定义执行编排使用的 transport 接口，`access.py` 提供当前 SSH/scp 实现，`script_output_contract.py` 管脚本输出合同，`capabilities.py` 管远端能力与目标探测，`script_runner.py` 管单脚本执行编排，`executor.py` 管兼容门面，`cli.py` 管远程执行器 CLI。
 - `modes.py`
   执行方式合同。当前默认是 `remote`，后续 `local` 和 `offline` 必须通过这里表达能力差异，再接入 phase 编排。
 

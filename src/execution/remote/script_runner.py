@@ -17,16 +17,13 @@ from execution.remote.contracts import (
     build_run_result,
     text_tail,
 )
-from execution.remote.runtime_support import load_config, now_iso, try_load_yaml, write_json, write_yaml
+from execution.remote.runtime_support import now_iso, try_load_yaml, write_json, write_yaml
+from execution.remote.script_output_contract import validate_script_output_contract
 from execution.remote.transport import FunctionRemoteTransport, RemoteTransport
 
 
 def classify_remote_error(detail: str, default_code: str) -> Dict[str, str]:
     return remote_capabilities.classify_remote_error(detail, default_code)
-
-
-def validate_script_output_contract(output_path: Path, expected_script_id: str):
-    return remote_capabilities.validate_script_output_contract(output_path, expected_script_id, load_config_fn=load_config)
 
 
 def default_remote_transport() -> RemoteTransport:

@@ -14,6 +14,8 @@
   MongoDB Pod/容器目标解析、mongo shell 选择、pod 内执行目标摘要。
 - `runtime_support.py`
   远端执行 runtime 的时间戳、YAML/JSON IO、runtime-map 解析等底层支持。
+- `script_output_contract.py`
+  远程脚本 `output.yaml` 的字段合同和校验。
 - `context.py`
   context profile、目标集、namespace 选择、inventory 采集与执行上下文构建。
 - `kubectl.py`

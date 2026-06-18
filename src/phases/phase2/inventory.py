@@ -9,13 +9,12 @@ from .auth import (
     build_auth_hints,
     mongodb_auth_secret_refs,
 )
-from .hints import (
+from .events import related_event
+from .targets import (
     build_mongodb_targets,
-    build_topology_hints,
-    deployment_architecture_candidates,
     inventory_scope_objects,
-    related_event,
 )
+from .topology import build_topology_hints, deployment_architecture_candidates
 from .objects import (
     compact_k8s_object,
     deployment_architecture_hints,

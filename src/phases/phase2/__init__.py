@@ -7,14 +7,13 @@ from .auth import (
     container_specs_for_auth,
     mongodb_auth_secret_refs,
 )
-from .hints import (
+from .events import related_event
+from .targets import (
     append_unique,
     build_mongodb_targets,
-    build_topology_hints,
-    deployment_architecture_candidates,
     inventory_scope_objects,
-    related_event,
 )
+from .topology import build_topology_hints, deployment_architecture_candidates
 from .inventory import (
     discover_mongodb_inventory,
     run_remote_kubectl_json,

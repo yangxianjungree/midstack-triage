@@ -25,9 +25,12 @@ superseded_by: none
 
 ### 目标
 
-- 让排障可以正式启动
-- 保存最小输入和第一手原始线索
-- 判断是否具备进入环境的基础条件
+- 判断本次输入应创建新的 incident，还是继续补齐已有 blocked incident
+- 保存最小输入、第一手原始线索和会话上下文
+- 记录用户声明的环境模式和接入场景
+
+Phase 1 不直接负责 SSH、kubectl 或对象盘点是否可用；这些会进入 Phase 2
+readiness gate。
 
 ### 最小必填输入
 
@@ -78,12 +81,19 @@ superseded_by: none
 `input.yaml` 和 `remote-config.yaml` 中已确认的字段，只用新参数补齐缺口。
 不带 `incident_id` 的 `/midstack:start` 始终创建新的排障记录。
 
-### `ready` 最小条件
+### Phase 2 readiness gate
 
-- 已提供远程环境信息
-- 已验证远程环境信息有效
-- 可执行基础 Kubernetes 操作
+`/midstack:start` 会在创建/续填 incident 后继续调用 Phase 2 readiness gate。
+Phase 2 负责持续从用户交互中补齐信息，并通过只读命令判断是否可以进入
+后续分析。
+
+`ready` 最小条件：
+
 - 已明确需要排查哪个中间件
+- 已提供当前执行模式所需的接入信息
+- `remote` 模式下已验证远程环境信息有效
+- `remote` 模式下可执行基础 Kubernetes 操作
+- 已完成目标对象的基础盘点，或已有用户明确指定的 namespace/对象范围
 - 如已提供故障线索，线索内容可以被理解（线索本身为可选输入，缺失不构成 `blocked`）
 
 当前 `ready` 适用于 `remote` 主路径，以及具备完整 `artifact_source` 的 `offline` 证据目录；`local` 在对应执行链路完成前返回 `blocked` 并提供结构化追问。
@@ -109,7 +119,9 @@ Kubernetes context，帮助用户判断是否应切换到 `local`、继续提供
 
 ### 目标
 
+- 补齐 Phase 1 尚未拿到的必要输入
 - 确认目标环境和目标集群
+- 执行接入 readiness gate，例如 `sshpass`、SSH、kubectl client、Kubernetes context、kubectl exec 能力
 - 识别部署架构
 - 盘清关键对象和基础拓扑
 

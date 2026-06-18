@@ -26,6 +26,7 @@ from .objects import (
     object_name,
     object_namespace,
 )
+from .startup_gate import evaluate_startup_readiness
 
 __all__ = [
     "MONGODB_DISCOVERY_HINTS",
@@ -41,6 +42,7 @@ __all__ = [
     "deployment_architecture_candidates",
     "deployment_architecture_hints",
     "discover_mongodb_inventory",
+    "evaluate_startup_readiness",
     "inventory_scope_objects",
     "mongodb_auth_secret_refs",
     "mongodb_role_hints",

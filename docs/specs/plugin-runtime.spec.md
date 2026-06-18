@@ -68,8 +68,8 @@ superseded_by: none
 
 | 5 阶段 | 阶段职责 | Slash 入口 | 说明 |
 | --- | --- | --- | --- |
-| Phase 1 启动 | 建立 incident、解析线索、远端接入校验 | `/<plugin_name>:start` | Agent 只抽取参数并调用 runtime；不自行排障 |
-| Phase 2 盘点 | namespace、对象、拓扑、auth hint | `/<plugin_name>:start` | 由 start runtime 内部完成，ready 后提示 analyse |
+| Phase 1 启动 | 创建或继续 incident、解析线索、保存用户上下文和环境模式 | `/<plugin_name>:start` | Agent 只抽取参数并调用 runtime；不自行排障 |
+| Phase 2 readiness 与盘点 | 持续补齐输入、执行接入校验、namespace、对象、拓扑、auth hint | `/<plugin_name>:start` | 由 start runtime 内部完成，ready 后提示 analyse |
 | Phase 3 采集治理 | remote run、fixture、recollection 输入治理 | `/<plugin_name>:analyse` | analyse 进入控制面后触发采集或读取已有 remote run |
 | Phase 4 推理 | rules fallback、多轨推理、reasoning board | `/<plugin_name>:analyse` | analyse 内部阶段，不应由 slash command 直接实现 |
 | Phase 5 收口 | finalize、review、report、score | `/<plugin_name>:analyse`、`/<plugin_name>:review` | analyse 产出结论和报告；review 只做质量反馈 |
@@ -140,9 +140,9 @@ superseded_by: none
 ### 主要迁移规则
 
 - `/plugin:start`
-  - 创建记录后进入 `created`
-  - 校验失败进入 `blocked`
-  - 校验成功进入 `ready`
+  - Phase 1 创建或继续记录并保存输入上下文
+  - Phase 2 readiness gate 缺信息或校验失败进入 `blocked`
+  - Phase 2 readiness gate 与对象盘点通过进入 `ready`
 - `/plugin:analyse`
   - 从 `ready` 进入 `analysing`
   - 完成后进入 `analysed`
@@ -180,6 +180,7 @@ superseded_by: none
 - `remote` 是当前默认主路径，表示通过 SSH 进入跳板机或故障环境后执行只读采集
 - `local` 表示 runtime 已在故障集群或控制面机器上；当前只在 Phase 1 识别并返回 blocked 引导，不执行本地采集
 - 当 `remote` 缺少环境 IP 或用户显式选择 `local` 时，`/start` 可记录轻量 `local_context` 探测结果，用于提示本机是否已有可用 kubectl context；显式 `local` 的 blocked 追问应说明该 context 状态，但这不改变 `local` 当前 blocked 状态
+- Phase 2 owns command-backed readiness checks: local context probing, remote SSH/kubectl validation, and MongoDB inventory blockers. Phase 1 owns incident creation/continuation and preserving the user's declared context.
 - `offline` 表示仅消费已有 incident、fixture、remote-run、日志或手工命令输出；缺少 `artifact_source` 时 `/start` 返回 blocked 引导
 - `offline` 模式提供完整 `artifact_source` 时，`/start` 可返回 `ready`，但不执行分析；下一步仍走 `/plugin:analyse --execution-mode offline`
 - `offline` 模式提供 `pasted_evidence` 时，`/start` 将其保存到 `logs/raw/manual-evidence.txt`，但仍保持 `blocked`，直到存在完整离线证据目录或后续治理步骤

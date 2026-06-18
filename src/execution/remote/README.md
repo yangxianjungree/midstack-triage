@@ -20,8 +20,10 @@
   远端 `kubectl get ... -o json` 的执行面 helper；Phase2 只保留兼容转发。
 - `contracts.py`
   remote workspace、request/result、run summary 等合同对象构建。
+- `script_runner.py`
+  单个远程脚本的上下文生成、执行、输出校验和产物回收。
 - `executor.py`
-  MongoDB 远程脚本执行器门面；保留脚本执行 helper 和旧导入面。
+  MongoDB 远程脚本执行器兼容门面；保留旧导入面和 `python -m execution.remote.executor`。
 - `cli.py`
   远程执行器 CLI 参数解析和批量编排；`python -m execution.remote.executor` 仍通过兼容入口转发到这里。
 
@@ -30,5 +32,5 @@
 - 这里是 execution plane，不是 phase 流程目录。
 - `phase1`、`phase2`、`phase3` 可以调用这里，但不要把 transport 逻辑重新散落回 phase 目录。
 - 仓库不再保留 `tools/remote-executor/` 和 `tools/remote-smoke/` 兼容壳；正式入口统一是 `src/execution/remote/executor.py`。
-- `executor.py` 可以作为兼容门面对外暴露符号，但新实现优先写入对应子模块；CLI 编排放在 `cli.py`。
+- `executor.py` 可以作为兼容门面对外暴露符号，但新实现优先写入对应子模块；单脚本执行放在 `script_runner.py`，CLI 编排放在 `cli.py`。
 - 需要 monkeypatch transport 的验证器，继续从 `executor.py` 打补丁；门面负责把当前模块的 `run_ssh`/`scp_*` 注入到底层实现。

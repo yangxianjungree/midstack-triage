@@ -8,31 +8,37 @@ import shlex
 from pathlib import Path
 from typing import Any, Dict, List
 
-from execution.remote.executor import (
+from execution.remote.context import (
+    choose_namespace,
+    collect_inventory,
+    context_profile_from_inventory,
+)
+from execution.remote.contracts import (
+    aggregate_run_status,
+    build_script_result_summary,
+)
+from execution.remote.runtime_support import (
     DEFAULT_LOCAL_OUTPUT,
     DEFAULT_MANIFEST,
     DEFAULT_PLUGIN_NAME,
     DEFAULT_REMOTE_ROOT,
     DEFAULT_RUNTIME_MAP,
-    aggregate_run_status,
-    build_script_result_summary,
-    choose_namespace,
-    classify_remote_error,
-    collect_inventory,
-    context_profile_from_inventory,
-    default_remote_transport,
-    error_payload,
-    finalize_run,
     load_config,
     load_script_entries,
     now_id,
     now_iso,
     remote_path,
+    try_load_yaml,
+    write_yaml,
+)
+from execution.remote.script_runner import (
+    classify_remote_error,
+    default_remote_transport,
+    error_payload,
+    finalize_run,
     run_script,
     status_from_error_code,
-    try_load_yaml,
     validate_executor_capabilities,
-    write_yaml,
 )
 
 

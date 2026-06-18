@@ -5,13 +5,29 @@
 import argparse
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+SUPPORT_DIR = Path(__file__).resolve().parents[1] / "support"
+if str(SUPPORT_DIR) not in sys.path:
+    sys.path.insert(0, str(SUPPORT_DIR))
+
+from install_common import (  # noqa: E402
+    LICENSE_FILES,
+    RuntimeBundleLayout,
+    copy_license_files,
+    copy_tree,
+    ensure_local_outputs_gitignore,
+    load_json,
+    missing_markers,
+    now_iso,
+    remove_path,
+    stage_runtime_dirs,
+    write_json,
+)
 
 
 PLUGIN_NAME = "midstack"
@@ -60,43 +76,11 @@ RUNTIME_MARKER_FILES = [
     "runtime/core/routing/scenario-signal-map.yaml",
     "runtime/interfaces/plugin/script-runtime-map.example.yaml",
 ]
-RUNTIME_COPY_DIRS = [
-    ("tools/plugin", "runtime/tools/plugin"),
-    ("tools/support", "runtime/tools/support"),
-    ("tools/validators", "runtime/tools/validators"),
-    ("src", "runtime/src"),
-    ("domains", "runtime/domains"),
-    ("scenarios", "runtime/scenarios"),
-    ("core", "runtime/core"),
-    ("interfaces", "runtime/interfaces"),
-]
-LICENSE_FILES = [
-    "LICENSE",
-    "NOTICE",
-]
+RUNTIME_COPY_DIRS = RuntimeBundleLayout("runtime").copy_dirs()
 
 
 # -----------------------------------------------------------------------------
-# Common file and process helpers
-
-
-def now_iso() -> str:
-    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
-
-
-def load_json(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = json.load(fh)
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a JSON object" % path)
-    return data
-
-
-def write_json(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2, sort_keys=False)
-        fh.write("\n")
+# Common process helpers
 
 
 def run(cmd: List[str], cwd: Path) -> subprocess.CompletedProcess:
@@ -190,33 +174,16 @@ def validate_source() -> None:
 
 
 def copy_plugin_source(target_plugin_dir: Path) -> None:
-    if target_plugin_dir.exists():
-        shutil.rmtree(target_plugin_dir)
-    target_plugin_dir.parent.mkdir(parents=True, exist_ok=True)
-    ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache")
-    shutil.copytree(PLUGIN_DIR, target_plugin_dir, ignore=ignore)
-    for name in LICENSE_FILES:
-        shutil.copy2(ENGINE_ROOT / name, target_plugin_dir / name)
-
-
-def copy_runtime_tree(source: Path, target: Path) -> None:
-    if target.exists():
-        shutil.rmtree(target)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache")
-    shutil.copytree(source, target, ignore=ignore)
+    copy_tree(PLUGIN_DIR, target_plugin_dir)
+    copy_license_files(ENGINE_ROOT, target_plugin_dir, LICENSE_FILES)
 
 
 def stage_runtime_bundle(target_plugin_dir: Path) -> None:
-    for source_rel, target_rel in RUNTIME_COPY_DIRS:
-        copy_runtime_tree(ENGINE_ROOT / source_rel, target_plugin_dir / target_rel)
+    stage_runtime_dirs(ENGINE_ROOT, target_plugin_dir, RUNTIME_COPY_DIRS)
 
 
 def validate_runtime_bundle(target_plugin_dir: Path) -> None:
-    errors: List[str] = []
-    for marker in RUNTIME_MARKER_FILES:
-        if not target_plugin_dir.joinpath(marker).exists():
-            errors.append("missing bundled runtime file: %s" % marker)
+    errors = ["missing bundled runtime file: %s" % marker for marker in missing_markers(target_plugin_dir, RUNTIME_MARKER_FILES)]
     if errors:
         for item in errors:
             print("ERROR: %s" % item, file=sys.stderr)
@@ -279,24 +246,7 @@ def write_workspace_state(workspace: Path) -> None:
         "last_installed_at": now_iso(),
     }
     write_json(workspace / ".claude" / WORKSPACE_STATE, state)
-    gitignore = workspace / ".gitignore"
-    marker = "# Midstack Triage local runtime outputs"
-    entry = "%s\n.local/\n" % marker
-    if gitignore.exists():
-        content = gitignore.read_text(encoding="utf-8")
-        if marker not in content and "\n.local/\n" not in ("\n" + content):
-            suffix = "" if content.endswith("\n") else "\n"
-            gitignore.write_text(content + suffix + "\n" + entry, encoding="utf-8")
-    else:
-        gitignore.write_text(entry, encoding="utf-8")
-
-
-def remove_path(path: Path) -> None:
-    if path.is_file() or path.is_symlink():
-        path.unlink()
-        return
-    if path.is_dir():
-        shutil.rmtree(path)
+    ensure_local_outputs_gitignore(workspace)
 
 
 def cleanup_legacy_workspace_projection(workspace: Path) -> List[str]:

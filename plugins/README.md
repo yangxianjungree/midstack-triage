@@ -24,6 +24,9 @@ plugins/
 
 ## Ownership
 
+- `plugins/support/` contains repository-side helper code shared by agent
+  installers. It is not an installed agent adapter and must not contain
+  Claude/Cursor-specific command text.
 - `plugins/claude/` is the Claude Code plugin source. It is validated with
   `claude plugin validate plugins/claude` and installed through
   `plugins/claude/plugin-install.py`.
@@ -150,6 +153,10 @@ targets.
 Claude and Cursor use different installation layouts, but they share one
 runtime contract:
 
+- Shared installer rules, runtime source directory lists, license projection,
+  marker checks, and workspace `.gitignore` updates live under
+  `plugins/support/`. Do not fork these rules inside each adapter unless the
+  adapter has a real platform-specific reason.
 - The installed runtime must be self-contained and must not call source
   `tools/plugin/midstack-local.py` or require a source checkout from the target
   workspace.
@@ -162,6 +169,13 @@ runtime contract:
   as the first diagnostic action.
 - Each adapter must document install, update, check, and smoke commands before
   being treated as supported.
+
+Adapter-specific installers still own platform behavior:
+
+- Claude owns local marketplace creation, project-state purge, plugin
+  registration, and `${CLAUDE_PLUGIN_ROOT}` command contracts.
+- Cursor owns workspace command/rule projection, workspace runtime staging, and
+  `runtime_root` command contracts.
 
 ## Current Commands
 

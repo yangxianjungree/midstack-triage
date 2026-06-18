@@ -3,12 +3,27 @@
 """Install Midstack Triage as a local Cursor plugin (official format, no Marketplace upload)."""
 
 import argparse
-import json
-import shutil
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+SUPPORT_DIR = Path(__file__).resolve().parents[1] / "support"
+if str(SUPPORT_DIR) not in sys.path:
+    sys.path.insert(0, str(SUPPORT_DIR))
+
+from install_common import (  # noqa: E402
+    LICENSE_FILES,
+    RuntimeBundleLayout,
+    copy_file,
+    copy_tree,
+    ensure_local_outputs_gitignore,
+    load_json,
+    missing_markers,
+    now_iso,
+    remove_path,
+    stage_runtime_dirs,
+    write_json,
+)
 
 PLUGIN_DIR = Path(__file__).resolve().parent
 PLUGIN_NAME = "midstack-triage"
@@ -17,10 +32,6 @@ MANIFEST_PATH = PLUGIN_DIR / ".cursor-plugin" / "plugin.json"
 WORKSPACE_STATE_NAME = "midstack-triage.workspace.json"
 INSTALL_MODE = "agent-cli-bundled-runtime"
 WORKSPACE_RUNTIME_DIR = "midstack-triage-runtime"
-LICENSE_FILES = [
-    "LICENSE",
-    "NOTICE",
-]
 REQUIRED_COMMANDS = [
     "midstack:start.md",
     "midstack:analyse.md",
@@ -34,16 +45,7 @@ LEGACY_COMMANDS = [
     "midstack-validate.md",
 ]
 LEGACY_RULE = "midstack-triage.mdc"
-RUNTIME_COPY_DIRS = [
-    ("tools/plugin", "tools/plugin"),
-    ("tools/support", "tools/support"),
-    ("tools/validators", "tools/validators"),
-    ("src", "src"),
-    ("domains", "domains"),
-    ("scenarios", "scenarios"),
-    ("core", "core"),
-    ("interfaces", "interfaces"),
-]
+RUNTIME_COPY_DIRS = RuntimeBundleLayout().copy_dirs()
 RUNTIME_MARKER_FILES = [
     "bin/midstack-local.py",
     "bin/validate-repo.py",
@@ -63,29 +65,6 @@ RUNTIME_FORBIDDEN_TEXT = [
     "engine_root` 调用",
     "source-checkout adapter",
 ]
-
-
-# -----------------------------------------------------------------------------
-# Common file helpers
-
-
-def now_iso() -> str:
-    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
-
-
-def load_json(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        data = json.load(fh)
-    if not isinstance(data, dict):
-        raise ValueError("%s must contain a JSON object" % path)
-    return data
-
-
-def write_json(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2, sort_keys=False)
-        fh.write("\n")
 
 
 # -----------------------------------------------------------------------------
@@ -126,15 +105,6 @@ def plugin_rule_source() -> Path:
 # Filesystem projection helpers
 
 
-def remove_path(path: Path) -> None:
-    if path.is_file() or path.is_symlink():
-        path.unlink()
-    elif path.is_dir():
-        for child in sorted(path.iterdir(), reverse=True):
-            remove_path(child)
-        path.rmdir()
-
-
 def ensure_symlink(link: Path, target: Path) -> None:
     link.parent.mkdir(parents=True, exist_ok=True)
     resolved_target = target.resolve()
@@ -145,19 +115,6 @@ def ensure_symlink(link: Path, target: Path) -> None:
     elif link.exists():
         remove_path(link)
     link.symlink_to(resolved_target)
-
-
-def copy_tree(source: Path, target: Path) -> None:
-    if target.exists():
-        remove_path(target)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache")
-    shutil.copytree(source, target, ignore=ignore)
-
-
-def copy_file(source: Path, target: Path) -> None:
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, target)
 
 
 def remove_legacy_command_names(command_dir: Path, target_root: Path) -> List[str]:
@@ -200,8 +157,7 @@ def write_runtime_wrappers(bin_dir: Path) -> None:
 def stage_workspace_runtime(target_root: Path) -> Path:
     runtime_dir = workspace_runtime_dir(target_root)
     runtime_dir.mkdir(parents=True, exist_ok=True)
-    for source_rel, target_rel in RUNTIME_COPY_DIRS:
-        copy_tree(source_root_path() / source_rel, runtime_dir / target_rel)
+    stage_runtime_dirs(source_root_path(), runtime_dir, RUNTIME_COPY_DIRS)
     write_runtime_wrappers(runtime_dir / "bin")
     return runtime_dir
 
@@ -209,9 +165,8 @@ def stage_workspace_runtime(target_root: Path) -> Path:
 def validate_workspace_runtime(target_root: Path) -> List[str]:
     errors: List[str] = []
     runtime_dir = workspace_runtime_dir(target_root)
-    for marker in RUNTIME_MARKER_FILES:
-        if not runtime_dir.joinpath(marker).exists():
-            errors.append("missing workspace runtime file: .cursor/%s/%s" % (WORKSPACE_RUNTIME_DIR, marker))
+    for marker in missing_markers(runtime_dir, RUNTIME_MARKER_FILES):
+        errors.append("missing workspace runtime file: .cursor/%s/%s" % (WORKSPACE_RUNTIME_DIR, marker))
     for relpath in [
         "tools/plugin/README.md",
         "tools/validators/README.md",
@@ -320,16 +275,7 @@ def init_workspace(target_root: Path) -> None:
         % (target_root.resolve(), PLUGIN_DIR.resolve()),
         encoding="utf-8",
     )
-    gitignore = target_root / ".gitignore"
-    marker = "# Midstack Triage local runtime outputs"
-    entry = "%s\n.local/\n" % marker
-    if gitignore.exists():
-        content = gitignore.read_text(encoding="utf-8")
-        if marker not in content and "\n.local/\n" not in ("\n" + content):
-            suffix = "" if content.endswith("\n") else "\n"
-            gitignore.write_text(content + suffix + "\n" + entry, encoding="utf-8")
-    else:
-        gitignore.write_text(entry, encoding="utf-8")
+    ensure_local_outputs_gitignore(target_root)
 
 
 def check_manifest() -> List[str]:

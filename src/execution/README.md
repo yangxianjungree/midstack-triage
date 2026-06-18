@@ -9,9 +9,22 @@
 - `remote/`
   SSH/SSHPass 远端接入、capability check、上下文构建、脚本投放与回收。
   其中 `access.py` 管 transport，`capabilities.py` 管远端能力与目标探测，`executor.py` 管执行编排门面。
+- `modes.py`
+  执行方式合同。当前默认是 `remote`，后续 `local` 和 `offline` 必须通过这里表达能力差异，再接入 phase 编排。
+
+## 执行方式
+
+- `remote`
+  当前默认路径。control plane 通过 SSH/SSHPass 进入 jump host 或故障环境，投放脚本并回收证据。
+- `local`
+  预留路径。control plane 在本机执行采集，不经过 SSH transport。当前还没有正式 executor。
+- `offline`
+  预留路径。不执行采集命令，只分析已有 incident、fixture 或 remote-run 产物。当前还没有正式 executor。
 
 规则：
 
 - 执行面模块要显式表达“本地控制端 -> 远端执行端”的边界。
+- 新执行方式先扩展 `modes.py` 合同，再接入具体 executor。
+- 接入 `local` 或 `offline` 时，先补测试证明 mode 不回落到 SSH/SSHPass，再接入 `src/commands/` 或 `src/phases/`。
 - phase 目录只负责流程语义，不长期承载远端 transport 或执行器主实现。
 - 需要被多个 phase 或多个 agent 适配器复用的远端执行能力，应优先沉到这里。

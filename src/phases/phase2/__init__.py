@@ -14,10 +14,8 @@ from .targets import (
     inventory_scope_objects,
 )
 from .topology import build_topology_hints, deployment_architecture_candidates
-from .inventory import (
-    discover_mongodb_inventory,
-    run_remote_kubectl_json,
-)
+from .inventory import discover_mongodb_inventory
+from .kubectl import run_remote_kubectl_json
 from .objects import (
     MONGODB_DISCOVERY_HINTS,
     compact_k8s_object,

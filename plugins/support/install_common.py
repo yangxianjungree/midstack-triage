@@ -29,6 +29,7 @@ COMMON_RUNTIME_MARKER_FILES: Tuple[str, ...] = (
     "src/execution/__init__.py",
     "src/execution/remote/__init__.py",
     "src/execution/remote/access.py",
+    "src/execution/remote/cli.py",
     "src/execution/remote/executor.py",
     "src/execution/remote/kubectl.py",
     "src/execution/remote/mongodb_collection_runtime.py",

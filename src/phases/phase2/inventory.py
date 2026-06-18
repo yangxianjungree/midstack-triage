@@ -22,11 +22,7 @@ from .objects import (
     object_matches_mongodb,
     object_name,
 )
-from .kubectl import run_remote_kubectl_json as _run_remote_kubectl_json
-
-
-def run_remote_kubectl_json(access: Dict[str, Any], resource: str, namespace: str, namespaced: bool = True) -> Dict[str, Any]:
-    return _run_remote_kubectl_json(access, resource, namespace, namespaced)
+from .kubectl import run_remote_kubectl_json
 
 
 def discover_mongodb_inventory(access: Dict[str, Any], namespace: str) -> Dict[str, Any]:

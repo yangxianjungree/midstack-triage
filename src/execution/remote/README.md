@@ -9,7 +9,9 @@
 - `transport.py`
   执行编排使用的 transport 接口；当前默认实现仍委托 `access.py` 的 SSH/scp 函数。
 - `capabilities.py`
-  远端 capability check、错误分类、Pod 目标解析与 pod 内工具探测。
+  脚本级远端 capability check、错误分类、Pod 目标解析与 pod 内工具探测。
+- `executor_preflight.py`
+  remote executor 批量运行前的基础 preflight：本地 `sshpass`、SSH、远端 `kubectl`、集群上下文和 `kubectl exec` 权限。
 - `mongodb_collection_runtime.py`
   MongoDB Pod/容器目标解析、mongo shell 选择、pod 内执行目标摘要。
 - `runtime_support.py`

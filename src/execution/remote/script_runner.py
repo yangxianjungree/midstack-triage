@@ -17,6 +17,7 @@ from execution.remote.contracts import (
     build_run_result,
     text_tail,
 )
+from execution.remote.executor_preflight import validate_executor_capabilities as validate_preflight_capabilities
 from execution.remote.runtime_support import now_iso, try_load_yaml, write_json, write_yaml
 from execution.remote.script_output_contract import validate_script_output_contract
 from execution.remote.transport import FunctionRemoteTransport, RemoteTransport
@@ -76,7 +77,7 @@ def validate_script_capabilities(
 
 def validate_executor_capabilities(access: Dict[str, Any], transport: RemoteTransport | None = None):
     transport = transport or default_remote_transport()
-    return remote_capabilities.validate_executor_capabilities(access, run_ssh_fn=transport.run, which_fn=shutil.which)
+    return validate_preflight_capabilities(access, run_ssh_fn=transport.run, which_fn=shutil.which)
 
 
 def print_run_pointer(incident_id: str, namespace: str, local_dir: Path) -> None:

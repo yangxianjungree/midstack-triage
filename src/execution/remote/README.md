@@ -11,11 +11,13 @@
 - `error_contract.py`
   remote executor 的错误码、状态映射、capability check 条目和通用错误分类。
 - `capabilities.py`
-  脚本级远端 capability check、错误分类、Pod 目标解析与 pod 内工具探测。
+  兼容导出旧 capability 符号；新实现优先落到对应子模块。
 - `executor_preflight.py`
   remote executor 批量运行前的基础 preflight：本地 `sshpass`、SSH、远端 `kubectl`、集群上下文和 `kubectl exec` 权限。
 - `mongodb_collection_runtime.py`
   MongoDB Pod/容器目标解析、mongo shell 选择、pod 内执行目标摘要。
+- `script_capabilities.py`
+  单脚本执行前的目标 Pod 解析、pod 内工具探测和脚本级 capability check。
 - `runtime_support.py`
   远端执行 runtime 的时间戳、YAML/JSON IO、runtime-map 解析等底层支持。
 - `script_output_contract.py`

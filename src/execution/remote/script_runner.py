@@ -7,7 +7,6 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, List
 
-from execution.remote import capabilities as remote_capabilities
 from execution.remote.access import run_ssh, scp_from, scp_to
 from execution.remote.context import build_context
 from execution.remote.contracts import (
@@ -24,6 +23,13 @@ from execution.remote.error_contract import (
 )
 from execution.remote.executor_preflight import validate_executor_capabilities as validate_preflight_capabilities
 from execution.remote.runtime_support import now_iso, try_load_yaml, write_json, write_yaml
+from execution.remote.script_capabilities import (
+    build_required_capabilities,
+    probe_pod_container_shell as probe_script_pod_container_shell,
+    probe_pod_tool as probe_script_pod_tool,
+    remote_kubectl_get_pods as script_remote_kubectl_get_pods,
+    validate_script_capabilities as validate_script_runtime_capabilities,
+)
 from execution.remote.script_output_contract import validate_script_output_contract
 from execution.remote.transport import FunctionRemoteTransport, RemoteTransport
 
@@ -34,12 +40,12 @@ def default_remote_transport() -> RemoteTransport:
 
 def remote_kubectl_get_pods(access: Dict[str, Any], namespace: str, transport: RemoteTransport | None = None):
     transport = transport or default_remote_transport()
-    return remote_capabilities.remote_kubectl_get_pods(access, namespace, run_ssh_fn=transport.run)
+    return script_remote_kubectl_get_pods(access, namespace, run_ssh_fn=transport.run)
 
 
 def probe_pod_tool(access: Dict[str, Any], namespace: str, pod: str, candidates: List[str], transport: RemoteTransport | None = None):
     transport = transport or default_remote_transport()
-    return remote_capabilities.probe_pod_tool(access, namespace, pod, candidates, run_ssh_fn=transport.run)
+    return probe_script_pod_tool(access, namespace, pod, candidates, run_ssh_fn=transport.run)
 
 
 def probe_pod_container_shell(
@@ -50,7 +56,7 @@ def probe_pod_container_shell(
     transport: RemoteTransport | None = None,
 ):
     transport = transport or default_remote_transport()
-    return remote_capabilities.probe_pod_container_shell(access, namespace, pod_item, mongo_exec, run_ssh_fn=transport.run)
+    return probe_script_pod_container_shell(access, namespace, pod_item, mongo_exec, run_ssh_fn=transport.run)
 
 
 def validate_script_capabilities(
@@ -62,7 +68,7 @@ def validate_script_capabilities(
     transport: RemoteTransport | None = None,
 ):
     transport = transport or default_remote_transport()
-    return remote_capabilities.validate_script_capabilities(
+    return validate_script_runtime_capabilities(
         access,
         namespace,
         script_id,
@@ -152,7 +158,7 @@ def run_script(
     remote_artifacts = remote_workspace["artifact_dir"]
     local_script_dir = local_dir / script_id
     local_script_dir.mkdir(parents=True, exist_ok=True)
-    request = build_executor_request(access, incident_id, entry, remote_workspace, plugin_name, remote_capabilities.build_required_capabilities(script_id))
+    request = build_executor_request(access, incident_id, entry, remote_workspace, plugin_name, build_required_capabilities(script_id))
     write_yaml(local_script_dir / "remote-executor-request.yaml", request)
     started_at = now_iso()
     process = {"exit_code": -1, "stdout_tail": "", "stderr_tail": ""}

@@ -878,3 +878,13 @@ def test_local_analyse_incident_uses_local_collection(tmp_path, monkeypatch):
     assert calls == [(str(incident_dir / "local-config.yaml"), "psmdb-test", None)]
     assert (incident_dir / "analysis.yaml").exists()
     assert (incident_dir / "remote-executor-run.yaml").exists()
+    signal_bundle = load_yaml(incident_dir / "signal_bundle.yaml")
+    assert signal_bundle["signal_groups"] == [
+        {
+            "layer": "pod",
+            "category": "runtime_failure",
+            "object_ref": "pod/mongo-0",
+            "signals": ["pod-not-ready"],
+            "severity": "",
+        }
+    ]

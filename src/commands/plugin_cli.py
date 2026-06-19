@@ -18,6 +18,7 @@ from phases.phase3.remote_collection import run_local_collection, run_remote_col
 from phases.phase3.remote_run import load_remote_executor_run_result, remote_executor_next_actions, remote_executor_required_user_action
 from phases.phase3.report_gaps import normalize_collection_report_gaps
 from phases.phase3.scenario_routing import apply_scenario_routing_if_needed
+from phases.phase3.signal_governance import write_signal_governance
 from phases.phase3.skill_runtime import enrich_skill_runtime_context
 
 def command_start(args: argparse.Namespace, probe_local_context=probe_local_context) -> int:
@@ -43,6 +44,7 @@ def command_analyse(args: argparse.Namespace) -> int:
         load_remote_executor_run_result=load_remote_executor_run_result,
         build_incident_from_remote_run=build_incident_from_remote_run,
         apply_scenario_routing_if_needed=apply_scenario_routing_if_needed,
+        write_signal_governance=write_signal_governance,
         enrich_skill_runtime_context=enrich_skill_runtime_context,
         run_directed_recollection_if_needed=run_directed_recollection_if_needed,
         remote_executor_required_user_action=remote_executor_required_user_action,

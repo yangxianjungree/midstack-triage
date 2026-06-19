@@ -158,10 +158,12 @@ def _prepare_phase3_context(
     remote_run_result: Dict[str, Any],
     apply_scenario_routing_if_needed,
     enrich_skill_runtime_context,
+    write_signal_governance,
     run_directed_recollection_if_needed,
 ) -> tuple[Dict[str, Any], Dict[str, Any]]:
     if (output_dir / "signal_bundle.yaml").exists():
         input_data = apply_scenario_routing_if_needed(output_dir, args)
+        write_signal_governance(output_dir)
     skill_runtime: Dict[str, Any] = {}
     if (output_dir / "signal_bundle.yaml").exists():
         skill_runtime = enrich_skill_runtime_context(output_dir, input_data)
@@ -171,6 +173,7 @@ def _prepare_phase3_context(
         try:
             run_directed_recollection_if_needed(args, output_dir, skill_pool=skill_pool or None)
             if skill_runtime:
+                write_signal_governance(output_dir)
                 enrich_skill_runtime_context(output_dir, input_data)
                 input_data = load_yaml(output_dir / "input.yaml")
         except Exception as exc:
@@ -284,6 +287,7 @@ def run(
     build_incident_from_remote_run,
     apply_scenario_routing_if_needed,
     enrich_skill_runtime_context,
+    write_signal_governance,
     run_directed_recollection_if_needed,
     remote_executor_required_user_action,
     remote_executor_next_actions,
@@ -529,6 +533,7 @@ def run(
         remote_run_result,
         apply_scenario_routing_if_needed,
         enrich_skill_runtime_context,
+        write_signal_governance,
         run_directed_recollection_if_needed,
     )
 

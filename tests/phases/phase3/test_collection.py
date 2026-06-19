@@ -18,6 +18,7 @@ from phases.phase3 import remote_collection as phase3_remote_collection
 from phases.phase3 import remote_run as phase3_remote_run
 from phases.phase3 import report_gaps as phase3_report_gaps
 from phases.phase3 import scenario_routing as phase3_scenario_routing
+from phases.phase3 import signal_governance as phase3_signal_governance
 from phases.phase3 import skill_runtime as phase3_skill_runtime
 
 
@@ -151,6 +152,115 @@ def test_resolve_skill_runtime_merges_unresolved_candidate_scenarios(tmp_path):
     assert "mongodb-triage-replica-member-not-healthy" in skill_ids
     assert "mongodb.collect.replicaset.rs_status" in runtime["required_scripts"]
     assert "mongodb.collect.dns.coredns" in runtime["skill_pool"]
+
+
+def test_signal_governance_groups_multilayer_signals_and_correlates_pods_to_nodes(tmp_path):
+    output_dir = tmp_path / "incident"
+    structured_record = {
+        "details": {
+            "pods": [
+                {
+                    "name": "mongo-0",
+                    "namespace": "psmdb-test",
+                    "node_ref": "node-a",
+                    "phase": "Running",
+                    "ready": False,
+                }
+            ],
+            "nodes": [
+                {
+                    "name": "node-a",
+                    "status_hint": "pressure",
+                    "conditions": [{"type": "MemoryPressure", "status": "True"}],
+                }
+            ],
+            "replica_members": [
+                {
+                    "replica_set_id": "shard-01-rs",
+                    "source_pod_ref": "mongo-0",
+                    "self_member": {"state_str": "RECOVERING", "health": 1},
+                }
+            ],
+        }
+    }
+    signal_bundle = {
+        "abnormal_signals": [
+            {"signal_id": "node-memory-pressure", "severity": "high", "object_ref": "node/node-a"},
+            {"signal_id": "pod-not-ready", "severity": "high", "object_ref": "pod/mongo-0"},
+            {"signal_id": "replica-member-recovering", "severity": "high", "object_ref": "replicaset/shard-01-rs"},
+        ]
+    }
+
+    governance = phase3_signal_governance.build_signal_governance(structured_record, signal_bundle)
+
+    assert {item["layer"] for item in governance["signal_groups"]} == {"node", "pod", "service"}
+    assert {
+        (item["type"], item["from"], item["to"])
+        for item in governance["correlations"]
+    } >= {
+        ("co_location", "pod/mongo-0", "node/node-a"),
+        ("service_pod_source", "replicaset/shard-01-rs", "pod/mongo-0"),
+    }
+
+
+def test_write_signal_governance_updates_signal_bundle_without_replacing_signals(tmp_path):
+    output_dir = tmp_path / "incident"
+    write_yaml(
+        output_dir / "structured_record.yaml",
+        {
+            "details": {
+                "pods": [
+                    {
+                        "name": "mongo-0",
+                        "namespace": "psmdb-test",
+                        "node_ref": "node-a",
+                    }
+                ],
+                "replica_members": [
+                    {
+                        "replica_set_id": "shard-01-rs",
+                        "source_pod_ref": "mongo-0",
+                    }
+                ],
+            }
+        },
+    )
+    write_yaml(
+        output_dir / "signal_bundle.yaml",
+        {
+            "abnormal_signals": [
+                {"signal_id": "pod-not-ready", "severity": "high", "object_ref": "pod/mongo-0"},
+                {
+                    "signal_id": "statefulset-replicas-not-ready",
+                    "severity": "high",
+                    "object_ref": "statefulset/mongo",
+                },
+                {"signal_id": "replica-member-recovering", "severity": "critical", "object_ref": "replicaset/shard-01-rs"},
+            ],
+        },
+    )
+
+    governance = phase3_signal_governance.write_signal_governance(output_dir)
+    signal_bundle = yaml.safe_load((output_dir / "signal_bundle.yaml").read_text(encoding="utf-8"))
+
+    assert signal_bundle["abnormal_signals"] == [
+        {"signal_id": "pod-not-ready", "severity": "high", "object_ref": "pod/mongo-0"},
+        {
+            "signal_id": "statefulset-replicas-not-ready",
+            "severity": "high",
+            "object_ref": "statefulset/mongo",
+        },
+        {"signal_id": "replica-member-recovering", "severity": "critical", "object_ref": "replicaset/shard-01-rs"},
+    ]
+    assert signal_bundle["signal_groups"] == governance["signal_groups"]
+    assert {item["layer"] for item in signal_bundle["signal_groups"]} == {"orchestration", "pod", "service"}
+    assert {
+        (item["type"], item["from"], item["to"])
+        for item in signal_bundle["correlations"]
+    } >= {
+        ("co_location", "pod/mongo-0", "node/node-a"),
+        ("service_pod_source", "replicaset/shard-01-rs", "pod/mongo-0"),
+    }
 
 
 def test_directed_recollection_prefers_dns_path_and_skill_pool(tmp_path):

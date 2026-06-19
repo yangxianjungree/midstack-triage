@@ -20,12 +20,18 @@
   采集报告 evidence gap 的归一化、收口和补采缺口记录。
 - `scenario_routing.py`
   基于 Phase 3 证据和用户线索推断或补全 incident scenario。
+- `signal_governance.py`
+  从 `structured_record.yaml` 与 `signal_bundle.yaml` 派生跨层
+  `signal_groups` 和 `correlations`，把 node / pod / orchestration / network /
+  service 信号整理成 Phase 4 可消费的证据图谱。
 - `skill_runtime.py`
   根据 middleware/scenario 匹配 skill、检查脚本证据完整性，并写回 runtime 上下文。
 
 规则：
 
 - 第 3 段负责证据构建和治理，不直接给出最终分析结论。
+- Phase 3 可以同时保留多个层面的异常信号；`signal_groups` 用于表达并发异常，
+  `correlations` 用于表达跨层关系，不在本阶段压缩成唯一根因。
 - `scenario_inference.unresolved=true` 时，Phase 3 保留 top1 `scenario` 作为主路由，
   但 skill runtime 会合并候选场景的 evidence/skill 覆盖，避免交叉场景过早收敛。
 - Phase 3 执行 live collection 时必须以显式 `execution_mode` 为权威：

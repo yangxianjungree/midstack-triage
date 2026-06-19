@@ -476,6 +476,10 @@ def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> N
   - Acceptance: `analysis.template.yaml` 和 incident/workflow specs 说明一等资产、二等只读命令与 blocked 动作边界。
   - Verify: `rg -n "verification_requests|auto_allowed|ad_hoc_readonly|blocked" core/templates/analysis.template.yaml docs/specs`
   - Files: `core/templates/analysis.template.yaml`、`docs/specs/incident-record.spec.md`、`docs/specs/triage-workflow.spec.md`
+- [x] Task: report 展示验证请求
+  - Acceptance: `report.md` 展示 `verification_requests` 的 request id、hypothesis、asset tier、execution policy、risk 和 reason。
+  - Verify: `python3 -m pytest tests/shared/test_analysis_report.py::test_write_report_includes_verification_requests -q`
+  - Files: `src/shared/analysis_runtime.py`、`tests/shared/test_analysis_report.py`、`docs/specs/incident-record.spec.md`
 
 ### Slice 8. 推理时间线与报告可信度
 

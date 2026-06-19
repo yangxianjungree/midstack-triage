@@ -94,3 +94,68 @@ def test_write_report_includes_deepening_findings(tmp_path):
     assert "`high` `mongodb.replica_set.config_divergence` Replica set rs0 has divergent config_version/config_term views." in content
     assert "supports=split_brain_enabling_condition" in content
     assert "refutes=sustained_network_partition" in content
+
+
+def test_write_report_includes_verification_requests(tmp_path):
+    analysis = {
+        "conclusion_summary": {
+            "statement": "MongoDB replica set has split-brain symptoms",
+            "confidence": "medium",
+            "deepest_supported_level": "mechanism",
+            "primary_cause_category": "replication",
+            "impact_scope": "shard replica set",
+            "evidence": ["two members report conflicting PRIMARY views"],
+            "limitations": [],
+        },
+        "hypotheses": [
+            {
+                "hypothesis_id": "H3",
+                "status": "insufficient",
+                "statement": "Replica set configuration or member metadata drift created divergent decision views.",
+            }
+        ],
+        "next_actions": [],
+        "knowledge_candidates": [],
+        "reasoning_timeline": {"events": []},
+        "deepening_findings": [],
+        "verification_requests": [
+            {
+                "request_id": "vr-mongodb-rs-conf-compare",
+                "hypothesis_id": "H3",
+                "purpose": "compare rs.conf from all affected replica set members",
+                "asset_tier": "ad_hoc_readonly",
+                "asset": {
+                    "type": "ad_hoc_command",
+                    "id": "vr-mongodb-rs-conf-compare",
+                },
+                "risk_level": "read-only",
+                "execution_policy": "approval_required",
+                "reason": "Configuration drift is a plausible enabling cause.",
+                "status": "planned",
+            },
+            {
+                "request_id": "vr-mongodb-election-logs",
+                "hypothesis_id": "H4",
+                "purpose": "collect MongoDB heartbeat election and reconfig logs",
+                "asset_tier": "first_class",
+                "asset": {
+                    "type": "script",
+                    "id": "mongodb.collect.logs.previous",
+                },
+                "risk_level": "read-only",
+                "execution_policy": "auto_allowed",
+                "reason": "Historical heartbeat evidence is needed.",
+                "status": "planned",
+            },
+        ],
+    }
+
+    report = write_report(tmp_path, {"incident_id": "demo", "middleware": "mongodb"}, analysis)
+
+    content = report.read_text(encoding="utf-8")
+    assert "## Verification Requests" in content
+    assert "`planned` `read-only` `approval_required` `ad_hoc_readonly` `vr-mongodb-rs-conf-compare` H3" in content
+    assert "asset=ad_hoc_command/vr-mongodb-rs-conf-compare" in content
+    assert "Configuration drift is a plausible enabling cause." in content
+    assert "`planned` `read-only` `auto_allowed` `first_class` `vr-mongodb-election-logs` H4" in content
+    assert "asset=script/mongodb.collect.logs.previous" in content

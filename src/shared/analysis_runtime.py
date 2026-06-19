@@ -88,6 +88,38 @@ def deepening_report_lines(analysis: Dict[str, Any], limit: int = 8) -> List[str
     return lines
 
 
+def verification_request_report_lines(analysis: Dict[str, Any], limit: int = 8) -> List[str]:
+    requests = as_list(analysis.get("verification_requests"))
+    lines: List[str] = []
+    for item in requests[:limit]:
+        if not isinstance(item, dict):
+            continue
+        request_id = str(item.get("request_id") or "verification").strip()
+        hypothesis_id = str(item.get("hypothesis_id") or "unknown").strip()
+        purpose = str(item.get("purpose") or "").strip()
+        status = str(item.get("status") or "unknown").strip()
+        risk_level = str(item.get("risk_level") or "unknown").strip()
+        execution_policy = str(item.get("execution_policy") or "unknown").strip()
+        asset_tier = str(item.get("asset_tier") or "unknown").strip()
+        reason = str(item.get("reason") or "").strip()
+        asset = item.get("asset") or {}
+        asset_type = str(asset.get("type") or "unknown").strip() if isinstance(asset, dict) else "unknown"
+        asset_id = str(asset.get("id") or "unknown").strip() if isinstance(asset, dict) else "unknown"
+        suffixes = ["asset=%s/%s" % (asset_type, asset_id)]
+        if reason:
+            suffixes.append("reason=%s" % reason)
+        suffix = " %s" % " ".join(suffixes)
+        lines.append(
+            "- `%s` `%s` `%s` `%s` `%s` %s: %s%s"
+            % (status, risk_level, execution_policy, asset_tier, request_id, hypothesis_id, purpose, suffix)
+        )
+    if not lines:
+        return ["- No verification requests recorded."]
+    if len(requests) > limit:
+        lines.append("- ... %s more request(s) omitted from report; see `analysis.yaml`." % (len(requests) - limit))
+    return lines
+
+
 def analysis_rules_fallback_candidates(output_dir: Path) -> List[Path]:
     return [
         output_dir / ANALYSIS_RULES_FALLBACK_FILENAME,
@@ -253,6 +285,8 @@ def write_report(output_dir: Path, input_data: Dict[str, Any], analysis: Dict[st
         if not isinstance(item, dict):
             continue
         lines.append("- `%s` %s: %s" % (item.get("status", ""), item.get("hypothesis_id", ""), item.get("statement", "")))
+    lines.extend(["", "## Verification Requests", ""])
+    lines.extend(verification_request_report_lines(analysis))
     lines.extend(["", "## Evidence Gaps", ""])
     gaps = as_list(conclusion.get("limitations"))
     if gaps:

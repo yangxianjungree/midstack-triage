@@ -211,11 +211,19 @@ def main() -> int:
     targets = context.get("targets") or {}
     logs_query = context.get("logs_query") or {}
     tail_lines = int(logs_query.get("tail_lines", 1000) or 1000)
+    max_targets = int(logs_query.get("max_targets", 8) or 8)
     log_type = "previous" if script_id.endswith(".previous") or bool(logs_query.get("previous", False)) else "current"
     log_dir_name = "logs-%s" % log_type
     logs_dir = os.path.join(artifact_dir, "raw", log_dir_name)
     os.makedirs(logs_dir, exist_ok=True)
-    target_pods = resolve_target_pods(kubectl, str(namespace), [str(item) for item in (targets.get("pod_refs") or [])], artifact_dir)
+    candidate_pods = resolve_target_pods(kubectl, str(namespace), [str(item) for item in (targets.get("pod_refs") or [])], artifact_dir)
+    target_pods = candidate_pods[:max_targets]
+    sample_policy = {
+        "tail_lines": tail_lines,
+        "max_targets": max_targets,
+        "candidate_count": len(candidate_pods),
+        "selected_count": len(target_pods),
+    }
     artifacts: List[Dict[str, Any]] = [
         {
             "path": os.path.join("raw", "pods-for-log-resolution.json"),
@@ -265,9 +273,11 @@ def main() -> int:
                 {
                     "gap": "kubectl logs are too short for pod/%s; MongoDB application log sink is unknown" % pod,
                     "gap_type": "critical_gap",
+                    "gap_category": "log_sample_quality",
                     "related_stage": "signal_collection",
                     "why_important": "MongoDB startup failures often write the root cause to file-backed application logs rather than container stdout/stderr.",
                     "recommended_action": "run mongodb.collect.logs.discover_sink to inspect MongoDB log destination and path",
+                    "sample_policy": sample_policy,
                     "affects": ["root_cause"],
                 }
             )
@@ -317,6 +327,7 @@ def main() -> int:
                     "method": "kubectl logs --previous" if log_type == "previous" else "kubectl logs",
                     "status": status,
                     "performed_at": finished_at,
+                    "sample_policy": sample_policy,
                 }
             ],
             "successful_items": [

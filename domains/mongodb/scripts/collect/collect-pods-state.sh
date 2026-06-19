@@ -136,6 +136,78 @@ def restart_count(container_statuses: List[Dict[str, Any]]) -> int:
     return sum(int(status.get("restartCount", 0) or 0) for status in container_statuses)
 
 
+def parse_cpu_millicores(value: str) -> int:
+    value = str(value or "").strip()
+    if not value:
+        return 0
+    if value.endswith("m"):
+        return int(float(value[:-1] or 0))
+    if value.endswith("n"):
+        return int(float(value[:-1] or 0) / 1000000)
+    return int(float(value) * 1000)
+
+
+def parse_memory_mi(value: str) -> int:
+    value = str(value or "").strip()
+    if not value:
+        return 0
+    units = (
+        ("Ki", 1 / 1024),
+        ("Mi", 1),
+        ("Gi", 1024),
+        ("Ti", 1024 * 1024),
+        ("K", 1 / 1024),
+        ("M", 1),
+        ("G", 1024),
+    )
+    for suffix, multiplier in units:
+        if value.endswith(suffix):
+            return int(float(value[: -len(suffix)] or 0) * multiplier)
+    return int(float(value) / 1024 / 1024)
+
+
+def resource_values(values: Dict[str, Any]) -> Dict[str, Any]:
+    cpu = str(values.get("cpu") or "")
+    memory = str(values.get("memory") or "")
+    return {
+        "cpu": cpu,
+        "memory": memory,
+        "cpu_millicores": parse_cpu_millicores(cpu),
+        "memory_mi": parse_memory_mi(memory),
+    }
+
+
+def add_resource_values(total: Dict[str, Any], values: Dict[str, Any]) -> None:
+    total["cpu_millicores"] += int(values.get("cpu_millicores") or 0)
+    total["memory_mi"] += int(values.get("memory_mi") or 0)
+
+
+def resource_profile(containers: List[Dict[str, Any]]) -> Dict[str, Any]:
+    totals = {
+        "requests": {"cpu_millicores": 0, "memory_mi": 0},
+        "limits": {"cpu_millicores": 0, "memory_mi": 0},
+    }
+    container_profiles: List[Dict[str, Any]] = []
+    for container in containers:
+        resources = container.get("resources") or {}
+        requests = resource_values(resources.get("requests") or {})
+        limits = resource_values(resources.get("limits") or {})
+        add_resource_values(totals["requests"], requests)
+        add_resource_values(totals["limits"], limits)
+        container_profiles.append(
+            {
+                "name": container.get("name"),
+                "requests": requests,
+                "limits": limits,
+            }
+        )
+    return {
+        "requests": totals["requests"],
+        "limits": totals["limits"],
+        "containers": container_profiles,
+    }
+
+
 def ready_flag(pod: Dict[str, Any], container_statuses: List[Dict[str, Any]]) -> bool:
     for condition in pod.get("status", {}).get("conditions") or []:
         if condition.get("type") == "Ready":
@@ -215,6 +287,7 @@ def pod_record(pod: Dict[str, Any], collected_at: str) -> Dict[str, Any]:
     metadata = pod.get("metadata") or {}
     spec = pod.get("spec") or {}
     status = pod.get("status") or {}
+    containers = spec.get("containers") or []
     container_statuses = status.get("containerStatuses") or []
     phase = status.get("phase") or "Unknown"
     ready = ready_flag(pod, container_statuses)
@@ -228,6 +301,7 @@ def pod_record(pod: Dict[str, Any], collected_at: str) -> Dict[str, Any]:
         "node_ref": spec.get("nodeName"),
         "node_selector": spec.get("nodeSelector") or {},
         "pod_ip": status.get("podIP"),
+        "resource_profile": resource_profile(containers),
         "phase": phase,
         "ready": ready,
         "conditions": pod_conditions(pod),
@@ -239,7 +313,16 @@ def pod_record(pod: Dict[str, Any], collected_at: str) -> Dict[str, Any]:
         "yaml": {
             "metadata": {
                 "labels": metadata.get("labels") or {},
-            }
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "name": container.get("name"),
+                        "resources": container.get("resources") or {},
+                    }
+                    for container in containers
+                ],
+            },
         },
         "status_hint": status_hint(phase, ready, restarts, container_status),
         "collected_at": collected_at,

@@ -14,6 +14,7 @@ DEFAULT_COLLECTION_TIER = "directed"
 DEFAULT_COST_CLASS = "medium"
 DEFAULT_NOISE_CLASS = "medium"
 DEFAULT_SIGNAL_LAYER = "unknown"
+CRITICAL_BASELINE_LAYERS = {"logs", "orchestration", "service", "system", "pod", "network"}
 
 
 def manifest_path_for(middleware: str) -> Path:
@@ -154,6 +155,46 @@ def build_collection_coverage(plan: Dict[str, Any], script_statuses: Dict[str, s
     }
 
 
+def _has_live_script_status(script_statuses: Dict[str, str]) -> bool:
+    return any(status for status in script_statuses.values())
+
+
+def _coverage_gap_for_layer(layer: str, missing_scripts: List[str]) -> Dict[str, Any]:
+    return {
+        "gap": "baseline %s collection missing: %s" % (layer, ", ".join(missing_scripts)),
+        "gap_type": "critical_gap" if layer in CRITICAL_BASELINE_LAYERS else "expected_gap",
+        "gap_category": "coverage_gap",
+        "related_stage": "signal_collection",
+        "signal_layer": layer,
+        "missing_scripts": missing_scripts,
+        "why_important": "Missing baseline %s evidence limits runtime and root-cause validation." % layer,
+        "recommended_action": "rerun live collection or inspect remote executor output for the missing baseline scripts",
+    }
+
+
+def _merge_coverage_gaps(collection_report: Dict[str, Any], coverage: Dict[str, Any], script_statuses: Dict[str, str]) -> None:
+    if not _has_live_script_status(script_statuses):
+        return
+    gaps = list(collection_report.get("evidence_gaps") or [])
+    existing_keys = set()
+    for item in gaps:
+        if not isinstance(item, dict):
+            continue
+        if item.get("gap_category") == "coverage_gap":
+            existing_keys.add((str(item.get("signal_layer") or ""), tuple(item.get("missing_scripts") or [])))
+    for layer, value in (coverage.get("layers") or {}).items():
+        if not isinstance(value, dict):
+            continue
+        missing_scripts = [str(item) for item in (value.get("missing_scripts") or []) if item]
+        if not missing_scripts:
+            continue
+        key = (str(layer), tuple(missing_scripts))
+        if key in existing_keys:
+            continue
+        gaps.append(_coverage_gap_for_layer(str(layer), missing_scripts))
+    collection_report["evidence_gaps"] = gaps
+
+
 def write_collection_plan(output_dir: Path, middleware: str = "mongodb") -> Dict[str, Any]:
     manifest_path = manifest_path_for(middleware)
     if not manifest_path.exists():
@@ -174,6 +215,7 @@ def write_collection_coverage(output_dir: Path) -> Dict[str, Any]:
     statuses = script_collection_statuses(output_dir, collection_report)
     coverage = build_collection_coverage(plan, statuses)
     collection_report["collection_coverage"] = coverage
+    _merge_coverage_gaps(collection_report, coverage, statuses)
     collection_report["updated_at"] = now_iso()
     write_yaml(report_file, collection_report)
     return coverage

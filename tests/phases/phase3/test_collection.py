@@ -21,6 +21,7 @@ from phases.phase3 import report_gaps as phase3_report_gaps
 from phases.phase3 import scenario_routing as phase3_scenario_routing
 from phases.phase3 import signal_governance as phase3_signal_governance
 from phases.phase3 import skill_runtime as phase3_skill_runtime
+from shared.analysis_runtime import apply_analysis_guardrails
 
 
 def write_yaml(path: Path, payload) -> None:
@@ -196,6 +197,74 @@ def test_write_collection_coverage_updates_collection_report(tmp_path):
     assert collection_report["collection_coverage"] == coverage
     assert collection_report["collection_coverage"]["summary"]["baseline_missing"] == 1
     assert collection_report["collection_coverage"]["layers"]["logs"]["missing_scripts"] == ["mongodb.collect.logs.current"]
+    assert collection_report["evidence_gaps"] == [
+        {
+            "gap": "baseline logs collection missing: mongodb.collect.logs.current",
+            "gap_type": "critical_gap",
+            "gap_category": "coverage_gap",
+            "related_stage": "signal_collection",
+            "signal_layer": "logs",
+            "missing_scripts": ["mongodb.collect.logs.current"],
+            "why_important": "Missing baseline logs evidence limits runtime and root-cause validation.",
+            "recommended_action": "rerun live collection or inspect remote executor output for the missing baseline scripts",
+        }
+    ]
+
+
+def test_write_collection_coverage_does_not_create_gaps_without_live_script_statuses(tmp_path):
+    output_dir = tmp_path / "incident"
+    write_yaml(
+        output_dir / "collection_plan.yaml",
+        {
+            "baseline_scripts": [
+                {"script_id": "mongodb.collect.nodes.state", "signal_layer": "system", "tier": "baseline"},
+            ],
+            "directed_scripts": [],
+        },
+    )
+    write_yaml(
+        output_dir / "collection_report.yaml",
+        {
+            "collection_actions": [],
+            "successful_items": [],
+            "failed_items": [],
+            "blank_items": [],
+            "evidence_gaps": [],
+        },
+    )
+
+    phase3_collection_plan.write_collection_coverage(output_dir)
+    collection_report = yaml.safe_load((output_dir / "collection_report.yaml").read_text(encoding="utf-8"))
+
+    assert collection_report["collection_coverage"]["summary"]["baseline_missing"] == 1
+    assert collection_report["evidence_gaps"] == []
+
+
+def test_coverage_gap_caps_unsupported_high_root_cause_confidence():
+    analysis = {
+        "conclusion_summary": {
+            "statement": "MongoDB failed because runtime evidence is incomplete.",
+            "confidence": "high",
+            "deepest_supported_level": "root_cause",
+            "primary_cause_category": "mongodb-runtime",
+            "limitations": [],
+        }
+    }
+    collection_report = {
+        "evidence_gaps": [
+            {
+                "gap": "baseline logs collection missing: mongodb.collect.logs.current",
+                "gap_type": "critical_gap",
+                "gap_category": "coverage_gap",
+            }
+        ]
+    }
+
+    changed = apply_analysis_guardrails(analysis, collection_report, {"abnormal_signals": []})
+
+    assert changed is True
+    assert analysis["conclusion_summary"]["confidence"] == "medium"
+    assert analysis["conclusion_summary"]["limitations"][0]["gap_type"] == "critical_gap"
 
 
 def test_apply_scenario_routing_sets_unknown_scenario(tmp_path):

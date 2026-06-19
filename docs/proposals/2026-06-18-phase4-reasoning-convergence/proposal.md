@@ -430,6 +430,8 @@ def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> N
 验收：
 
 - MongoDB/Pulsar rules fallback 都输出 `retrieval_context`、`experience_matches` 和 `source_boundaries`。
+- `analysis.multitrack.yaml` 辅助草稿也输出同一组顶层契约字段，但不替代生产 `analysis.yaml`。
+- `agent-reasoning-task.md` 明确要求人工/Agent refinement 保留这些字段。
 - `experience_matches` 当前保持空列表。
 - 模板和 incident spec 明确 `source_boundaries` 的证据边界。
 
@@ -438,7 +440,11 @@ def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> N
 - [x] Task: rules fallback 输出经验召回预留契约
   - Acceptance: rules fallback 生成的 `analysis.yaml` 顶层包含召回上下文、空经验匹配和证据来源边界。
   - Verify: `python3 -m pytest tests/phases/phase4/rules -q`
-  - Files: `src/phases/phase4/rules/common.py`、`src/phases/phase4/rules/mongodb.py`、`src/phases/phase4/rules/pulsar.py`、`tests/phases/phase4/rules/`
+  - Files: `src/phases/phase4/analysis_contract.py`、`src/phases/phase4/rules/mongodb.py`、`src/phases/phase4/rules/pulsar.py`、`tests/phases/phase4/rules/`
+- [x] Task: multitrack 和 Agent task 对齐经验召回契约
+  - Acceptance: `analysis.multitrack.yaml` 携带同一组顶层契约字段；`agent-reasoning-task.md` 要求 refinement 保留这些字段。
+  - Verify: `python3 -m pytest tests/shared/test_agent_reasoning_task.py tests/phases/phase4/test_renderer.py -q`
+  - Files: `src/phases/phase4/analysis_contract.py`、`src/phases/phase4/renderer.py`、`src/shared/analysis_runtime.py`、`tests/shared/test_agent_reasoning_task.py`、`tests/phases/phase4/test_renderer.py`
 - [x] Task: 模板和规范记录历史经验边界
   - Acceptance: `analysis.template.yaml` 和 incident/workflow specs 说明历史经验不能直接进入当前结论证据。
   - Verify: `rg -n "retrieval_context|experience_matches|source_boundaries|历史经验" core/templates/analysis.template.yaml docs/specs`

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+from .analysis_contract import analysis_contract_fields
+
 
 def format_analysis_output(phase4_result: Dict[str, Any], signal_bundle: Dict[str, Any]) -> Dict[str, Any]:
     """Render multitrack reasoning output into the Phase 4 analysis contract."""
@@ -28,4 +30,5 @@ def format_analysis_output(phase4_result: Dict[str, Any], signal_bundle: Dict[st
             "hypotheses_evaluated": len(hypotheses),
             "reasoning_board": "reasoning-board.yaml",
         },
+        **analysis_contract_fields(signal_bundle, signal_bundle, {"evidence_gaps": []}),
     }

@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple
 
 try:
+    from phases.phase4.analysis_contract import analysis_contract_fields
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
-    from .common import analysis_contract_fields, load_yaml, runtime_root, write_yaml
+    from .common import load_yaml, runtime_root, write_yaml
 except ImportError:  # pragma: no cover - supports direct file execution
     RULES_DIR = Path(__file__).resolve().parent
     if str(RULES_DIR) not in sys.path:
@@ -17,8 +18,9 @@ except ImportError:  # pragma: no cover - supports direct file execution
     SRC_DIR = RULES_DIR.parents[2]
     if str(SRC_DIR) not in sys.path:
         sys.path.insert(0, str(SRC_DIR))
+    from phases.phase4.analysis_contract import analysis_contract_fields
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
-    from common import analysis_contract_fields, load_yaml, runtime_root, write_yaml
+    from common import load_yaml, runtime_root, write_yaml
 
 
 ROOT = runtime_root()

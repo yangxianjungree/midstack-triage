@@ -179,6 +179,7 @@ superseded_by: none
 - 不带 `incident_id` 的 `/plugin:start` 永远新建 incident
 - `remote` 是当前默认主路径，表示通过 SSH 进入跳板机或故障环境后执行只读采集
 - `local` 表示 runtime 已在故障集群或控制面机器上；`/start` 可在 Phase 2 通过本机 kubectl context 和对象盘点后返回 `ready`，`/analyse --execution-mode local` 读取 `local-config.yaml` 并通过本地 transport 复用 Phase 3 采集脚本
+- `local` 默认只承诺 Kubernetes API 级节点访问；`local-config.yaml.access.node_access.mode` 默认为 `kubernetes_api_only`，`ssh.enabled=false`。需要读节点主机文件时必须显式启用 node access，否则脚本返回 blocked/evidence gap，不得猜测凭据 SSH 到节点
 - 当 `remote` 缺少环境 IP 或用户显式选择 `local` 时，`/start` 可记录轻量 `local_context` 探测结果，用于提示本机是否已有可用 kubectl context；显式 `local` 会在 Phase 2 重新探测 context，context 缺失或不可达时返回 blocked 追问
 - Phase 2 owns command-backed readiness checks: local context probing, remote SSH/kubectl validation, and MongoDB inventory blockers. Phase 1 owns incident creation/continuation and preserving the user's declared context.
 - `offline` 表示仅消费已有 incident、fixture、remote-run、日志或手工命令输出；缺少 `artifact_source` 时 `/start` 返回 blocked 引导
@@ -202,6 +203,7 @@ superseded_by: none
 - `remote` 是当前默认实装路径，可触发远程采集
 - `offline` 只消费已有 incident、fixture 或 remote-run 产物，不执行远程采集；ready offline incident 可从 `input.yaml.artifact_source` 补齐采集产物，缺少采集产物时返回 blocked
 - `local` 使用 ready incident 的 `local-config.yaml`，通过本地 transport 调度 Phase 3 采集；缺少 `local-config.yaml` 时返回 blocked，不得隐式回退到 SSH/SSHPass
+- `local` 采集中的 node-host 文件访问是独立 capability；未显式配置 `node_access.ssh.enabled=true` 时，节点文件类脚本必须产出 blocked/evidence gap
 
 后续版本预留但暂不实现：
 

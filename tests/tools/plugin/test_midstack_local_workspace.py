@@ -437,6 +437,10 @@ def test_start_local_mode_ready_with_local_context_and_inventory(tmp_path, monke
     assert output["status"] == "ready"
     assert intake["environment_mode"] == "local"
     assert local_config["context"]["current_context"] == "prod-cluster"
+    assert local_config["access"]["node_access"] == {
+        "mode": "kubernetes_api_only",
+        "ssh": {"enabled": False},
+    }
     assert calls == [({"execution_mode": "local", "current_context": "prod-cluster"}, "")]
     assert output["next_actions"] == [
         "run /midstack:analyse --execution-mode local",

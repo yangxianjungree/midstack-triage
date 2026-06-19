@@ -43,6 +43,13 @@ from execution.remote.script_runner import (
 from execution.remote.transport import LocalTransport
 
 
+def _default_local_node_access() -> Dict[str, Any]:
+    return {
+        "mode": "kubernetes_api_only",
+        "ssh": {"enabled": False},
+    }
+
+
 def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run MongoDB MVP scripts against a remote Kubernetes environment.")
     parser.add_argument("--config", required=True, help="Path to ignored local environment config YAML.")
@@ -66,6 +73,16 @@ def _local_access_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         access.setdefault("current_context", str(context.get("current_context") or ""))
     access.setdefault("execution_mode", "local")
     access.setdefault("primary_ip", "local")
+    node_access = access.get("node_access")
+    if not isinstance(node_access, dict):
+        access["node_access"] = _default_local_node_access()
+    else:
+        normalized = dict(node_access)
+        ssh = dict(normalized.get("ssh") or {})
+        ssh.setdefault("enabled", False)
+        normalized["ssh"] = ssh
+        normalized.setdefault("mode", "ssh" if ssh.get("enabled") else "kubernetes_api_only")
+        access["node_access"] = normalized
     return access
 
 

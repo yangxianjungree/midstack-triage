@@ -113,6 +113,13 @@ context；context 可用且目标对象盘点通过时，`/start` 可返回 `rea
 `local-config.yaml`，应返回结构化 `blocked`，并在追问或 next action 中说明
 本机 kubectl context 状态。
 
+`local` 模式下，节点状态和调度相关证据优先通过 Kubernetes API 获取，例如
+`kubectl get nodes`、`kubectl describe node`、Pod 的 `nodeName` 和事件。需要读
+节点主机文件的证据，例如 kubelet 侧 Pod volume/file log 路径，不属于普通
+local 能力；必须在 `local-config.yaml.access.node_access` 中显式开启对应节点访问。
+默认 `node_access.mode=kubernetes_api_only` 且 SSH disabled。缺少该能力时，相关
+脚本应返回结构化 `blocked` / evidence gap，不得在 local 模式下猜测凭据并 SSH 到节点。
+
 ### 典型 `blocked` 条件
 
 - 缺少必要工具，例如 `sshpass`
@@ -121,6 +128,7 @@ context；context 可用且目标对象盘点通过时，`/start` 可返回 `rea
 - 无法执行基础 Kubernetes 操作，例如 `kubectl exec`
 - 显式 `local` 模式下，本机 kubectl context 缺失或不可达
 - 显式 `local` analyse 时，ready incident 缺少 `local-config.yaml`
+- 显式 `local` 下需要节点主机文件证据，但 `node_access` 未启用
 - 远程环境中不存在目标中间件，或当前入口无法触达目标环境
 
 ## 3. 第 2 段：环境确认与对象盘点

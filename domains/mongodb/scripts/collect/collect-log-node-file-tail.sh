@@ -313,12 +313,30 @@ def local_addresses() -> List[str]:
     return [item for item in addresses if item]
 
 
+def node_ssh_config(access: Dict[str, Any]) -> Dict[str, Any]:
+    node_access = access.get("node_access") or {}
+    if not isinstance(node_access, dict):
+        node_access = {}
+    ssh = node_access.get("ssh") or {}
+    if not isinstance(ssh, dict):
+        ssh = {}
+    return ssh
+
+
 def node_command(access: Dict[str, Any], node_host: str, node_name: str, shell: str, timeout: int = 30) -> subprocess.CompletedProcess:
     if node_host in local_addresses() or node_name in local_addresses():
         return run(["bash", "-lc", shell], timeout=timeout)
-    username = str(access.get("username") or "root")
-    port = str(access.get("port") or 22)
-    password = str(access.get("password") or "")
+    ssh = node_ssh_config(access)
+    if access.get("execution_mode") == "local" and not bool(ssh.get("enabled")):
+        return subprocess.CompletedProcess(
+            ["node_access"],
+            2,
+            "",
+            "node SSH access is not enabled for local execution; configure access.node_access.ssh before collecting node-side file logs",
+        )
+    username = str(ssh.get("username") or access.get("username") or "root")
+    port = str(ssh.get("port") or access.get("port") or 22)
+    password = str(ssh.get("password") or access.get("password") or "")
     if password and shutil.which("sshpass"):
         env = os.environ.copy()
         env["SSHPASS"] = password
@@ -511,10 +529,17 @@ def main() -> int:
         )
 
     status = "blocked" if not raw_logs else ("partial" if failed_items or evidence_gaps else "success")
+    summary = "collected node-side MongoDB file log tail from %d pod(s)" % len(raw_logs)
+    if not raw_logs:
+        reasons = {str(item.get("reason") or "") for item in failed_items}
+        if len(reasons) == 1:
+            only_reason = next(iter(reasons))
+            if only_reason.startswith("node SSH access is not enabled"):
+                summary = only_reason
     payload = {
         "script_id": script_id,
         "status": status,
-        "summary": "collected node-side MongoDB file log tail from %d pod(s)" % len(raw_logs),
+        "summary": summary,
         "started_at": started_at,
         "finished_at": finished_at,
         "artifacts": artifacts,

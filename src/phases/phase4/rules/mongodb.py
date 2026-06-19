@@ -273,6 +273,143 @@ def verification_requests_for_gaps(
     return dedupe_verification_requests(requests)
 
 
+def ad_hoc_readonly_request(
+    request_id: str,
+    hypothesis_id: str,
+    purpose: str,
+    command_summary: str,
+    expected_evidence: List[str],
+    reason: str,
+) -> Dict[str, Any]:
+    return {
+        "request_id": request_id,
+        "hypothesis_id": hypothesis_id,
+        "purpose": purpose,
+        "asset_tier": "ad_hoc_readonly",
+        "asset": {
+            "type": "ad_hoc_command",
+            "id": request_id,
+            "summary": command_summary,
+        },
+        "risk_level": "read-only",
+        "execution_policy": "approval_required",
+        "expected_evidence": expected_evidence,
+        "reason": reason,
+        "status": "planned",
+    }
+
+
+def split_brain_enabling_hypotheses(findings: List[Dict[str, Any]], existing_count: int) -> List[Dict[str, Any]]:
+    finding_ids = {str(item.get("finding_id") or "") for item in findings if isinstance(item, dict)}
+    if "mongodb.replica_set.enabling_cause_candidates" not in finding_ids:
+        return []
+    evidence = [
+        {
+            "source": "deepening_findings",
+            "detail": "Replica set config/member/quorum divergence requires enabling-cause validation.",
+        }
+    ]
+    hypotheses = [
+        hypothesis_with_actions(
+            "H%s" % (existing_count + 1),
+            "Replica set configuration or member metadata drift created divergent decision views.",
+            evidence,
+            [
+                {
+                    "gap": "rs.conf() comparison across all affected members is not available",
+                    "gap_type": "critical_gap",
+                    "related_stage": "reasoning",
+                    "why_important": "Without rs.conf() from every member, config drift cannot be confirmed or ruled out.",
+                }
+            ],
+            "insufficient",
+            [
+                {
+                    "action": "Compare read-only rs.conf() output from all affected members.",
+                    "status": "planned",
+                    "result": "Needed to confirm version, members, votes, priority and settings divergence.",
+                    "risk_level": "read-only",
+                }
+            ],
+            [
+                "Multiple members report divergent config_version/config_term, member list, or voting quorum views",
+                "Such divergence can persist after a reconfiguration, stale config, or member metadata drift",
+            ],
+            [
+                "All members return identical rs.conf() version, term, members, votes, priority and settings",
+            ],
+        ),
+        hypothesis_with_actions(
+            "H%s" % (existing_count + 2),
+            "A historical network or MongoDB heartbeat partition triggered divergent elections before current probes recovered.",
+            evidence,
+            [
+                {
+                    "gap": "MongoDB heartbeat/election/reconfig logs for the incident window are missing",
+                    "gap_type": "critical_gap",
+                    "related_stage": "reasoning",
+                    "why_important": "Current TCP success weakens ongoing network partition, so historical heartbeat and election evidence is required.",
+                }
+            ],
+            "insufficient",
+            [
+                {
+                    "action": "Collect and compare heartbeat, election, stepdown and reconfig log lines from all affected members.",
+                    "status": "planned",
+                    "result": "Needed to distinguish historical partition from current config drift or process/auth failure.",
+                    "risk_level": "read-only",
+                }
+            ],
+            [
+                "Current rs.status views are divergent",
+                "Current TCP/27017 reachability can succeed after the split-brain-enabling condition has passed",
+            ],
+            [
+                "Logs show no heartbeat, election, network timeout, stepdown or reconfig events around the incident window",
+            ],
+        ),
+    ]
+    return hypotheses
+
+
+def verification_requests_from_deepening_findings(findings: List[Dict[str, Any]], hypotheses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    finding_ids = {str(item.get("finding_id") or "") for item in findings if isinstance(item, dict)}
+    if "mongodb.replica_set.enabling_cause_candidates" not in finding_ids:
+        return []
+    config_hypothesis_id = ""
+    history_hypothesis_id = ""
+    for item in hypotheses:
+        statement = str(item.get("statement") or "")
+        if "configuration or member metadata drift" in statement:
+            config_hypothesis_id = str(item.get("hypothesis_id") or "")
+        if "historical network or MongoDB heartbeat partition" in statement:
+            history_hypothesis_id = str(item.get("hypothesis_id") or "")
+    requests: List[Dict[str, Any]] = []
+    if config_hypothesis_id:
+        requests.append(
+            ad_hoc_readonly_request(
+                "vr-mongodb-rs-conf-compare",
+                config_hypothesis_id,
+                "compare rs.conf from all affected replica set members",
+                "Run read-only rs.conf() on each affected mongod member and compare version, term, members, votes, priority and settings.",
+                ["manual.rs_conf_compare", "analysis.hypotheses"],
+                "Configuration drift is a plausible enabling cause for divergent replica set views.",
+            )
+        )
+    if history_hypothesis_id:
+        requests.append(
+            first_class_script_request(
+                "vr-mongodb-election-logs",
+                history_hypothesis_id,
+                "collect MongoDB heartbeat election and reconfig logs",
+                "mongodb.collect.logs.previous",
+                ["signal_bundle.log_highlights", "structured_record.details.processed_logs"],
+                "Historical heartbeat, election or reconfig evidence is needed to explain why split-brain formed.",
+            )
+        )
+    return requests
+
+
 def next_actions_from_deepening_findings(scenario: str, findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if scenario != "replica-inconsistency":
         return []
@@ -1089,6 +1226,8 @@ def analyse(
         ]
 
     conclusion = apply_conclusion_ceiling(conclusion, evidence, gaps, ids)
+    deepening_findings = build_mongodb_deepening_findings(structured_record)
+    hypotheses.extend(split_brain_enabling_hypotheses(deepening_findings, len(hypotheses)))
     verification_requests = verification_requests_for_gaps(
         scenario,
         ids,
@@ -1096,7 +1235,9 @@ def analyse(
         replica_members_from_record(structured_record),
         hypotheses,
     )
-    deepening_findings = build_mongodb_deepening_findings(structured_record)
+    verification_requests = dedupe_verification_requests(
+        verification_requests + verification_requests_from_deepening_findings(deepening_findings, hypotheses)
+    )
     deepening_next_actions = next_actions_from_deepening_findings(scenario, deepening_findings)
     if deepening_next_actions:
         next_actions = deepening_next_actions

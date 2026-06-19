@@ -153,10 +153,47 @@ def network_counter_findings(structured_record: Dict[str, Any]) -> List[Dict[str
     ]
 
 
+def enabling_cause_candidate_findings(findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    finding_ids = {str(item.get("finding_id") or "") for item in findings if isinstance(item, dict)}
+    has_split_brain_invariant = bool(
+        finding_ids
+        & {
+            "mongodb.replica_set.config_divergence",
+            "mongodb.replica_set.membership_divergence",
+            "mongodb.replica_set.quorum_divergence",
+        }
+    )
+    if not has_split_brain_invariant:
+        return []
+    refutes_sustained_network_partition = "mongodb.network.current_tcp_reachability" in finding_ids
+    statement = (
+        "Replica set split-brain evidence should be deepened into enabling-cause candidates: "
+        "historical network or heartbeat partition, replica set reconfig/member metadata drift, "
+        "or MongoDB heartbeat/authentication/process-layer failure."
+    )
+    if refutes_sustained_network_partition:
+        statement += " Current TCP/27017 reachability weakens an ongoing network partition, so history and MongoDB-level heartbeat evidence are required."
+    return [
+        _finding(
+            "mongodb.replica_set.enabling_cause_candidates",
+            statement,
+            ["structured_record.details.replica_members"],
+            [
+                "historical_network_or_heartbeat_partition",
+                "reconfig_or_member_config_drift",
+                "mongodb_heartbeat_or_auth_layer_failure",
+            ],
+            ["sustained_network_partition"] if refutes_sustained_network_partition else [],
+            "medium",
+        )
+    ]
+
+
 def build_mongodb_deepening_findings(structured_record: Dict[str, Any]) -> List[Dict[str, Any]]:
     details = (structured_record or {}).get("details") or {}
     member_records = [item for item in details.get("replica_members") or [] if isinstance(item, dict)]
     findings = []
     findings.extend(replica_set_invariant_findings(member_records))
     findings.extend(network_counter_findings(structured_record))
+    findings.extend(enabling_cause_candidate_findings(findings))
     return findings

@@ -321,6 +321,67 @@ class MongoDBRulesTest(unittest.TestCase):
         for item in result["next_actions"]:
             self.assertEqual(item["risk_level"], "read-only")
 
+    def test_split_brain_deepening_adds_enabling_cause_hypotheses_and_verification_requests(self) -> None:
+        input_data = {"scenario": "replica-inconsistency"}
+        signal_bundle = {"abnormal_signals": [{"signal_id": "replica-member-recovering", "detail": "member state differs"}]}
+        collection_report = {"evidence_gaps": []}
+        structured_record = {
+            "details": {
+                "replica_members": [
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-0",
+                        "voting_members_count": 1,
+                        "self_member": {"state_str": "PRIMARY", "config_version": 2, "config_term": 73},
+                        "members": [
+                            {"name": "mongo-0:27017", "state_str": "PRIMARY", "config_version": 2, "config_term": 73}
+                        ],
+                    },
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-1",
+                        "voting_members_count": 3,
+                        "self_member": {"state_str": "PRIMARY", "config_version": 8, "config_term": 72},
+                        "members": [
+                            {"name": "mongo-0:27017", "state_str": "(not reachable/healthy)"},
+                            {"name": "mongo-1:27017", "state_str": "PRIMARY", "config_version": 8, "config_term": 72},
+                            {"name": "mongo-2:27017", "state_str": "SECONDARY", "config_version": 8, "config_term": 72},
+                        ],
+                    },
+                ],
+                "network_overlay": {
+                    "pod_connectivity_checks": [
+                        {
+                            "source_pod_ref": "mongo-0",
+                            "target_ref": "pod/mongo-1",
+                            "target_port": 27017,
+                            "status": "success",
+                        }
+                    ]
+                },
+            }
+        }
+
+        result = self.mod.analyse(input_data, signal_bundle, collection_report, structured_record)
+
+        findings = {item["finding_id"]: item for item in result["deepening_findings"]}
+        self.assertIn("mongodb.replica_set.enabling_cause_candidates", findings)
+        self.assertIn("historical network or heartbeat partition", findings["mongodb.replica_set.enabling_cause_candidates"]["statement"])
+        self.assertIn("historical_network_or_heartbeat_partition", findings["mongodb.replica_set.enabling_cause_candidates"]["supports"])
+        self.assertIn("reconfig_or_member_config_drift", findings["mongodb.replica_set.enabling_cause_candidates"]["supports"])
+        hypothesis_text = "\n".join(item["statement"] for item in result["hypotheses"])
+        self.assertIn("historical network or MongoDB heartbeat partition", hypothesis_text)
+        self.assertIn("Replica set configuration or member metadata drift", hypothesis_text)
+
+        requests = {item["request_id"]: item for item in result["verification_requests"]}
+        self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["asset_tier"], "ad_hoc_readonly")
+        self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["execution_policy"], "approval_required")
+        self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["risk_level"], "read-only")
+        self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["hypothesis_id"], "H3")
+        self.assertEqual(requests["vr-mongodb-election-logs"]["asset"]["id"], "mongodb.collect.logs.previous")
+        self.assertEqual(requests["vr-mongodb-election-logs"]["execution_policy"], "auto_allowed")
+        self.assertEqual(requests["vr-mongodb-election-logs"]["hypothesis_id"], "H4")
+
 
 if __name__ == "__main__":
     unittest.main()

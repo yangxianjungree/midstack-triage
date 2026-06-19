@@ -528,6 +528,10 @@ def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> N
   - Acceptance: Phase 4 rules 从 `structured_record.details.replica_members` 和 `network_overlay.pod_connectivity_checks` 输出机制深化 finding。
   - Verify: `python3 -m pytest tests/phases/phase4/rules/test_mongodb_rules.py -q`
   - Files: `src/phases/phase4/rules/mongodb_deepening.py`、`src/phases/phase4/rules/mongodb.py`、`tests/phases/phase4/rules/test_mongodb_rules.py`
+- [x] Task: split-brain enabling-cause 候选和验证请求
+  - Acceptance: Phase 4 rules 在 split-brain 不变量冲突后追加 enabling-cause hypotheses，并生成 `rs.conf()` 二等只读请求和 heartbeat/election 日志一等资产请求。
+  - Verify: `python3 -m pytest tests/phases/phase4/rules/test_mongodb_rules.py::MongoDBRulesTest::test_split_brain_deepening_adds_enabling_cause_hypotheses_and_verification_requests -q`
+  - Files: `src/phases/phase4/rules/mongodb_deepening.py`、`src/phases/phase4/rules/mongodb.py`、`tests/phases/phase4/rules/test_mongodb_rules.py`
 - [x] Task: 模板和合同记录 deepening 字段
   - Acceptance: 模板、specs 和 Agent task 明确 deepening finding 的证据边界和用途。
   - Verify: `rg -n "deepening_findings|enabling/root cause|不变量" core/templates/analysis.template.yaml docs/specs src/shared/analysis_runtime.py`

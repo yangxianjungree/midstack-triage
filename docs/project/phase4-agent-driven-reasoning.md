@@ -109,7 +109,8 @@ Phase 4 可以提出验证请求，但验证请求分层处理：
 - 机制层：成员之间的 `rs.status()` 视角不一致，说明副本集决策视图已经分裂。
 - 深化层：如果 `config_version`、`config_term`、members 列表和 `voting_members_count` 多视角不一致，应记录为配置、成员或 quorum 不变量冲突。
 - 反证层：如果当前 TCP/27017 已经双向连通，不能继续把“持续网络分区”当作未经限定的唯一解释。
-- 待验证层：下一步应转向只读比较 `rs.conf()`、MongoDB heartbeat/election 日志、变更记录和重启前日志，解释为什么配置或视图会分裂。
+- 成因候选层：将历史网络或 MongoDB heartbeat 分区、reconfig/member metadata drift、MongoDB heartbeat/auth/process 层异常写成 `insufficient` hypothesis，而不是直接升格为根因。
+- 待验证层：下一步应转向只读比较 `rs.conf()`、MongoDB heartbeat/election 日志、变更记录和重启前日志，解释为什么配置或视图会分裂；仓库内日志脚本是一等资产，临时 `rs.conf()` 比较属于二等只读请求。
 
 这类设计不是为某一个 case 写死规则，而是把领域诊断语法沉淀为可复用的不变量、反证和验证请求。
 

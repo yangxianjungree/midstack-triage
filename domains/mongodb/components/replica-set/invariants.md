@@ -26,7 +26,7 @@
 - 进程内或认证问题：TCP 正常但 MongoDB heartbeat 失败，可能涉及 mongod 状态、认证、证书、keyFile、hostname 或 replica set 配置。
 - 历史瞬时分区后遗留：当前网络已恢复，但历史 election、restart 或 reconfig 造成的状态仍未自动收敛。
 
-Phase 4 应把这些分支写成候选假设，并用当前证据支持、反驳或标记为 insufficient。
+Phase 4 应把这些分支写成候选假设，并用当前证据支持、反驳或标记为 insufficient。当前规则实现会在 split-brain 不变量冲突成立时追加 enabling-cause candidates，并把 `rs.conf()` 对比、heartbeat/election/reconfig 日志收集写成只读验证请求。
 
 ## Read-Only Evidence
 

@@ -301,13 +301,19 @@ def test_start_remote_validation_failure_writes_follow_up_question(tmp_path, mon
     assert output["next_actions"] == [output["follow_up_questions"][0]["question"]]
 
 
-def test_start_historical_resolved_incident_persists_time_gate(tmp_path, monkeypatch):
+def test_start_historical_resolved_incident_warns_but_allows_live_readiness(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
 
-    def fail_remote_validation(access):
-        raise AssertionError("historical incidents should not validate current live remote state before time window evidence")
-
-    monkeypatch.setattr(module, "validate_remote_environment", fail_remote_validation)
+    monkeypatch.setattr(module, "validate_remote_environment", lambda access: {"status": "passed", "checks": []})
+    monkeypatch.setattr(
+        module,
+        "discover_mongodb_inventory",
+        lambda access, namespace: {
+            "status": "passed",
+            "namespace_source": "auto_discovered",
+            "selected_namespace": "psmdb-test",
+        },
+    )
 
     args = SimpleNamespace(
         middleware="mongodb",
@@ -329,8 +335,8 @@ def test_start_historical_resolved_incident_persists_time_gate(tmp_path, monkeyp
     output = load_yaml(incident_dir / "adapter-output.yaml")
     input_data = load_yaml(incident_dir / "input.yaml")
     meta = load_yaml(incident_dir / "meta.yaml")
-    assert output["status"] == "blocked"
-    assert output["blocking_items"][0]["code"] == "historical_incident_needs_time_window"
+    assert output["status"] == "ready"
+    assert "live collection only proves current state" in output["warnings"][0]
     assert input_data["incident_time"]["mode"] == "historical_resolved"
     assert meta["incident_time"]["still_active"] is False
 

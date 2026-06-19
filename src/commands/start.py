@@ -144,6 +144,7 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory, probe_
     follow_up_questions = list(readiness["follow_up_questions"])
     remote_validation = readiness["remote_validation"]
     object_inventory = readiness["object_inventory"]
+    readiness_warnings = list(readiness.get("warnings") or [])
     status = readiness["status"]
     intake["local_context"] = readiness.get("local_context") or intake.get("local_context") or {}
     write_yaml(output_dir / "phase1-intake.yaml", intake)
@@ -247,6 +248,7 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory, probe_
             },
         )
     output = adapter_output("start", incident_id, args.middleware, status, "local incident %s is %s" % (incident_id, status), output_dir)
+    output["warnings"].extend(readiness_warnings)
     if status == "ready":
         if intake["environment_mode"] == "offline":
             output["summary"] = "%s; offline artifact source ready" % output["summary"]

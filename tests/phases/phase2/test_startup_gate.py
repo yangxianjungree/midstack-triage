@@ -52,9 +52,8 @@ def test_remote_readiness_gate_adds_follow_up_for_remote_validation_failure():
     assert result["follow_up_questions"][0]["field"] == "remote_access"
 
 
-def test_historical_resolved_incident_blocks_live_start_until_time_window_and_artifacts():
-    def fail_remote_validation(access):
-        raise AssertionError("historical incident should not run live remote validation before time window/artifacts are supplied")
+def test_historical_resolved_incident_warns_and_continues_live_readiness():
+    calls = []
 
     result = evaluate_startup_readiness(
         _args(),
@@ -68,15 +67,22 @@ def test_historical_resolved_incident_blocks_live_start_until_time_window_and_ar
                 "source": "customer_clue",
             }
         ),
-        validate_remote_environment=fail_remote_validation,
-        discover_mongodb_inventory=lambda access, namespace: {"status": "skipped"},
+        validate_remote_environment=lambda access: {"status": "passed", "checks": []},
+        discover_mongodb_inventory=lambda access, namespace: calls.append((access, namespace)) or {
+            "status": "passed",
+            "namespace_source": "auto_discovered",
+            "selected_namespace": "psmdb-test",
+        },
         probe_local_context=lambda: {"status": "not_checked", "reason": "", "current_context": ""},
     )
 
-    assert result["status"] == "blocked"
-    assert result["blocking_items"][0]["code"] == "historical_incident_needs_time_window"
-    assert result["follow_up_questions"][0]["field"] == "incident_time_window"
-    assert result["follow_up_questions"][1]["field"] == "historical_evidence"
+    assert result["status"] == "ready"
+    assert result["blocking_items"] == []
+    assert result["follow_up_questions"] == []
+    assert result["remote_validation"]["status"] == "passed"
+    assert result["object_inventory"]["selected_namespace"] == "psmdb-test"
+    assert calls
+    assert "live collection only proves current state" in result["warnings"][0]
 
 
 def test_remote_readiness_gate_adds_namespace_follow_up_for_ambiguous_inventory():

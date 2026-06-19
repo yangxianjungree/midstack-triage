@@ -17,9 +17,11 @@ related:
 Re-cut `/start` around the intended workflow boundary:
 
 - Phase 1 decides whether to create or continue an incident record and preserves
-  initial user memory/context.
+  initial user memory/context, including whether the incident is current or
+  historical/resolved.
 - Phase 2 owns input completion, access readiness checks, environment probing,
-  and object inventory gates.
+  object inventory gates, and historical-incident follow-up before live
+  collection.
 - `local` should become the same execution shape as `remote` minus the SSH
   transport layer. Conversely, `remote` is `local` plus an SSH transport.
 
@@ -48,6 +50,10 @@ Offline/manual paths remain documented but are not deepened in this slice.
 - Local start mode can become `ready` when the local Kubernetes context is
   available and Phase 2 object inventory passes; local analyse execution
   remains the next local-executor slice.
+- Historical/resolved incidents are identified during Phase 1 and blocked by
+  Phase 2 until the user supplies an incident time window and historical
+  evidence. Current live collection must not be presented as proof of a past
+  incident state.
 - Specs explain the new Phase 1 vs Phase 2 contract.
 
 ## Commands
@@ -87,6 +93,10 @@ git diff --check
   - Acceptance: explicit `local` start probes local kubectl context, uses local kubectl for MongoDB inventory, writes `local-config.yaml`, and can return `ready` without remote SSH validation.
   - Verify: `python3 -m pytest tests/phases/phase1 tests/phases/phase2 tests/tools/plugin/test_midstack_local_workspace.py -q`
   - Files: `src/phases/phase1/intake.py`, `src/phases/phase2/startup_gate.py`, `src/phases/phase2/kubectl.py`, `src/commands/start.py`
+- [x] Task: Add current-vs-historical incident time gate
+  - Acceptance: Phase 1 records `incident_time`; Phase 2 blocks historical/resolved incidents until a time window and historical evidence are supplied.
+  - Verify: `python3 -m pytest tests/phases/phase1/test_intake.py tests/phases/phase2/test_startup_gate.py -q`
+  - Files: `src/phases/phase1/intake.py`, `src/phases/phase2/startup_gate.py`, `docs/specs/triage-workflow.spec.md`
 
 ## Open Questions
 

@@ -49,6 +49,22 @@ def _local_context_follow_up(local_context: Dict[str, str]) -> Dict[str, str]:
     return _follow_up("execution_mode", question, "working local kubectl context or remote access fields")
 
 
+def _historical_time_window_follow_up() -> Dict[str, str]:
+    return _follow_up(
+        "incident_time_window",
+        "这个故障看起来已经恢复或发生在过去。请补充故障大致开始/结束时间，或说明现在是否仍在发生。",
+        "incident start/end time window or confirmation that the incident is still active",
+    )
+
+
+def _historical_evidence_follow_up() -> Dict[str, str]:
+    return _follow_up(
+        "historical_evidence",
+        "历史故障不能只用当前 live 状态判断。请提供故障时间窗口内的日志、事件、监控截图/链接，或已有 artifact 目录。",
+        "logs, events, metrics, screenshots, monitoring link, or artifact directory for the incident window",
+    )
+
+
 def _access_from_args(args: Any) -> Dict[str, Any]:
     env_ips = [item for item in (getattr(args, "environment_ip", []) or []) if item]
     primary_ip = env_ips[0] if env_ips else ""
@@ -114,6 +130,26 @@ def evaluate_startup_readiness(
     }
     if intake.get("environment_mode") == "local":
         local_context = probe_local_context()
+
+    incident_time = intake.get("incident_time") or {}
+    if incident_time.get("mode") == "historical_resolved":
+        blocking_items.append(
+            {
+                "code": "historical_incident_needs_time_window",
+                "message": "historical or resolved incident needs an explicit time window and historical evidence",
+                "required_user_action": "provide the incident time window and historical logs/events/metrics before live collection",
+            }
+        )
+        follow_up_questions.append(_historical_time_window_follow_up())
+        follow_up_questions.append(_historical_evidence_follow_up())
+        return {
+            "status": "blocked",
+            "blocking_items": blocking_items,
+            "follow_up_questions": follow_up_questions,
+            "remote_validation": remote_validation,
+            "object_inventory": object_inventory,
+            "local_context": local_context,
+        }
 
     if intake.get("status") == "ready_for_validation" and intake.get("environment_mode") == "remote":
         access = _access_from_args(args)

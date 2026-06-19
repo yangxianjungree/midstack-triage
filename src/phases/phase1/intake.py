@@ -12,6 +12,9 @@ OFFLINE_REQUIRED_FILES = ["input.yaml", "structured_record.yaml", "signal_bundle
 PRODUCTION_HINTS = ("production", "prod", "online", "线上", "生产", "告警", "监控", "sre", "incident", "alert")
 DEVELOPMENT_TEST_HINTS = ("dev", "development", "test", "testing", "研发", "测试")
 MANUAL_OFFLINE_HINTS = ("todesk", "remote desktop", "远程桌面", "手工", "人工", "粘贴", "截图", "命令输出", "paste", "screenshot", "command output")
+RESOLVED_HINTS = ("已经恢复", "已恢复", "恢复了", "resolved", "recovered")
+HISTORICAL_HINTS = ("昨天", "前天", "上周", "之前", "过去", "曾经", "yesterday", "last ")
+CURRENT_ACTIVE_HINTS = ("现在", "当前", "仍然", "还在", "正在", "未恢复", "still", "current", "now")
 
 
 def _blocking_item(code: str, message: str, required_user_action: str, field: str) -> Dict[str, str]:
@@ -42,6 +45,30 @@ def _environment_class(customer_clue: str) -> str:
     if _has_hint(clue, DEVELOPMENT_TEST_HINTS):
         return "development_test"
     return "unknown"
+
+
+def _incident_time(customer_clue: str) -> Dict[str, Any]:
+    clue = customer_clue.lower()
+    resolved = _has_hint(clue, RESOLVED_HINTS)
+    historical = _has_hint(clue, HISTORICAL_HINTS)
+    current = _has_hint(clue, CURRENT_ACTIVE_HINTS)
+    if resolved or (historical and not current):
+        return {
+            "mode": "historical_resolved",
+            "started_at": "",
+            "ended_at": "",
+            "observed_at": "",
+            "still_active": False,
+            "source": "customer_clue",
+        }
+    return {
+        "mode": "current_active",
+        "started_at": "",
+        "ended_at": "",
+        "observed_at": "",
+        "still_active": True,
+        "source": "default_current",
+    }
 
 
 def _intake_scenario(mode_name: str, customer_clue: str) -> Dict[str, str]:
@@ -187,6 +214,7 @@ def _remote_required_items(args: Any, primary_ip: str, local_context: Dict[str, 
 def build_start_intake(args: Any) -> Dict[str, Any]:
     middleware = str(getattr(args, "middleware", "") or "")
     customer_clue = str(getattr(args, "customer_clue", "") or "")
+    incident_time = _incident_time(customer_clue)
     mode_name = str(getattr(args, "environment_mode", "") or "remote").strip().lower()
     mode = resolve_execution_mode(mode_name)
     intake_scenario = _intake_scenario(mode.name, customer_clue)
@@ -269,6 +297,7 @@ def build_start_intake(args: Any) -> Dict[str, Any]:
         "environment_mode": mode.name,
         "execution_mode": mode.name,
         "intake_scenario": intake_scenario,
+        "incident_time": incident_time,
         "middleware": middleware,
         "environment_ips": env_ips,
         "primary_ip": primary_ip,

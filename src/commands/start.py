@@ -164,6 +164,7 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory, probe_
             "owner": "local",
             "environment_mode": intake["environment_mode"],
             "execution_mode": intake["execution_mode"],
+            "incident_time": intake.get("incident_time") or {},
             "remote_validation": remote_validation,
         },
     )
@@ -176,6 +177,7 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory, probe_
         "input_source": "local-cli",
         "environment_mode": intake["environment_mode"],
         "execution_mode": intake["execution_mode"],
+        "incident_time": intake.get("incident_time") or {},
         "environment_ips": env_ips,
         "remote_port": args.port,
         "received_at": created_at,

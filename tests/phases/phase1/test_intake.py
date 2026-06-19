@@ -53,6 +53,14 @@ def test_remote_intake_is_ready_for_validation_when_required_fields_exist():
     intake = build_start_intake(args())
 
     assert intake["environment_mode"] == "remote"
+    assert intake["incident_time"] == {
+        "mode": "current_active",
+        "started_at": "",
+        "ended_at": "",
+        "observed_at": "",
+        "still_active": True,
+        "source": "default_current",
+    }
     assert intake["intake_scenario"] == {
         "id": "remote_ssh",
         "environment_class": "unknown",
@@ -63,6 +71,14 @@ def test_remote_intake_is_ready_for_validation_when_required_fields_exist():
     assert intake["status"] == "ready_for_validation"
     assert intake["blocking_items"] == []
     assert intake["follow_up_questions"] == []
+
+
+def test_historical_resolved_clue_marks_incident_time():
+    intake = build_start_intake(args(customer_clue="昨天 MongoDB 脑裂过一次，现在已经恢复了"))
+
+    assert intake["incident_time"]["mode"] == "historical_resolved"
+    assert intake["incident_time"]["still_active"] is False
+    assert intake["incident_time"]["source"] == "customer_clue"
 
 
 def test_local_intake_does_not_require_ssh_credentials_and_is_ready_for_phase2_gate():

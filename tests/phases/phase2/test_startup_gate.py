@@ -52,6 +52,33 @@ def test_remote_readiness_gate_adds_follow_up_for_remote_validation_failure():
     assert result["follow_up_questions"][0]["field"] == "remote_access"
 
 
+def test_historical_resolved_incident_blocks_live_start_until_time_window_and_artifacts():
+    def fail_remote_validation(access):
+        raise AssertionError("historical incident should not run live remote validation before time window/artifacts are supplied")
+
+    result = evaluate_startup_readiness(
+        _args(),
+        _intake(
+            incident_time={
+                "mode": "historical_resolved",
+                "started_at": "",
+                "ended_at": "",
+                "observed_at": "",
+                "still_active": False,
+                "source": "customer_clue",
+            }
+        ),
+        validate_remote_environment=fail_remote_validation,
+        discover_mongodb_inventory=lambda access, namespace: {"status": "skipped"},
+        probe_local_context=lambda: {"status": "not_checked", "reason": "", "current_context": ""},
+    )
+
+    assert result["status"] == "blocked"
+    assert result["blocking_items"][0]["code"] == "historical_incident_needs_time_window"
+    assert result["follow_up_questions"][0]["field"] == "incident_time_window"
+    assert result["follow_up_questions"][1]["field"] == "historical_evidence"
+
+
 def test_remote_readiness_gate_adds_namespace_follow_up_for_ambiguous_inventory():
     result = evaluate_startup_readiness(
         _args(),

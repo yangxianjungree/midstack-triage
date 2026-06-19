@@ -301,6 +301,40 @@ def test_start_remote_validation_failure_writes_follow_up_question(tmp_path, mon
     assert output["next_actions"] == [output["follow_up_questions"][0]["question"]]
 
 
+def test_start_historical_resolved_incident_persists_time_gate(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+
+    def fail_remote_validation(access):
+        raise AssertionError("historical incidents should not validate current live remote state before time window evidence")
+
+    monkeypatch.setattr(module, "validate_remote_environment", fail_remote_validation)
+
+    args = SimpleNamespace(
+        middleware="mongodb",
+        incident_id="historical-resolved-incident",
+        customer_clue="昨天 MongoDB 脑裂过一次，现在已经恢复了",
+        environment_ip=["192.168.154.251"],
+        username="root",
+        password="123",
+        port=22,
+        namespace="",
+        cluster_id="",
+        environment_mode="remote",
+        output_root=".local/incidents",
+    )
+
+    assert module.command_start(args) == 0
+
+    incident_dir = tmp_path / ".local" / "incidents" / "historical-resolved-incident"
+    output = load_yaml(incident_dir / "adapter-output.yaml")
+    input_data = load_yaml(incident_dir / "input.yaml")
+    meta = load_yaml(incident_dir / "meta.yaml")
+    assert output["status"] == "blocked"
+    assert output["blocking_items"][0]["code"] == "historical_incident_needs_time_window"
+    assert input_data["incident_time"]["mode"] == "historical_resolved"
+    assert meta["incident_time"]["still_active"] is False
+
+
 def test_start_ambiguous_mongodb_namespaces_writes_namespace_follow_up(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
 

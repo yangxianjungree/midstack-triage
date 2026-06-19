@@ -428,6 +428,56 @@ def test_signal_governance_groups_multilayer_signals_and_correlates_pods_to_node
     }
 
 
+def test_signal_governance_adds_resource_pressure_context():
+    structured_record = {
+        "details": {
+            "pods": [
+                {
+                    "name": "mongo-0",
+                    "namespace": "psmdb-test",
+                    "node_ref": "worker-1",
+                    "resource_profile": {
+                        "requests": {"cpu_millicores": 500, "memory_mi": 1024},
+                        "limits": {"cpu_millicores": 2000, "memory_mi": 4096},
+                    },
+                }
+            ],
+            "resource_metrics": {
+                "nodes": [
+                    {
+                        "node_ref": "worker-1",
+                        "cpu_percent": 91,
+                        "memory_percent": 70,
+                    }
+                ],
+                "pods": [
+                    {
+                        "pod_ref": "mongo-0",
+                        "namespace": "psmdb-test",
+                        "cpu_millicores": 1200,
+                        "memory_mi": 2048,
+                    }
+                ],
+            },
+        }
+    }
+    signal_bundle = {
+        "abnormal_signals": [
+            {"signal_id": "node-resource-pressure", "severity": "medium", "object_ref": "node/worker-1"},
+            {"signal_id": "pod-resource-pressure", "severity": "medium", "object_ref": "pod/mongo-0"},
+        ]
+    }
+
+    governance = phase3_signal_governance.build_signal_governance(structured_record, signal_bundle)
+
+    contexts = {item["object_ref"]: item for item in governance["signal_contexts"]}
+    assert contexts["node/worker-1"]["resource_pressure"]["cpu_percent"] == 91
+    assert contexts["pod/mongo-0"]["resource_pressure"]["usage"]["cpu_millicores"] == 1200
+    assert contexts["pod/mongo-0"]["resource_pressure"]["requests"]["cpu_millicores"] == 500
+    assert contexts["pod/mongo-0"]["resource_pressure"]["usage_to_request"]["cpu_ratio"] == 2.4
+    assert contexts["pod/mongo-0"]["resource_pressure"]["usage_to_limit"]["memory_ratio"] == 0.5
+
+
 def test_write_signal_governance_updates_signal_bundle_without_replacing_signals(tmp_path):
     output_dir = tmp_path / "incident"
     write_yaml(

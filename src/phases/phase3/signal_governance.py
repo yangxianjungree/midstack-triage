@@ -156,11 +156,125 @@ def build_correlations(structured_record: Dict[str, Any]) -> List[Dict[str, str]
     return correlations
 
 
+def _ratio(numerator: int, denominator: int) -> float | None:
+    if denominator <= 0:
+        return None
+    return round(float(numerator) / float(denominator), 3)
+
+
+def _pods_by_ref(structured_record: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    pods: Dict[str, Dict[str, Any]] = {}
+    for pod in ((structured_record.get("details") or {}).get("pods") or []):
+        if not isinstance(pod, dict):
+            continue
+        name = str(pod.get("name") or pod.get("pod_ref") or "")
+        if name:
+            pods["pod/%s" % name] = pod
+    return pods
+
+
+def _resource_metrics(structured_record: Dict[str, Any]) -> Dict[str, Any]:
+    return ((structured_record.get("details") or {}).get("resource_metrics") or {})
+
+
+def _node_metrics_by_ref(structured_record: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    nodes: Dict[str, Dict[str, Any]] = {}
+    for node in _resource_metrics(structured_record).get("nodes") or []:
+        if not isinstance(node, dict):
+            continue
+        node_ref = str(node.get("node_ref") or "")
+        if node_ref:
+            nodes["node/%s" % node_ref] = node
+    return nodes
+
+
+def _pod_metrics_by_ref(structured_record: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    pods: Dict[str, Dict[str, Any]] = {}
+    for pod in _resource_metrics(structured_record).get("pods") or []:
+        if not isinstance(pod, dict):
+            continue
+        pod_ref = str(pod.get("pod_ref") or "")
+        if pod_ref:
+            pods["pod/%s" % pod_ref] = pod
+    return pods
+
+
+def _pod_resource_pressure_context(
+    object_ref: str,
+    pod_metrics: Dict[str, Dict[str, Any]],
+    pod_records: Dict[str, Dict[str, Any]],
+) -> Dict[str, Any]:
+    usage = pod_metrics.get(object_ref) or {}
+    pod = pod_records.get(object_ref) or {}
+    profile = pod.get("resource_profile") or {}
+    requests = profile.get("requests") or {}
+    limits = profile.get("limits") or {}
+    usage_cpu = int(usage.get("cpu_millicores") or 0)
+    usage_memory = int(usage.get("memory_mi") or 0)
+    request_cpu = int(requests.get("cpu_millicores") or 0)
+    request_memory = int(requests.get("memory_mi") or 0)
+    limit_cpu = int(limits.get("cpu_millicores") or 0)
+    limit_memory = int(limits.get("memory_mi") or 0)
+    return {
+        "usage": {
+            "cpu_millicores": usage_cpu,
+            "memory_mi": usage_memory,
+        },
+        "requests": {
+            "cpu_millicores": request_cpu,
+            "memory_mi": request_memory,
+        },
+        "limits": {
+            "cpu_millicores": limit_cpu,
+            "memory_mi": limit_memory,
+        },
+        "usage_to_request": {
+            "cpu_ratio": _ratio(usage_cpu, request_cpu),
+            "memory_ratio": _ratio(usage_memory, request_memory),
+        },
+        "usage_to_limit": {
+            "cpu_ratio": _ratio(usage_cpu, limit_cpu),
+            "memory_ratio": _ratio(usage_memory, limit_memory),
+        },
+        "node_ref": "node/%s" % pod.get("node_ref") if pod.get("node_ref") else "",
+    }
+
+
+def build_signal_contexts(structured_record: Dict[str, Any], signal_bundle: Dict[str, Any]) -> List[Dict[str, Any]]:
+    contexts: List[Dict[str, Any]] = []
+    node_metrics = _node_metrics_by_ref(structured_record)
+    pod_metrics = _pod_metrics_by_ref(structured_record)
+    pod_records = _pods_by_ref(structured_record)
+    for signal in signal_bundle.get("abnormal_signals") or []:
+        if not isinstance(signal, dict):
+            continue
+        signal_id = str(signal.get("signal_id") or "")
+        object_ref = str(signal.get("object_ref") or "")
+        if signal_id == "node-resource-pressure" and object_ref in node_metrics:
+            contexts.append(
+                {
+                    "object_ref": object_ref,
+                    "signal_id": signal_id,
+                    "resource_pressure": node_metrics[object_ref],
+                }
+            )
+        elif signal_id == "pod-resource-pressure" and object_ref in pod_metrics:
+            contexts.append(
+                {
+                    "object_ref": object_ref,
+                    "signal_id": signal_id,
+                    "resource_pressure": _pod_resource_pressure_context(object_ref, pod_metrics, pod_records),
+                }
+            )
+    return contexts
+
+
 def build_signal_governance(structured_record: Dict[str, Any], signal_bundle: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
         "signal_groups": build_signal_groups(signal_bundle),
         "correlations": build_correlations(structured_record),
+        "signal_contexts": build_signal_contexts(structured_record, signal_bundle),
     }
 
 
@@ -170,6 +284,7 @@ def write_signal_governance(output_dir) -> Dict[str, Any]:
     governance = build_signal_governance(structured_record, signal_bundle)
     signal_bundle["signal_groups"] = governance["signal_groups"]
     signal_bundle["correlations"] = governance["correlations"]
+    signal_bundle["signal_contexts"] = governance["signal_contexts"]
     signal_bundle["updated_at"] = now_iso()
     write_yaml(output_dir / "signal_bundle.yaml", signal_bundle)
     return governance

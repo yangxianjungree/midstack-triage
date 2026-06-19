@@ -269,6 +269,58 @@ class MongoDBRulesTest(unittest.TestCase):
         self.assertEqual(findings["mongodb.network.current_tcp_reachability"]["supports"], [])
         self.assertEqual(findings["mongodb.network.current_tcp_reachability"]["refutes"], ["sustained_network_partition"])
 
+    def test_replica_inconsistency_next_actions_use_deepening_findings(self) -> None:
+        input_data = {"scenario": "replica-inconsistency"}
+        signal_bundle = {"abnormal_signals": [{"signal_id": "replica-member-recovering", "detail": "member state differs"}]}
+        collection_report = {"evidence_gaps": []}
+        structured_record = {
+            "details": {
+                "replica_members": [
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-0",
+                        "voting_members_count": 1,
+                        "self_member": {"state_str": "PRIMARY", "config_version": 2, "config_term": 73},
+                        "members": [
+                            {"name": "mongo-0:27017", "state_str": "PRIMARY", "config_version": 2, "config_term": 73}
+                        ],
+                    },
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-1",
+                        "voting_members_count": 3,
+                        "self_member": {"state_str": "PRIMARY", "config_version": 8, "config_term": 72},
+                        "members": [
+                            {"name": "mongo-0:27017", "state_str": "(not reachable/healthy)"},
+                            {"name": "mongo-1:27017", "state_str": "PRIMARY", "config_version": 8, "config_term": 72},
+                            {"name": "mongo-2:27017", "state_str": "SECONDARY", "config_version": 8, "config_term": 72},
+                        ],
+                    },
+                ],
+                "network_overlay": {
+                    "pod_connectivity_checks": [
+                        {
+                            "source_pod_ref": "mongo-0",
+                            "target_ref": "pod/mongo-1",
+                            "target_port": 27017,
+                            "status": "success",
+                        }
+                    ]
+                },
+            }
+        }
+
+        result = self.mod.analyse(input_data, signal_bundle, collection_report, structured_record)
+
+        actions = [item["action"] for item in result["next_actions"]]
+        joined = "\n".join(actions)
+        self.assertIn("rs.conf()", joined)
+        self.assertIn("heartbeat/election", joined)
+        self.assertIn("current TCP/27017 reachability has succeeded", joined)
+        self.assertNotIn("run the scenario-specific runbook", joined)
+        for item in result["next_actions"]:
+            self.assertEqual(item["risk_level"], "read-only")
+
 
 if __name__ == "__main__":
     unittest.main()

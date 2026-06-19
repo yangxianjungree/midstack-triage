@@ -273,6 +273,43 @@ def verification_requests_for_gaps(
     return dedupe_verification_requests(requests)
 
 
+def next_actions_from_deepening_findings(scenario: str, findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    if scenario != "replica-inconsistency":
+        return []
+    finding_ids = {str(item.get("finding_id") or "") for item in findings if isinstance(item, dict)}
+    has_config_or_quorum_divergence = bool(
+        finding_ids
+        & {
+            "mongodb.replica_set.config_divergence",
+            "mongodb.replica_set.membership_divergence",
+            "mongodb.replica_set.quorum_divergence",
+        }
+    )
+    if not has_config_or_quorum_divergence:
+        return []
+    actions = [
+        {
+            "action": "Compare rs.conf() from every shard member and record config version, term, members, votes, priority, and settings before any reconfiguration.",
+            "risk_level": "read-only",
+            "requires_confirmation": False,
+        },
+        {
+            "action": "Collect MongoDB heartbeat/election/reconfig log lines from all affected members for the incident window and previous restart window.",
+            "risk_level": "read-only",
+            "requires_confirmation": False,
+        },
+    ]
+    if "mongodb.network.current_tcp_reachability" in finding_ids:
+        actions.append(
+            {
+                "action": "Treat sustained network partition as weakened because current TCP/27017 reachability has succeeded; focus on why replica set config or member views diverged.",
+                "risk_level": "read-only",
+                "requires_confirmation": False,
+            }
+        )
+    return actions
+
+
 def hypothesis(hid: str, statement: str, evidence: List[Dict[str, str]], gaps: List[Dict[str, Any]], status: str) -> Dict[str, Any]:
     return {
         "hypothesis_id": hid,
@@ -1059,8 +1096,11 @@ def analyse(
         replica_members_from_record(structured_record),
         hypotheses,
     )
-    reasoning_timeline = build_reasoning_timeline(signal_bundle, collection_report, structured_record, hypotheses)
     deepening_findings = build_mongodb_deepening_findings(structured_record)
+    deepening_next_actions = next_actions_from_deepening_findings(scenario, deepening_findings)
+    if deepening_next_actions:
+        next_actions = deepening_next_actions
+    reasoning_timeline = build_reasoning_timeline(signal_bundle, collection_report, structured_record, hypotheses)
 
     return {
         "hypotheses": hypotheses,

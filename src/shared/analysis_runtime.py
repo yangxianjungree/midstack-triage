@@ -61,6 +61,33 @@ def timeline_report_lines(analysis: Dict[str, Any], limit: int = 8) -> List[str]
     return lines
 
 
+def deepening_report_lines(analysis: Dict[str, Any], limit: int = 8) -> List[str]:
+    findings = as_list(analysis.get("deepening_findings"))
+    lines: List[str] = []
+    for item in findings[:limit]:
+        if not isinstance(item, dict):
+            continue
+        statement = str(item.get("statement") or "").strip()
+        if not statement:
+            continue
+        finding_id = str(item.get("finding_id") or "finding").strip()
+        severity = str(item.get("severity") or "unknown").strip()
+        supports = [str(value) for value in as_list(item.get("supports")) if str(value).strip()]
+        refutes = [str(value) for value in as_list(item.get("refutes")) if str(value).strip()]
+        suffixes = []
+        if supports:
+            suffixes.append("supports=%s" % ",".join(supports))
+        if refutes:
+            suffixes.append("refutes=%s" % ",".join(refutes))
+        suffix = " %s" % " ".join(suffixes) if suffixes else ""
+        lines.append("- `%s` `%s` %s%s" % (severity, finding_id, statement, suffix))
+    if not lines:
+        return ["- No mechanism-deepening findings recorded."]
+    if len(findings) > limit:
+        lines.append("- ... %s more finding(s) omitted from report; see `analysis.yaml`." % (len(findings) - limit))
+    return lines
+
+
 def analysis_rules_fallback_candidates(output_dir: Path) -> List[Path]:
     return [
         output_dir / ANALYSIS_RULES_FALLBACK_FILENAME,
@@ -219,6 +246,8 @@ def write_report(output_dir: Path, input_data: Dict[str, Any], analysis: Dict[st
     lines.extend(["- %s" % item for item in evidence] if evidence else ["- No explicit evidence recorded."])
     lines.extend(["", "## Timeline", ""])
     lines.extend(timeline_report_lines(analysis))
+    lines.extend(["", "## Mechanism Deepening", ""])
+    lines.extend(deepening_report_lines(analysis))
     lines.extend(["", "## Hypotheses", ""])
     for item in as_list(analysis.get("hypotheses")):
         if not isinstance(item, dict):

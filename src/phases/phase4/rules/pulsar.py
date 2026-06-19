@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 
 try:
     from phases.phase4.analysis_contract import analysis_contract_fields
+    from phases.phase4.verification_requests import dedupe_verification_requests, first_class_script_request
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from .common import load_yaml, runtime_root, write_yaml
 except ImportError:  # pragma: no cover - supports direct file execution
@@ -18,6 +19,7 @@ except ImportError:  # pragma: no cover - supports direct file execution
     if str(SRC_DIR) not in sys.path:
         sys.path.insert(0, str(SRC_DIR))
     from phases.phase4.analysis_contract import analysis_contract_fields
+    from phases.phase4.verification_requests import dedupe_verification_requests, first_class_script_request
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from common import load_yaml, runtime_root, write_yaml
 
@@ -75,11 +77,32 @@ def knowledge_candidates_for_scenario(scenario: str) -> List[Dict[str, str]]:
     return shared_knowledge_candidates_for_scenario("pulsar", scenario, ROOT)
 
 
+def verification_requests_for_gaps(scenario: str, ids: set, gaps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    gap_text = "\n".join(str(item.get("gap") or "") for item in gaps if isinstance(item, dict)).lower()
+    if scenario != "queue-backlog" and not (ids & {"topic-backlog-high", "consumer-lag-high"}):
+        return []
+    if "topic stats" not in gap_text and "broker stats" not in gap_text:
+        return []
+    return dedupe_verification_requests(
+        [
+            first_class_script_request(
+                "vr-pulsar-topic-stats",
+                "H1",
+                "verify Pulsar topic backlog and subscription lag metrics",
+                "pulsar.collect.broker.topic_stats",
+                ["structured_record.details.topic_stats"],
+                "Broker topic stats are missing, so backlog attribution remains incomplete.",
+            )
+        ]
+    )
+
+
 def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collection_report: Dict[str, Any]) -> Dict[str, Any]:
     scenario = str(input_data.get("scenario") or "unknown")
     ids = set(signal_ids(signal_bundle))
     evidence = evidence_from_signals(signal_bundle)
     gaps = collection_gaps(collection_report)
+    verification_requests = verification_requests_for_gaps(scenario, ids, gaps)
 
     if scenario == "queue-backlog" or "topic-backlog-high" in ids or "consumer-lag-high" in ids:
         supported = "topic-backlog-high" in ids or "consumer-lag-high" in ids
@@ -131,6 +154,7 @@ def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collectio
             }
         ],
         "knowledge_candidates": knowledge_candidates_for_scenario(scenario if scenario not in ("unknown", "baseline") else "queue-backlog"),
+        "verification_requests": verification_requests,
         **analysis_contract_fields(input_data, signal_bundle, collection_report),
         "generated_at": "generated-by-pulsar-analyse",
         "updated_at": "generated-by-pulsar-analyse",

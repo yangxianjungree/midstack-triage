@@ -36,6 +36,21 @@ next_actions:
     risk_level: <read-only|low-risk|high-risk>
     requires_confirmation: true
 
+verification_requests:
+  - request_id: <stable request id>
+    hypothesis_id: <related hypothesis id>
+    purpose: <what evidence this request should verify>
+    asset_tier: <first_class|ad_hoc_readonly|blocked>
+    asset:
+      type: <script|command|ad_hoc_command>
+      id: <asset id or generated command id>
+    risk_level: <read-only|low-risk|high-risk|destructive>
+    execution_policy: <auto_allowed|approval_required|blocked>
+    expected_evidence:
+      - <field or artifact expected after execution>
+    reason: <why this verification is needed>
+    status: <planned|executed|blocked>
+
 # summary subset of core/templates/knowledge-candidate.template.yaml;
 # candidate_type enum: core/taxonomies/candidate-types.yaml
 knowledge_candidates:

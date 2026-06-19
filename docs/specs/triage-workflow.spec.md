@@ -561,6 +561,15 @@ domains/mongodb/scripts/
 
 完整模型以 [core/templates/knowledge-candidate.template.yaml](../../core/templates/knowledge-candidate.template.yaml) 为准；`analysis.yaml` 中的 `knowledge_candidates` 是其摘要子集，见 [core/templates/analysis.template.yaml](../../core/templates/analysis.template.yaml)。`candidate_type` 枚举见 [core/taxonomies/candidate-types.yaml](../../core/taxonomies/candidate-types.yaml)。
 
+### `verification_requests` 字段
+
+`analysis.yaml` 顶层可包含 `verification_requests`，用于记录 Phase 4 推理后仍需补采或验证的证据请求。该字段只表达计划，不表示已经执行。
+
+- 仓库内声明为只读的脚本或结构化命令是一等资产，允许标记为 `asset_tier: first_class` 与 `execution_policy: auto_allowed`。
+- 临时只读命令是二等资产，必须先经过只读 guardrail 后才能进入执行路径。
+- 会改变 Kubernetes、数据库、文件系统、进程或网络状态的动作必须标记为 `execution_policy: blocked`，不得自动执行。
+- 历史经验、runbook 和知识资产可以启发 `verification_requests`，但不能绕过当前故障证据和风险分级。
+
 ### 经验召回预留字段
 
 `analysis.yaml` 顶层预留 `retrieval_context`、`experience_matches` 和 `source_boundaries`，用于未来接入历史经验或向量库召回。

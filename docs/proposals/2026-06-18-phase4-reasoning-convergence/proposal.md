@@ -450,6 +450,33 @@ def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> N
   - Verify: `rg -n "retrieval_context|experience_matches|source_boundaries|历史经验" core/templates/analysis.template.yaml docs/specs`
   - Files: `core/templates/analysis.template.yaml`、`docs/specs/incident-record.spec.md`、`docs/specs/triage-workflow.spec.md`
 
+### Slice 7. 受控验证请求契约
+
+目标：
+
+- Phase 4 可以在推理后提出需要补采或验证的证据请求。
+- 当前只生成 `verification_requests`，不执行动态脚本或命令。
+- 为后续动态验证预留一等资产、二等只读命令和禁止动作的治理边界。
+
+验收：
+
+- MongoDB/Pulsar rules fallback 输出顶层 `verification_requests`。
+- MongoDB 在缺失 rs.status 或关键 previous logs 时请求仓库内只读脚本。
+- Pulsar queue backlog 在缺失 broker topic stats 时请求仓库内只读脚本。
+- 一等只读资产标记为 `asset_tier: first_class`、`risk_level: read-only`、`execution_policy: auto_allowed`、`status: planned`。
+- 文档明确 `verification_requests` 是计划，不代表已经执行；临时只读命令需 guardrail，破坏性动作 blocked。
+
+任务：
+
+- [x] Task: rules fallback 生成验证请求
+  - Acceptance: Phase 4 rules 根据明确证据缺口输出只读一等资产验证请求，但不执行请求。
+  - Verify: `python3 -m pytest tests/phases/phase4/rules -q`
+  - Files: `src/phases/phase4/verification_requests.py`、`src/phases/phase4/rules/mongodb.py`、`src/phases/phase4/rules/pulsar.py`、`tests/phases/phase4/rules/`
+- [x] Task: 模板和规范记录验证请求边界
+  - Acceptance: `analysis.template.yaml` 和 incident/workflow specs 说明一等资产、二等只读命令与 blocked 动作边界。
+  - Verify: `rg -n "verification_requests|auto_allowed|ad_hoc_readonly|blocked" core/templates/analysis.template.yaml docs/specs`
+  - Files: `core/templates/analysis.template.yaml`、`docs/specs/incident-record.spec.md`、`docs/specs/triage-workflow.spec.md`
+
 ## 测试与门禁
 
 最小验证：

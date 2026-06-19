@@ -49,6 +49,30 @@ class PulsarRulesTest(unittest.TestCase):
         self.assertEqual(result["experience_matches"], [])
         self.assertIn("historical_experience", result["source_boundaries"]["hypothesis_sources_only"])
 
+    def test_verification_requests_include_topic_stats_when_backlog_evidence_is_incomplete(self) -> None:
+        input_data = {"scenario": "queue-backlog"}
+        signal_bundle = {
+            "abnormal_signals": [
+                {"signal_id": "topic-backlog-high", "object_ref": "topic/orders", "detail": "Backlog is high"},
+            ]
+        }
+        collection_report = {
+            "evidence_gaps": [
+                {"gap": "broker topic stats missing", "gap_type": "critical_gap"}
+            ]
+        }
+
+        result = self.mod.analyse(input_data, signal_bundle, collection_report)
+
+        self.assertEqual(len(result["verification_requests"]), 1)
+        request = result["verification_requests"][0]
+        self.assertEqual(request["asset"]["id"], "pulsar.collect.broker.topic_stats")
+        self.assertEqual(request["asset"]["type"], "script")
+        self.assertEqual(request["asset_tier"], "first_class")
+        self.assertEqual(request["risk_level"], "read-only")
+        self.assertEqual(request["execution_policy"], "auto_allowed")
+        self.assertEqual(request["status"], "planned")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Set
 
 try:
     from phases.phase4.analysis_contract import analysis_contract_fields
+    from phases.phase4.verification_requests import dedupe_verification_requests, first_class_script_request
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from .common import load_yaml, runtime_root, write_yaml
     from .mongodb_log_evidence import evidence_from_log_highlights
@@ -19,6 +20,7 @@ except ImportError:  # pragma: no cover - supports direct file execution
     if str(SRC_DIR) not in sys.path:
         sys.path.insert(0, str(SRC_DIR))
     from phases.phase4.analysis_contract import analysis_contract_fields
+    from phases.phase4.verification_requests import dedupe_verification_requests, first_class_script_request
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from common import load_yaml, runtime_root, write_yaml
     from mongodb_log_evidence import evidence_from_log_highlights
@@ -206,6 +208,65 @@ def collection_gaps(collection_report: Dict[str, Any]) -> List[Dict[str, Any]]:
     for item in collection_report.get("evidence_gaps") or []:
         gaps.append(normalize_gap(item))
     return gaps
+
+
+def verification_requests_for_gaps(
+    scenario: str,
+    ids: Set[str],
+    gaps: List[Dict[str, Any]],
+    member_records: List[Dict[str, Any]],
+    hypotheses: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if scenario in ("baseline",):
+        return []
+
+    requests: List[Dict[str, Any]] = []
+    gap_text = "\n".join(str(item.get("gap") or "") for item in gaps if isinstance(item, dict)).lower()
+    has_runtime_signal = bool(ids & {"pod-crashloop", "pod-not-ready", "pod-resource-pressure", "node-resource-pressure"})
+    primary_hypothesis_id = str((hypotheses[0] if hypotheses else {}).get("hypothesis_id") or "H1")
+    replica_hypothesis_id = primary_hypothesis_id
+    for item in hypotheses:
+        if "internal replica set state" in str(item.get("statement") or ""):
+            replica_hypothesis_id = str(item.get("hypothesis_id") or primary_hypothesis_id)
+            break
+
+    if "rs.status" in gap_text and not member_records:
+        requests.append(
+            first_class_script_request(
+                "vr-mongodb-rs-status",
+                replica_hypothesis_id,
+                "verify MongoDB replica set member state",
+                "mongodb.collect.replicaset.rs_status",
+                ["structured_record.details.replica_members"],
+                "rs.status evidence is missing, so replica-set internal state remains insufficient.",
+            )
+        )
+
+    if has_runtime_signal and any(token in gap_text for token in ("logs too short", "previous logs", "fatal startup logs")):
+        requests.append(
+            first_class_script_request(
+                "vr-mongodb-previous-logs",
+                primary_hypothesis_id,
+                "collect previous MongoDB pod logs around restart",
+                "mongodb.collect.logs.previous",
+                ["signal_bundle.log_highlights", "structured_record.details.processed_logs"],
+                "Crash or readiness evidence needs process log context before deepening the conclusion.",
+            )
+        )
+
+    if has_runtime_signal and any(token in gap_text for token in ("pod status", "pod conditions", "pods state")):
+        requests.append(
+            first_class_script_request(
+                "vr-mongodb-pods-state",
+                primary_hypothesis_id,
+                "verify Kubernetes pod state and conditions",
+                "mongodb.collect.pods.state",
+                ["structured_record.details.pods"],
+                "Pod state evidence is needed to validate the Kubernetes runtime hypothesis.",
+            )
+        )
+
+    return dedupe_verification_requests(requests)
 
 
 def hypothesis(hid: str, statement: str, evidence: List[Dict[str, str]], gaps: List[Dict[str, Any]], status: str) -> Dict[str, Any]:
@@ -987,11 +1048,19 @@ def analyse(
         ]
 
     conclusion = apply_conclusion_ceiling(conclusion, evidence, gaps, ids)
+    verification_requests = verification_requests_for_gaps(
+        scenario,
+        ids,
+        gaps,
+        replica_members_from_record(structured_record),
+        hypotheses,
+    )
 
     return {
         "hypotheses": hypotheses,
         "conclusion_summary": conclusion,
         "next_actions": next_actions,
+        "verification_requests": verification_requests,
         "knowledge_candidates": knowledge_candidates_for_scenario(scenario, str(conclusion.get("primary_cause_category") or "")),
         **analysis_contract_fields(input_data, signal_bundle, collection_report),
         "generated_at": "generated-by-mongodb-analyse",

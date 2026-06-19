@@ -135,6 +135,40 @@ class MongoDBRulesTest(unittest.TestCase):
         self.assertIn("historical_experience", result["source_boundaries"]["hypothesis_sources_only"])
         self.assertIn("must not be used as direct supporting evidence", result["source_boundaries"]["rule"])
 
+    def test_verification_requests_include_readonly_first_class_assets_for_evidence_gaps(self) -> None:
+        input_data = {"scenario": "kubernetes-runtime"}
+        signal_bundle = {
+            "abnormal_signals": [
+                {"signal_id": "pod-crashloop", "object_ref": "pod/mongo-0", "detail": "Pod is restarting"},
+            ]
+        }
+        collection_report = {
+            "evidence_gaps": [
+                {
+                    "gap": "rs.status not collected from any healthy replica set peer",
+                    "gap_type": "critical_gap",
+                },
+                {
+                    "gap": "kubectl logs are too short to show MongoDB fatal startup logs",
+                    "gap_category": "log_sample_quality",
+                },
+            ]
+        }
+
+        result = self.mod.analyse(input_data, signal_bundle, collection_report, {})
+
+        hypothesis_ids = {item["hypothesis_id"] for item in result["hypotheses"]}
+        requests = {item["asset"]["id"]: item for item in result["verification_requests"]}
+        self.assertIn("mongodb.collect.replicaset.rs_status", requests)
+        self.assertIn("mongodb.collect.logs.previous", requests)
+        for request in requests.values():
+            self.assertIn(request["hypothesis_id"], hypothesis_ids)
+            self.assertEqual(request["asset_tier"], "first_class")
+            self.assertEqual(request["risk_level"], "read-only")
+            self.assertEqual(request["execution_policy"], "auto_allowed")
+            self.assertEqual(request["status"], "planned")
+            self.assertEqual(request["asset"]["type"], "script")
+
 
 if __name__ == "__main__":
     unittest.main()

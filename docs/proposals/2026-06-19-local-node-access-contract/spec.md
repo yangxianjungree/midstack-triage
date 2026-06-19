@@ -23,8 +23,10 @@ The default contract is:
 - `local` must not SSH to Kubernetes nodes unless node access is explicitly
   configured.
 - Node-host file evidence, such as kubelet-side Pod log paths, is an optional
-  `node_access` capability. Missing capability should produce structured
-  `blocked` / evidence-gap output instead of silently trying SSH.
+  `node_access` capability. When enabled, SSH key/agent authentication is the
+  normal path; password is optional for clusters without node-to-node trust.
+  Missing capability should produce structured `blocked` / evidence-gap output
+  instead of silently trying SSH.
 
 ## Assumptions
 
@@ -39,11 +41,14 @@ The default contract is:
 
 ## Success Criteria
 
-- `local-config.yaml` records a default `node_access` contract with SSH disabled.
+- `local-config.yaml` records a default `node_access` contract with SSH disabled
+  and `auth_preference=key_or_agent`.
 - The executor's local access loading keeps that default when older local config
   files omit it.
 - `mongodb.collect.logs.node_file_tail` does not SSH to non-local nodes in
   local mode unless `access.node_access.ssh.enabled` is true.
+- Explicit node SSH without a password uses key/agent `ssh BatchMode`; password
+  SSH uses `sshpass` only when a password is configured.
 - When node SSH is not enabled, the node-file-tail script returns a structured
   blocked result with a clear evidence gap and recommended action.
 - Existing remote/local/offline analyse behavior remains compatible.
@@ -71,8 +76,8 @@ git diff --check
 ## Tasks
 
 - [x] Task: Persist local node access defaults
-  - Acceptance: new local incidents include `node_access.mode=kubernetes_api_only`
-    and `node_access.ssh.enabled=false`.
+  - Acceptance: new local incidents include `node_access.mode=kubernetes_api_only`,
+    `node_access.ssh.enabled=false`, and `node_access.ssh.auth_preference=key_or_agent`.
   - Verify: `python3 -m pytest tests/tools/plugin/test_midstack_local_workspace.py -q`
   - Files: `src/commands/start.py`, `tests/tools/plugin/test_midstack_local_workspace.py`
 - [x] Task: Normalize local access config defaults

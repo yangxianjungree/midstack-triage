@@ -54,7 +54,7 @@ def test_local_access_from_config_defaults_node_access():
     assert access["current_context"] == "prod-cluster"
     assert access["node_access"] == {
         "mode": "kubernetes_api_only",
-        "ssh": {"enabled": False},
+        "ssh": {"enabled": False, "auth_preference": "key_or_agent"},
     }
 
 
@@ -68,6 +68,7 @@ def test_local_access_from_config_preserves_explicit_node_ssh():
                     "mode": "ssh",
                     "ssh": {
                         "enabled": True,
+                        "auth_preference": "password",
                         "username": "node-user",
                         "password": "secret",
                         "port": 2202,
@@ -78,5 +79,6 @@ def test_local_access_from_config_preserves_explicit_node_ssh():
     )
 
     assert access["node_access"]["ssh"]["enabled"] is True
+    assert access["node_access"]["ssh"]["auth_preference"] == "password"
     assert access["node_access"]["ssh"]["username"] == "node-user"
     assert access["node_access"]["ssh"]["port"] == 2202

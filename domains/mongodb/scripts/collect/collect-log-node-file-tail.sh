@@ -84,6 +84,9 @@ SSH_OPTIONS = [
     "ServerAliveInterval=5",
     "-o",
     "ServerAliveCountMax=2",
+]
+SSHPASS_OPTIONS = [
+    *SSH_OPTIONS,
     "-o",
     "PreferredAuthentications=password,keyboard-interactive",
     "-o",
@@ -340,7 +343,7 @@ def node_command(access: Dict[str, Any], node_host: str, node_name: str, shell: 
     if password and shutil.which("sshpass"):
         env = os.environ.copy()
         env["SSHPASS"] = password
-        cmd = ["sshpass", "-e", "ssh", *SSH_OPTIONS, "-p", port, "%s@%s" % (username, node_host), "bash -lc %s" % shlex.quote(shell)]
+        cmd = ["sshpass", "-e", "ssh", *SSHPASS_OPTIONS, "-p", port, "%s@%s" % (username, node_host), "bash -lc %s" % shlex.quote(shell)]
         return run(cmd, timeout=timeout, env=env)
     cmd = ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-o", "ConnectTimeout=8", "-p", port, "%s@%s" % (username, node_host), "bash -lc %s" % shlex.quote(shell)]
     return run(cmd, timeout=timeout)

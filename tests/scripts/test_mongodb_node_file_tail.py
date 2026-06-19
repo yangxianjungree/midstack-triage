@@ -185,3 +185,66 @@ def test_local_node_file_tail_uses_explicit_node_ssh(tmp_path):
     assert output["status"] in ("success", "partial")
     assert "-p\n2202" in args
     assert "node-user@10.0.0.22" in args
+
+
+def test_local_node_file_tail_uses_key_ssh_when_password_absent(tmp_path):
+    marker = tmp_path / "ssh-args"
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    make_fake_kubectl(bin_dir)
+    ssh = bin_dir / "ssh"
+    ssh.write_text(
+        "#!/usr/bin/env bash\nprintf '%%s\\n' \"$@\" > %s\nprintf 'FATAL WiredTiger journal corrupted\\n'\n" % marker,
+        encoding="utf-8",
+    )
+    ssh.chmod(0o755)
+    context_file = tmp_path / "context.yaml"
+    output_file = tmp_path / "output.yaml"
+    artifact_dir = tmp_path / "artifacts"
+    write_yaml(
+        context_file,
+        {
+            "script_id": "mongodb.collect.logs.node_file_tail",
+            "namespace": "psmdb-test",
+            "access": {
+                "execution_mode": "local",
+                "node_access": {
+                    "mode": "ssh",
+                    "ssh": {
+                        "enabled": True,
+                        "auth_preference": "key_or_agent",
+                        "username": "root",
+                    },
+                },
+            },
+            "targets": {"pod_refs": ["mongo-0"]},
+        },
+    )
+    env = dict(os.environ)
+    env["PATH"] = "%s%s%s" % (bin_dir, os.pathsep, env.get("PATH", ""))
+
+    proc = subprocess.run(
+        [
+            str(SCRIPT),
+            "--context-file",
+            str(context_file),
+            "--output-file",
+            str(output_file),
+            "--artifact-dir",
+            str(artifact_dir),
+        ],
+        cwd=str(ROOT),
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        timeout=20,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    output = yaml.safe_load(output_file.read_text(encoding="utf-8"))
+    args = marker.read_text(encoding="utf-8")
+    assert output["status"] in ("success", "partial")
+    assert "BatchMode=yes" in args
+    assert "PubkeyAuthentication=no" not in args
+    assert "root@10.0.0.22" in args

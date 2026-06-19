@@ -46,7 +46,7 @@ from execution.remote.transport import LocalTransport
 def _default_local_node_access() -> Dict[str, Any]:
     return {
         "mode": "kubernetes_api_only",
-        "ssh": {"enabled": False},
+        "ssh": {"enabled": False, "auth_preference": "key_or_agent"},
     }
 
 
@@ -80,6 +80,7 @@ def _local_access_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
         normalized = dict(node_access)
         ssh = dict(normalized.get("ssh") or {})
         ssh.setdefault("enabled", False)
+        ssh.setdefault("auth_preference", "key_or_agent")
         normalized["ssh"] = ssh
         normalized.setdefault("mode", "ssh" if ssh.get("enabled") else "kubernetes_api_only")
         access["node_access"] = normalized

@@ -233,7 +233,7 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory, probe_
                     "primary_ip": "local",
                     "node_access": {
                         "mode": "kubernetes_api_only",
-                        "ssh": {"enabled": False},
+                        "ssh": {"enabled": False, "auth_preference": "key_or_agent"},
                     },
                 },
                 "context": readiness.get("local_context") or {},

@@ -117,8 +117,10 @@ context；context 可用且目标对象盘点通过时，`/start` 可返回 `rea
 `kubectl get nodes`、`kubectl describe node`、Pod 的 `nodeName` 和事件。需要读
 节点主机文件的证据，例如 kubelet 侧 Pod volume/file log 路径，不属于普通
 local 能力；必须在 `local-config.yaml.access.node_access` 中显式开启对应节点访问。
-默认 `node_access.mode=kubernetes_api_only` 且 SSH disabled。缺少该能力时，相关
-脚本应返回结构化 `blocked` / evidence gap，不得在 local 模式下猜测凭据并 SSH 到节点。
+默认 `node_access.mode=kubernetes_api_only` 且 SSH disabled，认证偏好为
+`key_or_agent`。启用节点 SSH 后，优先使用集群节点间常见的 SSH key/agent 免密；
+只有配置了 password 时才走 `sshpass`。缺少该能力时，相关脚本应返回结构化
+`blocked` / evidence gap，不得在 local 模式下猜测凭据并 SSH 到节点。
 
 ### 典型 `blocked` 条件
 

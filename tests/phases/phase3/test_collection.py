@@ -132,6 +132,72 @@ def test_write_collection_plan_loads_mongodb_manifest(tmp_path):
     assert plan["generated_at"] == written["generated_at"]
 
 
+def test_collection_coverage_reports_layer_gaps_from_plan_and_statuses():
+    plan = {
+        "baseline_scripts": [
+            {"script_id": "mongodb.collect.nodes.state", "signal_layer": "system", "tier": "baseline"},
+            {"script_id": "mongodb.collect.events.yaml", "signal_layer": "orchestration", "tier": "baseline"},
+            {"script_id": "mongodb.collect.logs.current", "signal_layer": "logs", "tier": "baseline"},
+        ],
+        "directed_scripts": [
+            {"script_id": "mongodb.collect.logs.file_tail", "signal_layer": "logs", "tier": "directed"},
+            {"script_id": "mongodb.collect.dns.coredns", "signal_layer": "network", "tier": "directed"},
+        ],
+    }
+    statuses = {
+        "mongodb.collect.nodes.state": "success",
+        "mongodb.collect.events.yaml": "failed",
+        "mongodb.collect.logs.current": "partial",
+    }
+
+    coverage = phase3_collection_plan.build_collection_coverage(plan, statuses)
+
+    assert coverage["summary"] == {
+        "baseline_expected": 3,
+        "baseline_collected": 2,
+        "baseline_missing": 1,
+        "directed_deferred": 2,
+    }
+    assert coverage["layers"]["system"]["collected_scripts"] == ["mongodb.collect.nodes.state"]
+    assert coverage["layers"]["orchestration"]["missing_scripts"] == ["mongodb.collect.events.yaml"]
+    assert coverage["layers"]["logs"]["collected_scripts"] == ["mongodb.collect.logs.current"]
+    assert coverage["layers"]["logs"]["directed_deferred_scripts"] == ["mongodb.collect.logs.file_tail"]
+    assert coverage["layers"]["network"]["directed_deferred_scripts"] == ["mongodb.collect.dns.coredns"]
+
+
+def test_write_collection_coverage_updates_collection_report(tmp_path):
+    output_dir = tmp_path / "incident"
+    write_yaml(
+        output_dir / "collection_plan.yaml",
+        {
+            "baseline_scripts": [
+                {"script_id": "mongodb.collect.nodes.state", "signal_layer": "system", "tier": "baseline"},
+                {"script_id": "mongodb.collect.logs.current", "signal_layer": "logs", "tier": "baseline"},
+            ],
+            "directed_scripts": [
+                {"script_id": "mongodb.collect.logs.file_tail", "signal_layer": "logs", "tier": "directed"},
+            ],
+        },
+    )
+    write_yaml(
+        output_dir / "collection_report.yaml",
+        {
+            "collection_actions": [],
+            "successful_items": [{"item": "remote-executor/mongodb.collect.nodes.state"}],
+            "failed_items": [{"item": "remote-executor/mongodb.collect.logs.current"}],
+            "blank_items": [],
+            "evidence_gaps": [],
+        },
+    )
+
+    coverage = phase3_collection_plan.write_collection_coverage(output_dir)
+    collection_report = yaml.safe_load((output_dir / "collection_report.yaml").read_text(encoding="utf-8"))
+
+    assert collection_report["collection_coverage"] == coverage
+    assert collection_report["collection_coverage"]["summary"]["baseline_missing"] == 1
+    assert collection_report["collection_coverage"]["layers"]["logs"]["missing_scripts"] == ["mongodb.collect.logs.current"]
+
+
 def test_apply_scenario_routing_sets_unknown_scenario(tmp_path):
     output_dir = tmp_path / "incident"
     write_yaml(

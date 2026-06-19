@@ -159,12 +159,14 @@ def _prepare_phase3_context(
     apply_scenario_routing_if_needed,
     enrich_skill_runtime_context,
     write_collection_plan,
+    write_collection_coverage,
     write_signal_governance,
     run_directed_recollection_if_needed,
 ) -> tuple[Dict[str, Any], Dict[str, Any]]:
     if (output_dir / "signal_bundle.yaml").exists():
         input_data = apply_scenario_routing_if_needed(output_dir, args)
         write_collection_plan(output_dir, str(input_data.get("middleware") or "mongodb"))
+        write_collection_coverage(output_dir)
         write_signal_governance(output_dir)
     skill_runtime: Dict[str, Any] = {}
     if (output_dir / "signal_bundle.yaml").exists():
@@ -176,6 +178,7 @@ def _prepare_phase3_context(
             run_directed_recollection_if_needed(args, output_dir, skill_pool=skill_pool or None)
             if skill_runtime:
                 write_collection_plan(output_dir, str(input_data.get("middleware") or "mongodb"))
+                write_collection_coverage(output_dir)
                 write_signal_governance(output_dir)
                 enrich_skill_runtime_context(output_dir, input_data)
                 input_data = load_yaml(output_dir / "input.yaml")
@@ -292,6 +295,7 @@ def run(
     apply_scenario_routing_if_needed,
     enrich_skill_runtime_context,
     write_collection_plan,
+    write_collection_coverage,
     write_signal_governance,
     run_directed_recollection_if_needed,
     remote_executor_required_user_action,
@@ -539,6 +543,7 @@ def run(
         apply_scenario_routing_if_needed,
         enrich_skill_runtime_context,
         write_collection_plan,
+        write_collection_coverage,
         write_signal_governance,
         run_directed_recollection_if_needed,
     )

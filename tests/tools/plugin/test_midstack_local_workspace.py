@@ -889,6 +889,9 @@ def test_local_analyse_incident_uses_local_collection(tmp_path, monkeypatch):
     collection_plan = load_yaml(incident_dir / "collection_plan.yaml")
     assert collection_plan["baseline_script_ids"]
     assert "mongodb.collect.logs.file_tail" in collection_plan["directed_script_ids"]
+    collection_report = load_yaml(incident_dir / "collection_report.yaml")
+    assert collection_report["collection_coverage"]["summary"]["baseline_collected"] == 1
+    assert "mongodb.collect.nodes.state" in collection_report["collection_coverage"]["layers"]["system"]["missing_scripts"]
     signal_bundle = load_yaml(incident_dir / "signal_bundle.yaml")
     assert signal_bundle["signal_groups"] == [
         {

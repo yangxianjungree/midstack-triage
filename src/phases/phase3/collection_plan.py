@@ -6,6 +6,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List
 
+from shared.skill_resolver import SCRIPT_SUCCESS_STATUSES, script_collection_statuses
 from shared.workspace import load_yaml, now_iso, runtime_root, write_yaml
 
 
@@ -91,6 +92,68 @@ def build_collection_plan(manifest: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _coverage_layer(layers: Dict[str, Dict[str, List[str]]], layer: str) -> Dict[str, List[str]]:
+    return layers.setdefault(
+        layer,
+        {
+            "expected_baseline_scripts": [],
+            "collected_scripts": [],
+            "missing_scripts": [],
+            "directed_deferred_scripts": [],
+        },
+    )
+
+
+def build_collection_coverage(plan: Dict[str, Any], script_statuses: Dict[str, str]) -> Dict[str, Any]:
+    layers: Dict[str, Dict[str, List[str]]] = {}
+    baseline_expected = 0
+    baseline_collected = 0
+    baseline_missing = 0
+    directed_deferred = 0
+
+    for item in plan.get("baseline_scripts") or []:
+        if not isinstance(item, dict):
+            continue
+        script_id = str(item.get("script_id") or "")
+        if not script_id:
+            continue
+        layer = str(item.get("signal_layer") or DEFAULT_SIGNAL_LAYER)
+        entry = _coverage_layer(layers, layer)
+        entry["expected_baseline_scripts"].append(script_id)
+        baseline_expected += 1
+        if script_statuses.get(script_id) in SCRIPT_SUCCESS_STATUSES:
+            entry["collected_scripts"].append(script_id)
+            baseline_collected += 1
+        else:
+            entry["missing_scripts"].append(script_id)
+            baseline_missing += 1
+
+    for item in plan.get("directed_scripts") or []:
+        if not isinstance(item, dict):
+            continue
+        script_id = str(item.get("script_id") or "")
+        if not script_id:
+            continue
+        layer = str(item.get("signal_layer") or DEFAULT_SIGNAL_LAYER)
+        entry = _coverage_layer(layers, layer)
+        if script_statuses.get(script_id) in SCRIPT_SUCCESS_STATUSES:
+            entry["collected_scripts"].append(script_id)
+        else:
+            entry["directed_deferred_scripts"].append(script_id)
+            directed_deferred += 1
+
+    return {
+        "generated_at": now_iso(),
+        "summary": {
+            "baseline_expected": baseline_expected,
+            "baseline_collected": baseline_collected,
+            "baseline_missing": baseline_missing,
+            "directed_deferred": directed_deferred,
+        },
+        "layers": dict(sorted(layers.items())),
+    }
+
+
 def write_collection_plan(output_dir: Path, middleware: str = "mongodb") -> Dict[str, Any]:
     manifest_path = manifest_path_for(middleware)
     if not manifest_path.exists():
@@ -99,3 +162,18 @@ def write_collection_plan(output_dir: Path, middleware: str = "mongodb") -> Dict
     plan = build_collection_plan(manifest)
     write_yaml(output_dir / "collection_plan.yaml", plan)
     return plan
+
+
+def write_collection_coverage(output_dir: Path) -> Dict[str, Any]:
+    plan_file = output_dir / "collection_plan.yaml"
+    report_file = output_dir / "collection_report.yaml"
+    if not plan_file.exists() or not report_file.exists():
+        return {}
+    plan = load_yaml(plan_file)
+    collection_report = load_yaml(report_file)
+    statuses = script_collection_statuses(output_dir, collection_report)
+    coverage = build_collection_coverage(plan, statuses)
+    collection_report["collection_coverage"] = coverage
+    collection_report["updated_at"] = now_iso()
+    write_yaml(report_file, collection_report)
+    return coverage

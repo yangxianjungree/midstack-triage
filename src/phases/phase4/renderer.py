@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from .analysis_contract import analysis_contract_fields
+from .reasoning_timeline import build_reasoning_timeline
 
 
 def format_analysis_output(phase4_result: Dict[str, Any], signal_bundle: Dict[str, Any]) -> Dict[str, Any]:
@@ -30,5 +31,6 @@ def format_analysis_output(phase4_result: Dict[str, Any], signal_bundle: Dict[st
             "hypotheses_evaluated": len(hypotheses),
             "reasoning_board": "reasoning-board.yaml",
         },
+        "reasoning_timeline": build_reasoning_timeline(signal_bundle, {"evidence_gaps": []}, {}, []),
         **analysis_contract_fields(signal_bundle, signal_bundle, {"evidence_gaps": []}),
     }

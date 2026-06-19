@@ -570,6 +570,15 @@ domains/mongodb/scripts/
 - 会改变 Kubernetes、数据库、文件系统、进程或网络状态的动作必须标记为 `execution_policy: blocked`，不得自动执行。
 - 历史经验、runbook 和知识资产可以启发 `verification_requests`，但不能绕过当前故障证据和风险分级。
 
+### `reasoning_timeline` 字段
+
+`analysis.yaml` 顶层应包含 `reasoning_timeline`，用于把 Phase 3 的 `timeline_summary`、异常信号、Kubernetes events 和采集动作整理成可审计的推理时间线。
+
+- `events` 按时间优先、未知时间靠后排序，事件需保留 `source`。
+- `findings` 只表达时间顺序观察以及它关联的假设，不得把历史经验或用户线索当作当前因果证据。
+- `report.md` 应展示关键时间线，帮助读者看到“什么时间发生了什么关键事项”。
+- 如果时间线缺失，应显式说明缺失，而不是伪造时间。
+
 ### 经验召回预留字段
 
 `analysis.yaml` 顶层预留 `retrieval_context`、`experience_matches` 和 `source_boundaries`，用于未来接入历史经验或向量库召回。

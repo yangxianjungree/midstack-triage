@@ -183,6 +183,7 @@ hypotheses:
 conclusion_summary:
 next_actions:
 verification_requests:
+reasoning_timeline:
 knowledge_candidates:
 retrieval_context:
 experience_matches:
@@ -197,6 +198,7 @@ updated_at:
 - 假设、结论、知识沉淀、review 四类内容并存但不混写
 - 验证动作（`validation_actions`）嵌套在各假设内，挂回对应假设，不设顶层列表
 - `verification_requests` 是 Phase 4 产出的待验证请求队列，不表示已经执行；仓库内只读脚本/命令是一等资产，可标记为 `auto_allowed`，临时只读命令必须先经过 guardrail，破坏性动作必须 `blocked`
+- `reasoning_timeline` 汇总当前证据中的关键时间顺序，用于报告可信度和假设关联；时间线本身不单独证明因果
 - `retrieval_context` 只作为未来历史经验/向量召回的查询上下文，不表达当前结论
 - `experience_matches` 在未接入真实召回前必须保持空列表；接入后也只能作为假设或验证路径来源
 - `source_boundaries` 明确当前故障证据与假设来源的边界；历史经验、runbook 和用户线索不得直接作为 `conclusion_summary` 的支撑证据

@@ -49,6 +49,22 @@ class PulsarRulesTest(unittest.TestCase):
         self.assertEqual(result["experience_matches"], [])
         self.assertIn("historical_experience", result["source_boundaries"]["hypothesis_sources_only"])
 
+    def test_reasoning_timeline_is_generated_from_backlog_signals(self) -> None:
+        input_data = {"scenario": "queue-backlog"}
+        signal_bundle = {
+            "timeline_summary": ["backlog growth overlaps with payment topic alert"],
+            "abnormal_signals": [
+                {"signal_id": "topic-backlog-high", "object_ref": "topic/orders", "detail": "Backlog is high"},
+            ],
+        }
+        collection_report = {"evidence_gaps": []}
+
+        result = self.mod.analyse(input_data, signal_bundle, collection_report)
+
+        summaries = [item["summary"] for item in result["reasoning_timeline"]["events"]]
+        self.assertIn("backlog growth overlaps with payment topic alert", summaries)
+        self.assertIn("topic-backlog-high: Backlog is high", summaries)
+
     def test_verification_requests_include_topic_stats_when_backlog_evidence_is_incomplete(self) -> None:
         input_data = {"scenario": "queue-backlog"}
         signal_bundle = {

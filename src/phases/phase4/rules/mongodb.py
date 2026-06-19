@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Set
 
 try:
     from phases.phase4.analysis_contract import analysis_contract_fields
+    from phases.phase4.reasoning_timeline import build_reasoning_timeline
     from phases.phase4.verification_requests import dedupe_verification_requests, first_class_script_request
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from .common import load_yaml, runtime_root, write_yaml
@@ -20,6 +21,7 @@ except ImportError:  # pragma: no cover - supports direct file execution
     if str(SRC_DIR) not in sys.path:
         sys.path.insert(0, str(SRC_DIR))
     from phases.phase4.analysis_contract import analysis_contract_fields
+    from phases.phase4.reasoning_timeline import build_reasoning_timeline
     from phases.phase4.verification_requests import dedupe_verification_requests, first_class_script_request
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from common import load_yaml, runtime_root, write_yaml
@@ -1055,12 +1057,14 @@ def analyse(
         replica_members_from_record(structured_record),
         hypotheses,
     )
+    reasoning_timeline = build_reasoning_timeline(signal_bundle, collection_report, structured_record, hypotheses)
 
     return {
         "hypotheses": hypotheses,
         "conclusion_summary": conclusion,
         "next_actions": next_actions,
         "verification_requests": verification_requests,
+        "reasoning_timeline": reasoning_timeline,
         "knowledge_candidates": knowledge_candidates_for_scenario(scenario, str(conclusion.get("primary_cause_category") or "")),
         **analysis_contract_fields(input_data, signal_bundle, collection_report),
         "generated_at": "generated-by-mongodb-analyse",

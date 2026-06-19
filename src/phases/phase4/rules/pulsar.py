@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 
 try:
     from phases.phase4.analysis_contract import analysis_contract_fields
+    from phases.phase4.reasoning_timeline import build_reasoning_timeline
     from phases.phase4.verification_requests import dedupe_verification_requests, first_class_script_request
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from .common import load_yaml, runtime_root, write_yaml
@@ -19,6 +20,7 @@ except ImportError:  # pragma: no cover - supports direct file execution
     if str(SRC_DIR) not in sys.path:
         sys.path.insert(0, str(SRC_DIR))
     from phases.phase4.analysis_contract import analysis_contract_fields
+    from phases.phase4.reasoning_timeline import build_reasoning_timeline
     from phases.phase4.verification_requests import dedupe_verification_requests, first_class_script_request
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from common import load_yaml, runtime_root, write_yaml
@@ -155,6 +157,7 @@ def analyse(input_data: Dict[str, Any], signal_bundle: Dict[str, Any], collectio
         ],
         "knowledge_candidates": knowledge_candidates_for_scenario(scenario if scenario not in ("unknown", "baseline") else "queue-backlog"),
         "verification_requests": verification_requests,
+        "reasoning_timeline": build_reasoning_timeline(signal_bundle, collection_report, {}, hypotheses),
         **analysis_contract_fields(input_data, signal_bundle, collection_report),
         "generated_at": "generated-by-pulsar-analyse",
         "updated_at": "generated-by-pulsar-analyse",

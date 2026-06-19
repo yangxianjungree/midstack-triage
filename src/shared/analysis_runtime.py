@@ -39,6 +39,28 @@ def analysis_next_action_texts(analysis: Dict[str, Any]) -> List[str]:
     return items
 
 
+def timeline_report_lines(analysis: Dict[str, Any], limit: int = 8) -> List[str]:
+    timeline = analysis.get("reasoning_timeline") or {}
+    events = as_list(timeline.get("events") if isinstance(timeline, dict) else [])
+    lines: List[str] = []
+    for item in events[:limit]:
+        if not isinstance(item, dict):
+            continue
+        summary = str(item.get("summary") or "").strip()
+        if not summary:
+            continue
+        time = str(item.get("time") or "time unknown").strip()
+        layer = str(item.get("layer") or "unknown").strip()
+        source = str(item.get("source") or "").strip()
+        suffix = " source=%s" % source if source else ""
+        lines.append("- `%s` `%s` %s%s" % (time, layer, summary, suffix))
+    if not lines:
+        return ["- No timeline events recorded."]
+    if len(events) > limit:
+        lines.append("- ... %s more event(s) omitted from report; see `analysis.yaml`." % (len(events) - limit))
+    return lines
+
+
 def analysis_rules_fallback_candidates(output_dir: Path) -> List[Path]:
     return [
         output_dir / ANALYSIS_RULES_FALLBACK_FILENAME,
@@ -195,6 +217,8 @@ def write_report(output_dir: Path, input_data: Dict[str, Any], analysis: Dict[st
     ]
     evidence = as_list(conclusion.get("evidence"))
     lines.extend(["- %s" % item for item in evidence] if evidence else ["- No explicit evidence recorded."])
+    lines.extend(["", "## Timeline", ""])
+    lines.extend(timeline_report_lines(analysis))
     lines.extend(["", "## Hypotheses", ""])
     for item in as_list(analysis.get("hypotheses")):
         if not isinstance(item, dict):
@@ -313,7 +337,8 @@ def write_agent_reasoning_task(
             "- `next_actions` should stay read-only unless the evidence clearly justifies a higher-risk action.",
             "- Distinguish missing evidence from evidence that disproves a hypothesis.",
             "- If evidence is insufficient, keep the conclusion and hypothesis status conservative instead of forcing certainty.",
-            "- Preserve top-level `retrieval_context`, `experience_matches`, and `source_boundaries`; these fields must stay present when refining `analysis.yaml`.",
+            "- Preserve top-level `reasoning_timeline`, `verification_requests`, `retrieval_context`, `experience_matches`, and `source_boundaries`; these fields must stay present when refining `analysis.yaml`.",
+            "- Use `reasoning_timeline` to correlate symptoms, collection actions, and hypothesis checks, but do not treat ordering alone as proof of causality.",
             "",
             "## Evidence and Source Boundaries",
             "",
@@ -341,6 +366,12 @@ def write_agent_reasoning_task(
             "- If a `critical_gap` can be closed by a known read-only playbook, record it as a `validation_action` with status `planned` or `blocked` and include it in `next_actions`.",
             "- Examples include healthy peer `rs.status`, `kubectl logs --previous`, peer connectivity checks, discovering the application log sink when `kubectl logs` is shallow, collecting MongoDB file log tails after log sink discovery, node-side file log tail from kubelet pod volumes for fast-crashing containers, pod describe/termination detail, CoreDNS/DNS probes for DNS lookup failures, and flannel overlay checks for DNS timeouts with suspicious Service backends.",
             "- DNS lookup errors in MongoDB startup logs support a DNS hypothesis; they should not become a mechanism-level conclusion unless CoreDNS state or an in-cluster DNS probe also supports it.",
+            "",
+            "## Timeline Reporting",
+            "",
+            "- Keep `reasoning_timeline.events` sourced to current incident artifacts.",
+            "- Report the key timeline events in `report.md` so readers can see what happened and when.",
+            "- If event time is unknown, keep `time_precision: unknown` instead of inventing timestamps.",
             "",
             "## Working Rules",
             "",

@@ -477,6 +477,36 @@ def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> N
   - Verify: `rg -n "verification_requests|auto_allowed|ad_hoc_readonly|blocked" core/templates/analysis.template.yaml docs/specs`
   - Files: `core/templates/analysis.template.yaml`、`docs/specs/incident-record.spec.md`、`docs/specs/triage-workflow.spec.md`
 
+### Slice 8. 推理时间线与报告可信度
+
+目标：
+
+- Phase 4 生成结构化 `reasoning_timeline`，把关键事件顺序带入 `analysis.yaml`。
+- `report.md` 展示关键时间线，让读者能看到“什么时间发生了什么关键事项”。
+- 时间线用于关联症状、采集动作和假设，但不单独证明因果。
+
+验收：
+
+- MongoDB/Pulsar rules fallback 和 multitrack draft 都输出顶层 `reasoning_timeline`。
+- `reasoning_timeline.events` 从 `signal_bundle.timeline_summary`、异常信号、Kubernetes events 和采集动作聚合。
+- `report.md` 包含 `## Timeline`，并限制展示条数避免报告被噪音撑爆。
+- Agent task 和 specs 明确 refinement 必须保留时间线，未知时间不得伪造。
+
+任务：
+
+- [x] Task: rules fallback 输出结构化推理时间线
+  - Acceptance: Phase 4 rules 输出 `reasoning_timeline.events` 和 `reasoning_timeline.findings`。
+  - Verify: `python3 -m pytest tests/phases/phase4/rules/test_mongodb_rules.py tests/phases/phase4/rules/test_pulsar_rules.py -q`
+  - Files: `src/phases/phase4/reasoning_timeline.py`、`src/phases/phase4/rules/mongodb.py`、`src/phases/phase4/rules/pulsar.py`
+- [x] Task: report 和 Agent task 使用时间线
+  - Acceptance: `report.md` 渲染关键时间线；Agent task 要求保留 `reasoning_timeline`。
+  - Verify: `python3 -m pytest tests/shared/test_analysis_report.py tests/shared/test_agent_reasoning_task.py -q`
+  - Files: `src/shared/analysis_runtime.py`、`tests/shared/`
+- [x] Task: 模板和规范记录时间线边界
+  - Acceptance: 模板和 specs 说明时间线字段、来源、报告用途和因果边界。
+  - Verify: `rg -n "reasoning_timeline|Timeline|时间线" core/templates/analysis.template.yaml docs/specs`
+  - Files: `core/templates/analysis.template.yaml`、`docs/specs/incident-record.spec.md`、`docs/specs/triage-workflow.spec.md`
+
 ## 测试与门禁
 
 最小验证：

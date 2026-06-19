@@ -51,6 +51,26 @@ verification_requests:
     reason: <why this verification is needed>
     status: <planned|executed|blocked>
 
+reasoning_timeline:
+  events:
+    - time: <timestamp or empty>
+      time_precision: <exact|approximate|unknown>
+      layer: <user|system|kubernetes|pod|middleware|network|collection|signal|analysis>
+      object_ref: <object ref>
+      event_type: <event or signal type>
+      summary: <what happened>
+      source: <source artifact path or field>
+      evidence_ref: <optional evidence id>
+      confidence: <high|medium|low>
+  findings:
+    - statement: <timeline-based observation>
+      supports:
+        - <hypothesis id>
+      refutes:
+        - <hypothesis id>
+      related_hypotheses:
+        - <hypothesis id>
+
 # summary subset of core/templates/knowledge-candidate.template.yaml;
 # candidate_type enum: core/taxonomies/candidate-types.yaml
 knowledge_candidates:

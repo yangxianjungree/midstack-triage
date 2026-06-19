@@ -169,6 +169,55 @@ class MongoDBRulesTest(unittest.TestCase):
             self.assertEqual(request["status"], "planned")
             self.assertEqual(request["asset"]["type"], "script")
 
+    def test_reasoning_timeline_aggregates_signal_timeline_events_and_collection_actions(self) -> None:
+        input_data = {"scenario": "kubernetes-runtime"}
+        signal_bundle = {
+            "timeline_summary": ["pod scheduling failed before rs.status collection"],
+            "abnormal_signals": [
+                {
+                    "signal_id": "pod-node-selector-mismatch",
+                    "object_ref": "pod/mongo-0",
+                    "detail": "Scheduler reports node selector mismatch",
+                }
+            ],
+        }
+        collection_report = {
+            "collection_actions": [
+                {
+                    "action_id": "mongodb-collect-pods-state",
+                    "target": "mongo",
+                    "status": "success",
+                    "performed_at": "2026-06-07T00:00:00+08:00",
+                }
+            ],
+            "evidence_gaps": [],
+        }
+        structured_record = {
+            "details": {
+                "events": [
+                    {
+                        "last_timestamp": "2026-06-07T00:01:00+08:00",
+                        "reason": "FailedScheduling",
+                        "message": "node selector mismatch",
+                        "involved_object": {"name": "mongo-0"},
+                    }
+                ]
+            }
+        }
+
+        result = self.mod.analyse(input_data, signal_bundle, collection_report, structured_record)
+
+        timeline = result["reasoning_timeline"]
+        summaries = [item["summary"] for item in timeline["events"]]
+        self.assertIn("pod scheduling failed before rs.status collection", summaries)
+        self.assertIn("pod-node-selector-mismatch: Scheduler reports node selector mismatch", summaries)
+        self.assertIn("FailedScheduling on mongo-0: node selector mismatch", summaries)
+        self.assertIn("collection mongodb-collect-pods-state status=success target=mongo", summaries)
+        self.assertIn(
+            "Timeline order is available for correlating symptoms, collection actions, and hypotheses.",
+            timeline["findings"][0]["statement"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -15,6 +15,8 @@
 - 判断问题属于拓扑、网络、资源还是复制积压
 - 在不执行高风险操作的前提下输出下一步建议
 
+相关领域不变量见 `domains/mongodb/components/replica-set/invariants.md`。当出现多 PRIMARY、脑裂、成员视图不一致或 quorum 异常时，应优先用这些不变量推进机制判断。
+
 ## Step 1: 确认副本集整体状态
 
 执行：
@@ -29,6 +31,7 @@ rs.status()
 - 各成员 `health` 是否正常
 - 各成员 `stateStr` 是否符合预期
 - 各成员 `optimeDate` 是否明显滞后
+- 多成员视角中的 `config_version`、members 列表和 quorum 是否一致
 
 如果这里已经发现异常成员，记录成员名、状态和延迟情况，进入下一步。
 

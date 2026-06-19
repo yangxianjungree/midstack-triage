@@ -533,6 +533,31 @@ def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> N
   - Verify: `rg -n "deepening_findings|enabling/root cause|不变量" core/templates/analysis.template.yaml docs/specs src/shared/analysis_runtime.py`
   - Files: `core/templates/analysis.template.yaml`、`docs/specs/incident-record.spec.md`、`docs/specs/triage-workflow.spec.md`、`src/shared/analysis_runtime.py`
 
+### Slice 10. Agent 驱动推理流程与领域经验文档
+
+目标：
+
+- 把信号、领域不变量、推理假设、验证请求和 Agent refinement 的协作方式写成开发者可读文档。
+- 补充 MongoDB replica set 经验知识，作为后续历史经验和领域知识辅助推理的落点。
+- 明确历史经验和领域知识只能生成假设或验证路径，不能替代当前 incident 证据。
+
+验收：
+
+- `docs/project/phase4-agent-driven-reasoning.md` 说明 Phase 4 agent-driven flow、动态验证边界和历史经验证据边界。
+- `domains/mongodb/components/replica-set/invariants.md` 记录 replica set 多视角不变量、split-brain deepening、反证和安全边界。
+- replica-set skill/runbook 引用不变量知识，但不复制全文。
+
+任务：
+
+- [x] Task: Phase 4 Agent 驱动流程文档
+  - Acceptance: 文档解释 `reasoning_timeline`、`deepening_findings`、`verification_requests`、`retrieval_context`、`experience_matches` 和 Agent refinement 如何协作。
+  - Verify: `rg -n "Phase 4 Agent|deepening_findings|verification_requests|reasoning_timeline|历史经验" docs/project docs/README.md`
+  - Files: `docs/project/phase4-agent-driven-reasoning.md`、`docs/project/README.md`、`docs/README.md`、`docs/project/phase4-multitrack-integration.md`
+- [x] Task: MongoDB replica set 不变量知识
+  - Acceptance: 领域知识资产覆盖 config/member/quorum consistency、split-brain deepening、counter-evidence 和只读验证路径。
+  - Verify: `rg -n "invariants.md|config_version|voting_members_count|rs.conf|rs.reconfig" domains/mongodb/components/replica-set domains/mongodb/skills/replica-set domains/mongodb/runbooks/replica-set`
+  - Files: `domains/mongodb/components/replica-set/invariants.md`、`domains/mongodb/components/replica-set/README.md`、`domains/mongodb/skills/replica-set/triage-replica-member-not-healthy/skill.md`、`domains/mongodb/runbooks/replica-set/replica-member-not-healthy/runbook.md`
+
 ## 测试与门禁
 
 最小验证：
@@ -700,5 +725,6 @@ Pulsar 当前有 skeleton 资产、golden path、两个 MVP 脚本和 rules anal
 - [x] 更新 `.cursor/skills/midstack-architecture-review/`。
 - [x] 新增或明确 component / triage surface taxonomy。
 - [x] 预留历史经验召回字段并明确证据边界。
+- [x] 补充 Phase 4 Agent 驱动推理流程文档和 MongoDB replica set 不变量知识。
 - [x] 补充对应测试或 validator。
 - [x] 运行最小门禁和必要 replay/score gate。

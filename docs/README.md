@@ -135,6 +135,7 @@ superseded_by: none
 - [测试与安装门禁](project/testing-and-install-gates.md)
 - [TODO](project/todo.md)
 - [Phase 4 集成说明](project/phase4-multitrack-integration.md)
+- [Phase 4 Agent 驱动推理流程](project/phase4-agent-driven-reasoning.md)
 
 ### 变更提案（proposals/）
 

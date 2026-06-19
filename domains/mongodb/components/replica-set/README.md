@@ -16,6 +16,7 @@
 
 关联资产：
 
+- `domains/mongodb/components/replica-set/invariants.md`
 - `domains/mongodb/runbooks/replica-set/replica-member-not-healthy/`
 - `domains/mongodb/commands/replica-set/check-rs-status/`
 - `domains/mongodb/skills/replica-set/triage-replica-member-not-healthy/`

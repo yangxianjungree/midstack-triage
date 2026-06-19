@@ -9,6 +9,8 @@ superseded_by: none
 
 本文档只说明当前仓库里第 4 段多轨推理模块的实际集成位置、职责边界和验证入口，不重复设计提案内容。
 
+信号、领域不变量、验证请求和 Agent refinement 的协作方式见 [Phase 4 Agent 驱动推理流程](phase4-agent-driven-reasoning.md)。
+
 ## 当前集成位置
 
 第 4 段运行时入口已经接在正式 analyse 主链路中。`tools/plugin/midstack-local.py` 只是本地 CLI 适配壳，不是 Phase 4 的正式集成点。

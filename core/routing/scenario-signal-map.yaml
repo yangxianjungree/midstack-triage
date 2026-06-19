@@ -12,6 +12,8 @@ routes:
       - pod-node-selector-mismatch
       - pod-volume-binding-failed
       - pod-resource-insufficient
+      - node-resource-pressure
+      - pod-resource-pressure
       - pod-image-pull-failed
       - pod-crashloop
       - pod-not-ready
@@ -52,6 +54,8 @@ routes:
       - mongodb
     when_any_signal:
       - pod-resource-insufficient
+      - node-resource-pressure
+      - pod-resource-pressure
       - node-disk-pressure
       - node-memory-pressure
       - oom-killed

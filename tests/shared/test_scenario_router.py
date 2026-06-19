@@ -86,6 +86,19 @@ class ScenarioRouterTest(unittest.TestCase):
         result = infer_scenario(load_fixture_signal_bundle("kubernetes-resource-insufficient-sample"))
         self.assertIn(result["scenario"], ("resource-exhaustion", "kubernetes-runtime"))
 
+    def test_resource_pressure_routes_to_resource_or_runtime(self) -> None:
+        signal_bundle = {
+            "abnormal_signals": [
+                {"signal_id": "node-resource-pressure", "detail": "cpu_percent=91"},
+                {"signal_id": "pod-resource-pressure", "detail": "cpu_millicores=1200"},
+            ]
+        }
+
+        result = infer_scenario(signal_bundle, middleware="mongodb")
+
+        self.assertIn(result["scenario"], ("resource-exhaustion", "kubernetes-runtime"))
+        self.assertIn(result["scenario_inference"]["confidence"], ("high", "medium"))
+
     def test_overlapping_signals_mark_unresolved(self) -> None:
         signal_bundle = {
             "abnormal_signals": [

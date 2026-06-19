@@ -331,6 +331,7 @@ def knowledge_candidates_for_scenario(scenario: str, primary_cause_category: str
         "kubernetes-scheduling",
         "kubernetes-storage-binding",
         "kubernetes-resource-scheduling",
+        "kubernetes-resource-pressure",
         "kubernetes-image-pull",
         "container-restart",
         "kubernetes-runtime",
@@ -660,6 +661,20 @@ def kubernetes_runtime_conclusion(
             "MongoDB member Pod cannot be scheduled because CPU, memory or ephemeral-storage requests cannot be satisfied.",
         ),
         (
+            "node-resource-pressure",
+            "kubernetes-resource-pressure",
+            "medium",
+            "Kubernetes resource pressure observed: a node running MongoDB workload reports high CPU or memory usage.",
+            "MongoDB availability or latency may be affected by sustained resource pressure on the Kubernetes node.",
+        ),
+        (
+            "pod-resource-pressure",
+            "kubernetes-resource-pressure",
+            "medium",
+            "Kubernetes resource pressure observed: a MongoDB Pod reports high CPU or memory usage.",
+            "MongoDB availability or latency may be affected by sustained resource pressure in the MongoDB Pod.",
+        ),
+        (
             "pod-image-pull-failed",
             "kubernetes-image-pull",
             "high",
@@ -835,6 +850,8 @@ def kubernetes_runtime_conclusion(
             )
         )
         conclusion_level = "impact"
+        if signal_id in ("node-resource-pressure", "pod-resource-pressure"):
+            conclusion_level = "phenomenon"
         if dns_probe_supported:
             conclusion_statement = "MongoDB containers are restarting or not ready with supported DNS lookup failure evidence."
             category = "dns-startup-failure"
@@ -872,6 +889,11 @@ def kubernetes_runtime_conclusion(
                 "Compare Pod resource requests with node allocatable CPU, memory, and ephemeral storage.",
                 "Inspect scheduler FailedScheduling events for Insufficient cpu, memory, or ephemeral-storage.",
                 "Check whether existing workload placement or taints reduce usable node capacity.",
+            ],
+            "kubernetes-resource-pressure": [
+                "Confirm resource pressure duration with metrics-server or platform monitoring around the incident window.",
+                "Compare affected Pod CPU and memory usage with requests, limits, throttling, and OOM history.",
+                "Check whether the affected Node also has disk, memory, PID, or network pressure conditions.",
             ],
             "kubernetes-image-pull": [
                 "Inspect container waiting reason, image name, imagePullSecret, and image pull events.",

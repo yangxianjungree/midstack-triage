@@ -81,6 +81,31 @@ class MongoDBRulesTest(unittest.TestCase):
         h3 = replica_internal_hypothesis(result["hypotheses"])
         self.assertEqual(h3["status"], "insufficient")
 
+    def test_resource_pressure_is_medium_confidence_runtime_phenomenon(self) -> None:
+        input_data = {"scenario": "kubernetes-runtime"}
+        signal_bundle = {
+            "abnormal_signals": [
+                {
+                    "signal_id": "node-resource-pressure",
+                    "object_ref": "node/worker-1",
+                    "detail": "Node resource metrics are high; cpu_percent=91 memory_percent=70",
+                },
+                {
+                    "signal_id": "pod-resource-pressure",
+                    "object_ref": "pod/mongo-0",
+                    "detail": "Pod resource metrics are high; cpu_millicores=1200 memory_mi=768",
+                },
+            ]
+        }
+
+        result = self.mod.analyse(input_data, signal_bundle, {"evidence_gaps": []}, {})
+
+        conclusion = result["conclusion_summary"]
+        self.assertEqual(conclusion["primary_cause_category"], "kubernetes-resource-pressure")
+        self.assertEqual(conclusion["confidence"], "medium")
+        self.assertEqual(conclusion["deepest_supported_level"], "phenomenon")
+        self.assertIn("sustained resource pressure", result["hypotheses"][0]["statement"])
+
 
 if __name__ == "__main__":
     unittest.main()

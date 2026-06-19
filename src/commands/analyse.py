@@ -158,11 +158,13 @@ def _prepare_phase3_context(
     remote_run_result: Dict[str, Any],
     apply_scenario_routing_if_needed,
     enrich_skill_runtime_context,
+    write_collection_plan,
     write_signal_governance,
     run_directed_recollection_if_needed,
 ) -> tuple[Dict[str, Any], Dict[str, Any]]:
     if (output_dir / "signal_bundle.yaml").exists():
         input_data = apply_scenario_routing_if_needed(output_dir, args)
+        write_collection_plan(output_dir, str(input_data.get("middleware") or "mongodb"))
         write_signal_governance(output_dir)
     skill_runtime: Dict[str, Any] = {}
     if (output_dir / "signal_bundle.yaml").exists():
@@ -173,6 +175,7 @@ def _prepare_phase3_context(
         try:
             run_directed_recollection_if_needed(args, output_dir, skill_pool=skill_pool or None)
             if skill_runtime:
+                write_collection_plan(output_dir, str(input_data.get("middleware") or "mongodb"))
                 write_signal_governance(output_dir)
                 enrich_skill_runtime_context(output_dir, input_data)
                 input_data = load_yaml(output_dir / "input.yaml")
@@ -224,6 +227,7 @@ def _write_completed_analysis_output(
 
     output = adapter_output("analyse", incident_id, middleware, "completed", "local analyse completed", output_dir)
     output["record_refs"].append({"name": "analysis", "path": str(analysis_file), "description": "generated analysis result"})
+    add_record_ref_if_exists(output, output_dir, "collection_plan", "collection_plan.yaml", "phase-3 script layer and cost plan")
     add_record_ref_if_exists(
         output,
         output_dir,
@@ -287,6 +291,7 @@ def run(
     build_incident_from_remote_run,
     apply_scenario_routing_if_needed,
     enrich_skill_runtime_context,
+    write_collection_plan,
     write_signal_governance,
     run_directed_recollection_if_needed,
     remote_executor_required_user_action,
@@ -533,6 +538,7 @@ def run(
         remote_run_result,
         apply_scenario_routing_if_needed,
         enrich_skill_runtime_context,
+        write_collection_plan,
         write_signal_governance,
         run_directed_recollection_if_needed,
     )

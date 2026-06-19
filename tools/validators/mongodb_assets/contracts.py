@@ -26,10 +26,14 @@ from .common import (  # noqa: E402
     SCRIPT_ID_RE,
     VALID_ADAPTER_COMMANDS,
     VALID_ADAPTER_STATUS,
+    VALID_COLLECTION_TIERS,
+    VALID_COST_CLASSES,
     VALID_EXECUTOR_STATUS,
+    VALID_NOISE_CLASSES,
     VALID_RISK_LEVELS,
     VALID_RUNTIMES,
     VALID_SCRIPT_STATUS,
+    VALID_SIGNAL_LAYERS,
     fail,
     require_list_of_strings,
 )
@@ -141,6 +145,14 @@ def validate_manifest(manifest_path: Path, errors: List[str]) -> Dict[str, Dict[
         runtime = item.get("runtime")
         if runtime not in VALID_RUNTIMES:
             fail(errors, "%s runtime must be one of %s" % (script_id, sorted(VALID_RUNTIMES)))
+        if item.get("collection_tier") not in VALID_COLLECTION_TIERS:
+            fail(errors, "%s collection_tier must be one of %s" % (script_id, sorted(VALID_COLLECTION_TIERS)))
+        if item.get("signal_layer") not in VALID_SIGNAL_LAYERS:
+            fail(errors, "%s signal_layer must be one of %s" % (script_id, sorted(VALID_SIGNAL_LAYERS)))
+        if item.get("cost_class") not in VALID_COST_CLASSES:
+            fail(errors, "%s cost_class must be one of %s" % (script_id, sorted(VALID_COST_CLASSES)))
+        if item.get("noise_class") not in VALID_NOISE_CLASSES:
+            fail(errors, "%s noise_class must be one of %s" % (script_id, sorted(VALID_NOISE_CLASSES)))
         source = str(item.get("source") or "")
         if os.path.isabs(source):
             fail(errors, "%s source must be relative" % script_id)
@@ -158,6 +170,9 @@ def validate_manifest(manifest_path: Path, errors: List[str]) -> Dict[str, Dict[
     mvp_count = sum(1 for item in by_id.values() if item.get("mvp") is True)
     if mvp_count != 11:
         fail(errors, "MongoDB MVP script count must be 11, got %d" % mvp_count)
+    baseline_count = sum(1 for item in by_id.values() if item.get("collection_tier") == "baseline")
+    if baseline_count != 11:
+        fail(errors, "MongoDB baseline collection_tier count must be 11, got %d" % baseline_count)
     return by_id
 
 

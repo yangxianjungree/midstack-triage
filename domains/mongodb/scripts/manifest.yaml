@@ -9,6 +9,10 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: true
+    collection_tier: baseline
+    signal_layer: pod
+    cost_class: low
+    noise_class: low
 
   - script_id: mongodb.collect.statefulsets.yaml
     source: collect/collect-statefulsets-yaml.sh
@@ -19,6 +23,10 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: true
+    collection_tier: baseline
+    signal_layer: orchestration
+    cost_class: low
+    noise_class: low
 
   - script_id: mongodb.collect.services.yaml
     source: collect/collect-services-yaml.sh
@@ -29,6 +37,10 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: true
+    collection_tier: baseline
+    signal_layer: service
+    cost_class: low
+    noise_class: low
 
   - script_id: mongodb.collect.nodes.state
     source: collect/collect-nodes-state.sh
@@ -39,6 +51,10 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: true
+    collection_tier: baseline
+    signal_layer: system
+    cost_class: low
+    noise_class: low
 
   - script_id: mongodb.collect.events.yaml
     source: collect/collect-events-yaml.sh
@@ -49,6 +65,13 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: true
+    collection_tier: baseline
+    signal_layer: orchestration
+    cost_class: medium
+    noise_class: medium
+    sample_policy:
+      scope: namespace
+      max_events: 200
 
   - script_id: mongodb.collect.mongos.get_shard_map
     source: collect/collect-mongos-get-shard-map.sh
@@ -59,6 +82,10 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: true
+    collection_tier: baseline
+    signal_layer: service
+    cost_class: medium
+    noise_class: low
 
   - script_id: mongodb.collect.replicaset.rs_status
     source: collect/collect-replicaset-rs-status.sh
@@ -69,6 +96,10 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: true
+    collection_tier: baseline
+    signal_layer: service
+    cost_class: medium
+    noise_class: low
 
   - script_id: mongodb.collect.logs.current
     source: collect/collect-logs-current.sh
@@ -79,6 +110,13 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: true
+    collection_tier: baseline
+    signal_layer: logs
+    cost_class: medium
+    noise_class: high
+    sample_policy:
+      tail_lines: 1000
+      max_targets: 8
 
   - script_id: mongodb.collect.logs.previous
     source: collect/collect-logs-previous.sh
@@ -89,6 +127,13 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: true
+    collection_tier: baseline
+    signal_layer: logs
+    cost_class: medium
+    noise_class: high
+    sample_policy:
+      tail_lines: 1000
+      max_targets: 8
 
   - script_id: mongodb.collect.logs.discover_sink
     source: collect/collect-log-sink.sh
@@ -99,6 +144,11 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: false
+    collection_tier: directed
+    signal_layer: logs
+    cost_class: medium
+    noise_class: medium
+    trigger_policy: "run when kubectl logs are too short or log sink is unknown"
 
   - script_id: mongodb.collect.logs.file_tail
     source: collect/collect-log-file-tail.sh
@@ -109,6 +159,14 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: false
+    collection_tier: directed
+    signal_layer: logs
+    cost_class: high
+    noise_class: high
+    sample_policy:
+      tail_lines: 400
+      max_targets: 8
+    trigger_policy: "run after log sink discovery finds a file-backed MongoDB log"
 
   - script_id: mongodb.collect.logs.node_file_tail
     source: collect/collect-log-node-file-tail.sh
@@ -119,6 +177,14 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: false
+    collection_tier: directed
+    signal_layer: logs
+    cost_class: high
+    noise_class: high
+    sample_policy:
+      tail_lines: 500
+      max_targets: 8
+    trigger_policy: "run only when node SSH access is explicitly enabled and pod file logs remain missing"
 
   - script_id: mongodb.collect.dns.coredns
     source: collect/collect-dns-coredns.sh
@@ -129,6 +195,11 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: false
+    collection_tier: directed
+    signal_layer: network
+    cost_class: medium
+    noise_class: medium
+    trigger_policy: "run when DNS or service resolution symptoms are present"
 
   - script_id: mongodb.collect.network.overlay
     source: collect/collect-network-overlay.sh
@@ -139,6 +210,11 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: false
+    collection_tier: directed
+    signal_layer: network
+    cost_class: medium
+    noise_class: medium
+    trigger_policy: "run when DNS timeout or overlay partition symptoms are present"
 
   - script_id: mongodb.collect.pods.describe
     source: collect/collect-pods-describe.sh
@@ -149,6 +225,11 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: false
+    collection_tier: directed
+    signal_layer: orchestration
+    cost_class: medium
+    noise_class: medium
+    trigger_policy: "run when pod scheduling, readiness, or crashloop signals need event-level detail"
 
   - script_id: mongodb.normalize.logs.highlights
     source: normalize/normalize-logs-highlights.py
@@ -159,6 +240,10 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: true
+    collection_tier: baseline
+    signal_layer: logs
+    cost_class: low
+    noise_class: low
 
   - script_id: mongodb.normalize.signals.bundle
     source: normalize/normalize-signals-bundle.py
@@ -169,3 +254,7 @@ scripts:
     readonly: true
     default_packaged: true
     mvp: true
+    collection_tier: baseline
+    signal_layer: service
+    cost_class: low
+    noise_class: low

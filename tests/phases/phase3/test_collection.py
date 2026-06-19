@@ -12,6 +12,7 @@ if str(SRC_DIR) not in sys.path:
 FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "active" / "mongodb"
 
 from phases.phase3 import incident_build as phase3_incident_build
+from phases.phase3 import collection_plan as phase3_collection_plan
 from phases.phase3 import recollection as phase3_recollection
 from phases.phase3 import recollection_run as phase3_recollection_run
 from phases.phase3 import remote_collection as phase3_remote_collection
@@ -40,6 +41,95 @@ def test_normalize_collection_report_gaps_assigns_gap_types():
     assert collection_report["evidence_gaps"][0]["gap_type"] == "critical_gap"
     assert collection_report["evidence_gaps"][1]["gap_type"] == "expected_gap"
     assert collection_report["evidence_gaps"][0]["related_stage"] == "signal_collection"
+
+
+def test_build_baseline_collection_plan_classifies_layers_and_costs():
+    manifest = {
+        "middleware": "mongodb",
+        "scripts": [
+            {
+                "script_id": "mongodb.collect.nodes.state",
+                "phase": "collect",
+                "target": "nodes",
+                "readonly": True,
+                "default_packaged": True,
+                "mvp": True,
+                "collection_tier": "baseline",
+                "signal_layer": "system",
+                "cost_class": "low",
+                "noise_class": "low",
+            },
+            {
+                "script_id": "mongodb.collect.events.yaml",
+                "phase": "collect",
+                "target": "events",
+                "readonly": True,
+                "default_packaged": True,
+                "mvp": True,
+                "collection_tier": "baseline",
+                "signal_layer": "orchestration",
+                "cost_class": "medium",
+                "noise_class": "medium",
+            },
+            {
+                "script_id": "mongodb.collect.logs.current",
+                "phase": "collect",
+                "target": "logs",
+                "readonly": True,
+                "default_packaged": True,
+                "mvp": True,
+                "collection_tier": "baseline",
+                "signal_layer": "logs",
+                "cost_class": "medium",
+                "noise_class": "high",
+                "sample_policy": {"tail_lines": 1000, "max_targets": 8},
+            },
+            {
+                "script_id": "mongodb.collect.logs.file_tail",
+                "phase": "collect",
+                "target": "logs",
+                "readonly": True,
+                "default_packaged": True,
+                "mvp": False,
+                "collection_tier": "directed",
+                "signal_layer": "logs",
+                "cost_class": "high",
+                "noise_class": "high",
+                "trigger_policy": "only after log sink gap",
+            },
+        ],
+    }
+
+    plan = phase3_collection_plan.build_collection_plan(manifest)
+
+    baseline_ids = [item["script_id"] for item in plan["baseline_scripts"]]
+    directed_ids = [item["script_id"] for item in plan["directed_scripts"]]
+    assert baseline_ids == [
+        "mongodb.collect.nodes.state",
+        "mongodb.collect.events.yaml",
+        "mongodb.collect.logs.current",
+    ]
+    assert directed_ids == ["mongodb.collect.logs.file_tail"]
+    assert plan["layer_summary"]["system"]["baseline_count"] == 1
+    assert plan["layer_summary"]["orchestration"]["baseline_count"] == 1
+    assert plan["layer_summary"]["logs"]["baseline_count"] == 1
+    assert plan["resource_budget"]["baseline_cost_classes"] == {"low": 1, "medium": 2}
+    assert plan["resource_budget"]["baseline_high_noise_count"] == 1
+    assert plan["baseline_scripts"][2]["sample_policy"] == {"tail_lines": 1000, "max_targets": 8}
+
+
+def test_write_collection_plan_loads_mongodb_manifest(tmp_path):
+    output_dir = tmp_path / "incident"
+
+    plan = phase3_collection_plan.write_collection_plan(output_dir, "mongodb")
+    written = yaml.safe_load((output_dir / "collection_plan.yaml").read_text(encoding="utf-8"))
+
+    assert written["middleware"] == "mongodb"
+    assert written["baseline_script_ids"] == [item["script_id"] for item in written["baseline_scripts"]]
+    assert "mongodb.collect.nodes.state" in written["baseline_script_ids"]
+    assert "mongodb.collect.logs.file_tail" in [item["script_id"] for item in written["directed_scripts"]]
+    assert written["resource_budget"]["baseline_high_noise_count"] >= 1
+    assert plan["generated_at"] == written["generated_at"]
 
 
 def test_apply_scenario_routing_sets_unknown_scenario(tmp_path):

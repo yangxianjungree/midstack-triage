@@ -884,6 +884,11 @@ def test_local_analyse_incident_uses_local_collection(tmp_path, monkeypatch):
     assert calls == [(str(incident_dir / "local-config.yaml"), "psmdb-test", None)]
     assert (incident_dir / "analysis.yaml").exists()
     assert (incident_dir / "remote-executor-run.yaml").exists()
+    record_ref_names = {item["name"] for item in adapter["record_refs"]}
+    assert "collection_plan" in record_ref_names
+    collection_plan = load_yaml(incident_dir / "collection_plan.yaml")
+    assert collection_plan["baseline_script_ids"]
+    assert "mongodb.collect.logs.file_tail" in collection_plan["directed_script_ids"]
     signal_bundle = load_yaml(incident_dir / "signal_bundle.yaml")
     assert signal_bundle["signal_groups"] == [
         {

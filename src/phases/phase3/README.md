@@ -4,6 +4,10 @@
 
 当前边界：
 
+- `collection_plan.py`
+  从脚本 manifest 派生 `collection_plan.yaml`，记录 baseline / directed
+  脚本、信号层级、成本等级、噪音等级和采样策略，给采集治理与 Phase 4
+  解释证据边界使用。
 - `incident_build.py`
   从 remote run 输出还原 incident 工作目录，生成 `input.yaml`、`structured_record.yaml`、`signal_bundle.yaml` 和 `collection_report.yaml`。
 - `remote_collection.py`
@@ -30,6 +34,8 @@
 规则：
 
 - 第 3 段负责证据构建和治理，不直接给出最终分析结论。
+- `collection_plan.yaml` 只描述采集计划和资源/噪音预算；执行器仍以显式
+  `--script-id` 或 manifest 中的 `mvp` baseline 为实际运行权威。
 - Phase 3 可以同时保留多个层面的异常信号；`signal_groups` 用于表达并发异常，
   `correlations` 用于表达跨层关系，不在本阶段压缩成唯一根因。
 - `scenario_inference.unresolved=true` 时，Phase 3 保留 top1 `scenario` 作为主路由，

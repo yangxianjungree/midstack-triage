@@ -1,5 +1,6 @@
 """Phase 3 collection runtime package."""
 
+from .collection_plan import build_collection_plan, write_collection_plan
 from .incident_build import build_incident_from_remote_run
 from .recollection_run import run_directed_recollection_if_needed
 from .remote_collection import merge_remote_run_outputs, run_local_collection, run_remote_collection
@@ -11,6 +12,7 @@ from .skill_runtime import enrich_skill_runtime_context, resolve_skill_runtime
 
 __all__ = [
     "apply_scenario_routing_if_needed",
+    "build_collection_plan",
     "build_incident_from_remote_run",
     "build_signal_governance",
     "enrich_skill_runtime_context",
@@ -23,5 +25,6 @@ __all__ = [
     "run_directed_recollection_if_needed",
     "run_local_collection",
     "run_remote_collection",
+    "write_collection_plan",
     "write_signal_governance",
 ]

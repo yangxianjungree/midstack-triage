@@ -8,6 +8,10 @@ from typing import Any, Dict, List
 MIDDLEWARE = "mongodb"
 SCRIPT_ID_RE = re.compile(r"^mongodb\.(collect|normalize)\.[a-z0-9_]+\.[a-z0-9_]+$")
 VALID_RUNTIMES = {"shell", "python"}
+VALID_COLLECTION_TIERS = {"baseline", "directed"}
+VALID_SIGNAL_LAYERS = {"system", "orchestration", "pod", "network", "logs", "service", "unknown"}
+VALID_COST_CLASSES = {"low", "medium", "high"}
+VALID_NOISE_CLASSES = {"low", "medium", "high"}
 REQUIRED_MANIFEST_FIELDS = {
     "script_id",
     "source",
@@ -18,6 +22,10 @@ REQUIRED_MANIFEST_FIELDS = {
     "readonly",
     "default_packaged",
     "mvp",
+    "collection_tier",
+    "signal_layer",
+    "cost_class",
+    "noise_class",
 }
 REQUIRED_RUNTIME_FIELDS = {
     "script_id",

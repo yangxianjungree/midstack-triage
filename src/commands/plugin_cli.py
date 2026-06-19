@@ -13,6 +13,7 @@ from phases.phase1.local_context import probe_local_context
 from phases.phase1.startup import validate_remote_environment
 from phases.phase2.inventory import discover_mongodb_inventory
 from phases.phase3.incident_build import build_incident_from_remote_run
+from phases.phase3.collection_plan import write_collection_plan
 from phases.phase3.recollection_run import run_directed_recollection_if_needed
 from phases.phase3.remote_collection import run_local_collection, run_remote_collection
 from phases.phase3.remote_run import load_remote_executor_run_result, remote_executor_next_actions, remote_executor_required_user_action
@@ -44,6 +45,7 @@ def command_analyse(args: argparse.Namespace) -> int:
         load_remote_executor_run_result=load_remote_executor_run_result,
         build_incident_from_remote_run=build_incident_from_remote_run,
         apply_scenario_routing_if_needed=apply_scenario_routing_if_needed,
+        write_collection_plan=write_collection_plan,
         write_signal_governance=write_signal_governance,
         enrich_skill_runtime_context=enrich_skill_runtime_context,
         run_directed_recollection_if_needed=run_directed_recollection_if_needed,

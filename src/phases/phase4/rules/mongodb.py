@@ -12,6 +12,7 @@ try:
     from phases.phase4.verification_requests import dedupe_verification_requests, first_class_script_request
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from .common import load_yaml, runtime_root, write_yaml
+    from .mongodb_deepening import build_mongodb_deepening_findings
     from .mongodb_log_evidence import evidence_from_log_highlights
 except ImportError:  # pragma: no cover - supports direct file execution
     RULES_DIR = Path(__file__).resolve().parent
@@ -25,6 +26,7 @@ except ImportError:  # pragma: no cover - supports direct file execution
     from phases.phase4.verification_requests import dedupe_verification_requests, first_class_script_request
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
     from common import load_yaml, runtime_root, write_yaml
+    from mongodb_deepening import build_mongodb_deepening_findings
     from mongodb_log_evidence import evidence_from_log_highlights
 
 
@@ -1058,12 +1060,14 @@ def analyse(
         hypotheses,
     )
     reasoning_timeline = build_reasoning_timeline(signal_bundle, collection_report, structured_record, hypotheses)
+    deepening_findings = build_mongodb_deepening_findings(structured_record)
 
     return {
         "hypotheses": hypotheses,
         "conclusion_summary": conclusion,
         "next_actions": next_actions,
         "verification_requests": verification_requests,
+        "deepening_findings": deepening_findings,
         "reasoning_timeline": reasoning_timeline,
         "knowledge_candidates": knowledge_candidates_for_scenario(scenario, str(conclusion.get("primary_cause_category") or "")),
         **analysis_contract_fields(input_data, signal_bundle, collection_report),

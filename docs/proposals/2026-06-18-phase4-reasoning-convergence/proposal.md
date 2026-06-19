@@ -507,6 +507,32 @@ def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> N
   - Verify: `rg -n "reasoning_timeline|Timeline|时间线" core/templates/analysis.template.yaml docs/specs`
   - Files: `core/templates/analysis.template.yaml`、`docs/specs/incident-record.spec.md`、`docs/specs/triage-workflow.spec.md`
 
+### Slice 9. 机制深化与领域不变量检查
+
+目标：
+
+- Phase 4 不只停在现象或机制识别，还能从当前证据中提取“为什么能发生”的深化线索。
+- 初始实现不硬编码单个故障案例，而是增加 MongoDB replica set 多视角不变量检查。
+- 已采反证要进入结构化 finding，避免 Agent 重复建议已经被部分验证或反驳的路径。
+
+验收：
+
+- `analysis.yaml` 输出顶层 `deepening_findings`。
+- MongoDB replica set 多视角 `config_version/config_term`、members 列表和 voting quorum 不一致会产生 high severity finding。
+- 当前 MongoDB TCP/27017 probe 成功会反驳 `sustained_network_partition`，不再被隐藏在原始采集产物里。
+- Agent task 和 specs 要求 refinement 使用 `deepening_findings` 推进 enabling/root cause。
+
+任务：
+
+- [x] Task: MongoDB replica set 不变量 deepening
+  - Acceptance: Phase 4 rules 从 `structured_record.details.replica_members` 和 `network_overlay.pod_connectivity_checks` 输出机制深化 finding。
+  - Verify: `python3 -m pytest tests/phases/phase4/rules/test_mongodb_rules.py -q`
+  - Files: `src/phases/phase4/rules/mongodb_deepening.py`、`src/phases/phase4/rules/mongodb.py`、`tests/phases/phase4/rules/test_mongodb_rules.py`
+- [x] Task: 模板和合同记录 deepening 字段
+  - Acceptance: 模板、specs 和 Agent task 明确 deepening finding 的证据边界和用途。
+  - Verify: `rg -n "deepening_findings|enabling/root cause|不变量" core/templates/analysis.template.yaml docs/specs src/shared/analysis_runtime.py`
+  - Files: `core/templates/analysis.template.yaml`、`docs/specs/incident-record.spec.md`、`docs/specs/triage-workflow.spec.md`、`src/shared/analysis_runtime.py`
+
 ## 测试与门禁
 
 最小验证：

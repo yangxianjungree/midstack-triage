@@ -579,6 +579,15 @@ domains/mongodb/scripts/
 - `report.md` 应展示关键时间线，帮助读者看到“什么时间发生了什么关键事项”。
 - 如果时间线缺失，应显式说明缺失，而不是伪造时间。
 
+### `deepening_findings` 字段
+
+`analysis.yaml` 顶层可包含 `deepening_findings`，用于记录 Phase 4 对已采证据做的机制深化检查。
+
+- 该字段面向“为什么会发生”的追问，记录领域不变量冲突、当前证据反证和机制推进观察。
+- 每条 finding 必须有 `evidence_refs`，只引用当前 incident 证据。
+- finding 可以支持或反驳某个候选机制，但不能绕过 `hypotheses` 和 `conclusion_summary` 的证据边界。
+- MongoDB 初始不变量包括 replica set config/member/quorum 多视角一致性，以及当前 TCP 连通性对持续网络分区假设的反证。
+
 ### 经验召回预留字段
 
 `analysis.yaml` 顶层预留 `retrieval_context`、`experience_matches` 和 `source_boundaries`，用于未来接入历史经验或向量库召回。

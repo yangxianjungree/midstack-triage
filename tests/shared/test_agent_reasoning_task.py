@@ -33,6 +33,8 @@ def test_agent_reasoning_task_preserves_experience_retrieval_contract(tmp_path):
     assert "`source_boundaries`" in content
     assert "`reasoning_timeline`" in content
     assert "`verification_requests`" in content
+    assert "`deepening_findings`" in content
     assert "must stay present" in content
     assert "must not become direct supporting evidence" in content
     assert "ordering alone" in content
+    assert "enabling/root cause" in content

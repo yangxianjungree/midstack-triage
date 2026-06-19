@@ -71,6 +71,17 @@ reasoning_timeline:
       related_hypotheses:
         - <hypothesis id>
 
+deepening_findings:
+  - finding_id: <domain invariant or counter-evidence id>
+    statement: <what the existing evidence deepens or challenges>
+    evidence_refs:
+      - <source field or artifact>
+    supports:
+      - <hypothesis or mechanism id>
+    refutes:
+      - <hypothesis or mechanism id>
+    severity: <high|medium|low>
+
 # summary subset of core/templates/knowledge-candidate.template.yaml;
 # candidate_type enum: core/taxonomies/candidate-types.yaml
 knowledge_candidates:

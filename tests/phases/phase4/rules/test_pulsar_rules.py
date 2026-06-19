@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+
+import importlib.util
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[4]
+RULES_PATH = ROOT / "src" / "phases" / "phase4" / "rules" / "pulsar.py"
+
+
+def load_rules_module():
+    spec = importlib.util.spec_from_file_location("phase4_rules_pulsar", RULES_PATH)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+class PulsarRulesTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.mod = load_rules_module()
+
+    def test_analysis_contract_reserves_experience_retrieval_fields(self) -> None:
+        input_data = {
+            "scenario": "queue-backlog",
+            "incident_time": {"mode": "current_active"},
+        }
+        signal_bundle = {
+            "abnormal_signals": [
+                {"signal_id": "topic-backlog-high", "object_ref": "topic/orders", "detail": "Backlog is high"},
+                {"signal_id": "consumer-lag-high", "object_ref": "subscription/orders-sub", "detail": "Lag is high"},
+            ]
+        }
+        collection_report = {
+            "evidence_gaps": [
+                {"gap": "broker topic stats missing", "gap_type": "critical_gap"}
+            ]
+        }
+
+        result = self.mod.analyse(input_data, signal_bundle, collection_report)
+
+        self.assertEqual(result["retrieval_context"]["time_mode"], "current_active")
+        self.assertEqual(result["retrieval_context"]["signal_ids"], ["topic-backlog-high", "consumer-lag-high"])
+        self.assertEqual(result["retrieval_context"]["scenario_candidates"], ["queue-backlog"])
+        self.assertEqual(result["retrieval_context"]["object_refs"], ["topic/orders", "subscription/orders-sub"])
+        self.assertEqual(result["retrieval_context"]["evidence_gap_categories"], ["critical_gap"])
+        self.assertEqual(result["experience_matches"], [])
+        self.assertIn("historical_experience", result["source_boundaries"]["hypothesis_sources_only"])
+
+
+if __name__ == "__main__":
+    unittest.main()

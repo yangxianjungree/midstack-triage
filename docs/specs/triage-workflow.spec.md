@@ -561,6 +561,14 @@ domains/mongodb/scripts/
 
 完整模型以 [core/templates/knowledge-candidate.template.yaml](../../core/templates/knowledge-candidate.template.yaml) 为准；`analysis.yaml` 中的 `knowledge_candidates` 是其摘要子集，见 [core/templates/analysis.template.yaml](../../core/templates/analysis.template.yaml)。`candidate_type` 枚举见 [core/taxonomies/candidate-types.yaml](../../core/taxonomies/candidate-types.yaml)。
 
+### 经验召回预留字段
+
+`analysis.yaml` 顶层预留 `retrieval_context`、`experience_matches` 和 `source_boundaries`，用于未来接入历史经验或向量库召回。
+
+- `retrieval_context` 从当前 incident 的 scenario、信号、对象和证据缺口生成召回上下文。
+- `experience_matches` 在未实现真实召回前保持空列表。
+- `source_boundaries` 必须说明历史经验、runbook、知识资产和用户线索只能作为假设来源或验证路径来源，不能直接作为当前故障结论证据。
+
 ## 7. MongoDB 结构化记录
 
 当前 MongoDB 结构化记录采用：

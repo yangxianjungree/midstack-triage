@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Set, Tuple
 
 try:
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
-    from .common import load_yaml, runtime_root, write_yaml
+    from .common import analysis_contract_fields, load_yaml, runtime_root, write_yaml
 except ImportError:  # pragma: no cover - supports direct file execution
     RULES_DIR = Path(__file__).resolve().parent
     if str(RULES_DIR) not in sys.path:
@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover - supports direct file execution
     if str(SRC_DIR) not in sys.path:
         sys.path.insert(0, str(SRC_DIR))
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
-    from common import load_yaml, runtime_root, write_yaml
+    from common import analysis_contract_fields, load_yaml, runtime_root, write_yaml
 
 
 ROOT = runtime_root()
@@ -1079,6 +1079,7 @@ def analyse(
         "conclusion_summary": conclusion,
         "next_actions": next_actions,
         "knowledge_candidates": knowledge_candidates_for_scenario(scenario, str(conclusion.get("primary_cause_category") or "")),
+        **analysis_contract_fields(input_data, signal_bundle, collection_report),
         "generated_at": "generated-by-mongodb-analyse",
         "updated_at": "generated-by-mongodb-analyse",
     }

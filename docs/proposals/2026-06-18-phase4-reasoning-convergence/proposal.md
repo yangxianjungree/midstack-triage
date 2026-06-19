@@ -419,6 +419,31 @@ def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> N
   - Verify: `python3 -m pytest tests/tools -q` 或 `python3 tools/validators/validate-repo.py`
   - Files: `core/taxonomies/triage-surface-types.yaml`、`core/taxonomies/README.md`、`tools/validators/mongodb_assets/contracts.py`、`tools/validators/mongodb_assets/domain_assets.py`
 
+### Slice 6. 历史经验召回字段预留
+
+目标：
+
+- 在 `analysis.yaml` 顶层预留未来历史经验/向量库召回字段。
+- 当前不接入 embedding、向量库或真实召回服务。
+- 明确历史经验只能作为假设来源或验证路径来源，不能作为当前故障结论的直接证据。
+
+验收：
+
+- MongoDB/Pulsar rules fallback 都输出 `retrieval_context`、`experience_matches` 和 `source_boundaries`。
+- `experience_matches` 当前保持空列表。
+- 模板和 incident spec 明确 `source_boundaries` 的证据边界。
+
+任务：
+
+- [x] Task: rules fallback 输出经验召回预留契约
+  - Acceptance: rules fallback 生成的 `analysis.yaml` 顶层包含召回上下文、空经验匹配和证据来源边界。
+  - Verify: `python3 -m pytest tests/phases/phase4/rules -q`
+  - Files: `src/phases/phase4/rules/common.py`、`src/phases/phase4/rules/mongodb.py`、`src/phases/phase4/rules/pulsar.py`、`tests/phases/phase4/rules/`
+- [x] Task: 模板和规范记录历史经验边界
+  - Acceptance: `analysis.template.yaml` 和 incident/workflow specs 说明历史经验不能直接进入当前结论证据。
+  - Verify: `rg -n "retrieval_context|experience_matches|source_boundaries|历史经验" core/templates/analysis.template.yaml docs/specs`
+  - Files: `core/templates/analysis.template.yaml`、`docs/specs/incident-record.spec.md`、`docs/specs/triage-workflow.spec.md`
+
 ## 测试与门禁
 
 最小验证：
@@ -585,5 +610,6 @@ Pulsar 当前有 skeleton 资产、golden path、两个 MVP 脚本和 rules anal
 - [x] 迁移 `rs-status-collection-gap.spec.md`。
 - [x] 更新 `.cursor/skills/midstack-architecture-review/`。
 - [x] 新增或明确 component / triage surface taxonomy。
+- [x] 预留历史经验召回字段并明确证据边界。
 - [x] 补充对应测试或 validator。
 - [x] 运行最小门禁和必要 replay/score gate。

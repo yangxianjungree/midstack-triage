@@ -45,5 +45,31 @@ knowledge_candidates:
     reason: <why this should be captured>
     suggested_path: <path>
 
+retrieval_context:
+  query_text: <scenario and signal summary for future experience retrieval>
+  time_mode: <current_active|historical_resolved|current_or_unknown>
+  scenario_candidates:
+    - <scenario>
+  signal_ids:
+    - <signal id>
+  object_refs:
+    - <object ref>
+  evidence_gap_categories:
+    - <gap category>
+
+experience_matches: []
+
+source_boundaries:
+  current_incident_evidence:
+    - structured_record
+    - signal_bundle
+    - collection_report
+  hypothesis_sources_only:
+    - customer_clue
+    - historical_experience
+    - runbook
+    - knowledge_asset
+  rule: hypothesis_sources_only must not be used as direct supporting evidence for conclusion_summary
+
 generated_at: <timestamp>
 updated_at: <timestamp>

@@ -183,6 +183,9 @@ hypotheses:
 conclusion_summary:
 next_actions:
 knowledge_candidates:
+retrieval_context:
+experience_matches:
+source_boundaries:
 review:
 generated_at:
 updated_at:
@@ -192,6 +195,9 @@ updated_at:
 
 - 假设、结论、知识沉淀、review 四类内容并存但不混写
 - 验证动作（`validation_actions`）嵌套在各假设内，挂回对应假设，不设顶层列表
+- `retrieval_context` 只作为未来历史经验/向量召回的查询上下文，不表达当前结论
+- `experience_matches` 在未接入真实召回前必须保持空列表；接入后也只能作为假设或验证路径来源
+- `source_boundaries` 明确当前故障证据与假设来源的边界；历史经验、runbook 和用户线索不得直接作为 `conclusion_summary` 的支撑证据
 - `review` 并入 `analysis.yaml`，不再单独使用 `review.yaml`
 
 ## 9. `logs/`

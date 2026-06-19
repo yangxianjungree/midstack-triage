@@ -106,6 +106,35 @@ class MongoDBRulesTest(unittest.TestCase):
         self.assertEqual(conclusion["deepest_supported_level"], "phenomenon")
         self.assertIn("sustained resource pressure", result["hypotheses"][0]["statement"])
 
+    def test_analysis_contract_reserves_experience_retrieval_fields(self) -> None:
+        input_data = {
+            "scenario": "kubernetes-runtime",
+            "scenario_candidates": "kubernetes-runtime",
+            "incident_time": {"mode": "historical_resolved"},
+        }
+        signal_bundle = {
+            "abnormal_signals": [
+                {"signal_id": "pod-crashloop", "object_ref": "pod/mongo-0", "detail": "Pod is restarting"},
+                {"signal_id": "pod-resource-pressure", "object_ref": "pod/mongo-0", "detail": "CPU high"},
+            ]
+        }
+        collection_report = {
+            "evidence_gaps": [
+                {"gap": "kubectl logs are too short", "gap_category": "log_sample_quality"}
+            ]
+        }
+
+        result = self.mod.analyse(input_data, signal_bundle, collection_report, {})
+
+        self.assertEqual(result["retrieval_context"]["time_mode"], "historical_resolved")
+        self.assertEqual(result["retrieval_context"]["signal_ids"], ["pod-crashloop", "pod-resource-pressure"])
+        self.assertEqual(result["retrieval_context"]["scenario_candidates"], ["kubernetes-runtime"])
+        self.assertEqual(result["retrieval_context"]["object_refs"], ["pod/mongo-0"])
+        self.assertEqual(result["retrieval_context"]["evidence_gap_categories"], ["log_sample_quality"])
+        self.assertEqual(result["experience_matches"], [])
+        self.assertIn("historical_experience", result["source_boundaries"]["hypothesis_sources_only"])
+        self.assertIn("must not be used as direct supporting evidence", result["source_boundaries"]["rule"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,11 +16,37 @@ from shared.skill_resolver import (
 from shared.workspace import load_yaml, now_iso, write_yaml
 
 
+def scenario_candidates(input_data: Dict[str, Any]) -> List[str]:
+    scenarios: List[str] = []
+    primary = str(input_data.get("scenario") or "unknown")
+    if primary:
+        scenarios.append(primary)
+    inference = input_data.get("scenario_inference") or {}
+    if inference.get("unresolved"):
+        for item in inference.get("candidates") or []:
+            if not isinstance(item, dict):
+                continue
+            scenario = str(item.get("scenario") or "")
+            if scenario:
+                scenarios.append(scenario)
+    result: List[str] = []
+    seen = set()
+    for scenario in scenarios:
+        if scenario in ("", "unknown", "baseline") or scenario in seen:
+            continue
+        seen.add(scenario)
+        result.append(scenario)
+    return result
+
+
 def resolve_skill_runtime(input_data: Dict[str, Any], output_dir: Path, collection_report: Dict[str, Any]) -> Dict[str, Any]:
     middleware = str(input_data.get("middleware") or "mongodb")
-    scenario = str(input_data.get("scenario") or "unknown")
-    skills = resolve_skills(middleware, scenario)
-    skill_pool = recollection_script_pool(middleware, scenario)
+    scenarios = scenario_candidates(input_data)
+    skills: List[Dict[str, Any]] = []
+    skill_pool = set()
+    for scenario in scenarios:
+        skills.extend(resolve_skills(middleware, scenario))
+        skill_pool.update(recollection_script_pool(middleware, scenario))
     required_scripts: List[str] = []
     for skill in skills:
         required_scripts.extend(extract_script_ids(skill["metadata"]))
@@ -30,6 +56,7 @@ def resolve_skill_runtime(input_data: Dict[str, Any], output_dir: Path, collecti
     missing_or_failed = missing_required_scripts(required_scripts, script_statuses)
     return {
         "skills": skills,
+        "scenarios": scenarios,
         "skill_pool": skill_pool,
         "required_scripts": required_scripts,
         "missing_or_failed": missing_or_failed,
@@ -47,6 +74,7 @@ def write_skill_runtime_context(
     skills = runtime.get("skills") or []
     skill_pool = runtime.get("skill_pool") or set()
     collection_report["skill_evidence_check"] = {
+        "scenarios": runtime.get("scenarios") or [],
         "skill_ids": [skill["id"] for skill in skills],
         "required_scripts": runtime.get("required_scripts") or [],
         "recollection_script_pool": sorted(skill_pool),

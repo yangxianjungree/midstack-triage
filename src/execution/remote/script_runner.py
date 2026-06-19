@@ -116,6 +116,7 @@ def finalize_run(
     incident_id: str,
     plugin_name: str,
     selected_ip: str,
+    transport: str,
     namespace: str,
     started_at: str,
     capability_checks: List[Dict[str, str]],
@@ -128,7 +129,7 @@ def finalize_run(
 ) -> int:
     write_yaml(
         local_dir / "remote-executor-run.yaml",
-        build_run_result(incident_id, plugin_name, selected_ip, namespace, started_at, capability_checks, script_results, error, warnings, status),
+        build_run_result(incident_id, plugin_name, selected_ip, transport, namespace, started_at, capability_checks, script_results, error, warnings, status),
     )
     print_run_pointer(incident_id, namespace, local_dir)
     if script_results:

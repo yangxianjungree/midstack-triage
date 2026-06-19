@@ -13,7 +13,9 @@ FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "active" / "mongodb"
 
 from phases.phase3 import incident_build as phase3_incident_build
 from phases.phase3 import recollection as phase3_recollection
+from phases.phase3 import recollection_run as phase3_recollection_run
 from phases.phase3 import remote_collection as phase3_remote_collection
+from phases.phase3 import remote_run as phase3_remote_run
 from phases.phase3 import report_gaps as phase3_report_gaps
 from phases.phase3 import scenario_routing as phase3_scenario_routing
 from phases.phase3 import skill_runtime as phase3_skill_runtime
@@ -121,6 +123,34 @@ def test_resolve_skill_runtime_returns_pure_context(tmp_path):
     assert "mongodb.collect.dns.coredns" in runtime["missing_or_failed"]
     assert "mongodb.collect.pods.state" in runtime["script_statuses"]
     assert "skill_evidence_check" not in collection_report
+
+
+def test_resolve_skill_runtime_merges_unresolved_candidate_scenarios(tmp_path):
+    output_dir = tmp_path / "incident"
+    write_yaml(output_dir / "collection_report.yaml", {"collection_actions": [], "successful_items": [], "failed_items": [], "blank_items": []})
+    collection_report = yaml.safe_load((output_dir / "collection_report.yaml").read_text(encoding="utf-8"))
+
+    runtime = phase3_skill_runtime.resolve_skill_runtime(
+        {
+            "middleware": "mongodb",
+            "scenario": "kubernetes-runtime",
+            "scenario_inference": {
+                "unresolved": True,
+                "candidates": [
+                    {"scenario": "kubernetes-runtime", "score": 1.0},
+                    {"scenario": "replica-inconsistency", "score": 0.95},
+                ],
+            },
+        },
+        output_dir,
+        collection_report,
+    )
+
+    skill_ids = {skill["id"] for skill in runtime["skills"]}
+    assert "mongodb-triage-kubernetes-runtime-failure" in skill_ids
+    assert "mongodb-triage-replica-member-not-healthy" in skill_ids
+    assert "mongodb.collect.replicaset.rs_status" in runtime["required_scripts"]
+    assert "mongodb.collect.dns.coredns" in runtime["skill_pool"]
 
 
 def test_directed_recollection_prefers_dns_path_and_skill_pool(tmp_path):
@@ -313,6 +343,110 @@ def test_run_local_collection_invokes_execution_module_with_local_transport(tmp_
     assert captured["command"][captured["command"].index("--config") + 1] == str(local_config)
     assert captured["command"][captured["command"].index("--transport") + 1] == "local"
     assert "--namespace" in captured["command"]
+
+
+def test_directed_recollection_uses_execution_mode_to_select_local_runner(tmp_path, monkeypatch):
+    output_dir = tmp_path / "incident"
+    write_yaml(output_dir / "structured_record.yaml", {"details": {"raw_logs": []}})
+    write_yaml(
+        output_dir / "signal_bundle.yaml",
+        {"abnormal_signals": [{"signal_id": "dns-resolution-failed"}]},
+    )
+    write_yaml(
+        output_dir / "collection_report.yaml",
+        {"collection_actions": [], "evidence_gaps": [{"gap": "lookup on 10.96.0.10:53 connection refused"}]},
+    )
+    remote_run_dir = tmp_path / "local-run"
+    remote_run_dir.mkdir()
+    calls = []
+
+    def fail_remote(*_args, **_kwargs):
+        raise AssertionError("local directed recollection must not use the remote runner")
+
+    def fake_local(args, trace_dir, script_ids):
+        calls.append((args.local_config, trace_dir, script_ids))
+        return remote_run_dir
+
+    monkeypatch.setattr(phase3_recollection_run, "run_remote_collection", fail_remote)
+    monkeypatch.setattr(phase3_recollection_run, "run_local_collection", fake_local)
+    monkeypatch.setattr(phase3_recollection_run, "merge_remote_run_outputs", lambda *_args, **_kwargs: None)
+
+    args = SimpleNamespace(
+        execution_mode="local",
+        remote_config=str(tmp_path / "stale-remote.yaml"),
+        local_config=str(tmp_path / "local.yaml"),
+    )
+
+    assert phase3_recollection_run.run_directed_recollection_if_needed(args, output_dir) is True
+
+    assert calls
+    assert calls[0][0] == str(tmp_path / "local.yaml")
+    assert calls[0][1] == output_dir / "directed-recollection"
+    assert phase3_recollection.SCRIPT_DNS_COREDNS in calls[0][2]
+
+
+def test_directed_recollection_offline_mode_does_not_execute_collection(tmp_path, monkeypatch):
+    output_dir = tmp_path / "incident"
+    write_yaml(output_dir / "structured_record.yaml", {"details": {"raw_logs": []}})
+    write_yaml(
+        output_dir / "signal_bundle.yaml",
+        {"abnormal_signals": [{"signal_id": "dns-resolution-failed"}]},
+    )
+    write_yaml(
+        output_dir / "collection_report.yaml",
+        {"collection_actions": [], "evidence_gaps": [{"gap": "lookup on 10.96.0.10:53 connection refused"}]},
+    )
+
+    def fail_collection(*_args, **_kwargs):
+        raise AssertionError("offline directed recollection must not execute collection")
+
+    monkeypatch.setattr(phase3_recollection_run, "run_remote_collection", fail_collection)
+    monkeypatch.setattr(phase3_recollection_run, "run_local_collection", fail_collection)
+
+    args = SimpleNamespace(
+        execution_mode="offline",
+        remote_config=str(tmp_path / "remote.yaml"),
+        local_config=str(tmp_path / "local.yaml"),
+    )
+
+    assert phase3_recollection_run.run_directed_recollection_if_needed(args, output_dir) is False
+
+
+def test_remote_run_report_method_reflects_local_transport():
+    collection_report = {
+        "collection_actions": [],
+        "successful_items": [],
+        "failed_items": [],
+        "evidence_gaps": [],
+    }
+
+    phase3_remote_run.merge_remote_executor_run_result(
+        collection_report,
+        {
+            "status": "blocked",
+            "selected_ip": "local",
+            "transport": "local",
+            "error": {"message": "local kubectl unavailable"},
+        },
+        has_script_outputs=False,
+    )
+    phase3_remote_run.merge_remote_executor_result(
+        collection_report,
+        "mongodb.collect.pods.state",
+        {
+            "script_id": "mongodb.collect.pods.state",
+            "status": "success",
+            "selected_ip": "local",
+            "transport": "local",
+            "process": {"exit_code": 0},
+        },
+    )
+
+    methods = [item["method"] for item in collection_report["collection_actions"]]
+    assert methods == [
+        "local transport + staged packaged scripts",
+        "local transport + staged packaged script",
+    ]
 
 
 def test_build_incident_from_remote_run_merges_and_copies_outputs(tmp_path):

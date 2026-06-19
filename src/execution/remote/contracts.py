@@ -72,13 +72,15 @@ def build_executor_result(
     error: Dict[str, str],
     warnings: List[str],
 ) -> Dict[str, Any]:
+    access = request.get("access") or {}
     return {
         "executor_id": request["executor_id"],
         "incident_id": request["incident_id"],
         "script_id": request["script_id"],
         "plugin_name": request["plugin_name"],
         "status": status,
-        "selected_ip": str((request.get("access") or {}).get("primary_ip") or ""),
+        "selected_ip": str(access.get("primary_ip") or ""),
+        "transport": str(access.get("execution_mode") or "remote"),
         "started_at": started_at,
         "finished_at": now_iso(),
         "capability_checks": capability_checks,
@@ -108,6 +110,7 @@ def build_run_result(
     incident_id: str,
     plugin_name: str,
     selected_ip: str,
+    transport: str,
     namespace: str,
     started_at: str,
     capability_checks: List[Dict[str, str]],
@@ -121,6 +124,7 @@ def build_run_result(
         "plugin_name": plugin_name,
         "status": status,
         "selected_ip": selected_ip,
+        "transport": transport,
         "namespace": namespace,
         "started_at": started_at,
         "finished_at": now_iso(),

@@ -102,9 +102,10 @@ def main(argv: List[str] | None = None) -> int:
     script_ids: List[str] = []
     error = error_payload()
     remote_root = args.remote_root.rstrip("/")
+    transport_name = str(args.transport or "remote")
     try:
         cfg = load_config(Path(args.config))
-        if args.transport == "local":
+        if transport_name == "local":
             access = _local_access_from_config(cfg)
             transport = LocalTransport()
         else:
@@ -121,6 +122,7 @@ def main(argv: List[str] | None = None) -> int:
                 incident_id,
                 plugin_name,
                 selected_ip,
+                transport_name,
                 namespace,
                 started_at,
                 capability_checks,
@@ -141,6 +143,7 @@ def main(argv: List[str] | None = None) -> int:
                 incident_id,
                 plugin_name,
                 selected_ip,
+                transport_name,
                 namespace,
                 started_at,
                 capability_checks,
@@ -162,6 +165,7 @@ def main(argv: List[str] | None = None) -> int:
                     incident_id,
                     plugin_name,
                     selected_ip,
+                    transport_name,
                     namespace,
                     started_at,
                     capability_checks,
@@ -183,6 +187,7 @@ def main(argv: List[str] | None = None) -> int:
                     incident_id,
                     plugin_name,
                     selected_ip,
+                    transport_name,
                     namespace,
                     started_at,
                     capability_checks,
@@ -205,6 +210,7 @@ def main(argv: List[str] | None = None) -> int:
                 incident_id,
                 plugin_name,
                 selected_ip,
+                transport_name,
                 namespace,
                 started_at,
                 capability_checks,
@@ -229,6 +235,7 @@ def main(argv: List[str] | None = None) -> int:
             incident_id,
             plugin_name,
             selected_ip,
+            transport_name,
             namespace,
             started_at,
             capability_checks,
@@ -246,6 +253,7 @@ def main(argv: List[str] | None = None) -> int:
             incident_id,
             plugin_name,
             selected_ip,
+            transport_name,
             namespace,
             started_at,
             capability_checks,

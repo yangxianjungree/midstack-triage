@@ -30,6 +30,18 @@ def load_remote_executor_run_result(remote_run_dir: Path) -> Dict[str, Any]:
     return load_yaml(path) if path.exists() else {}
 
 
+def executor_transport(value: Dict[str, Any]) -> str:
+    transport = str(value.get("transport") or "").strip().lower()
+    return "local" if transport == "local" else "remote"
+
+
+def executor_method(value: Dict[str, Any], *, plural: bool = False) -> str:
+    suffix = "scripts" if plural else "script"
+    if executor_transport(value) == "local":
+        return "local transport + staged packaged %s" % suffix
+    return "ssh + staged packaged %s" % suffix
+
+
 def copy_remote_run_support_files(remote_run_dir: Path, output_dir: Path) -> None:
     for filename in (
         "remote-executor-run.yaml",
@@ -78,7 +90,7 @@ def merge_remote_executor_run_result(collection_report: Dict[str, Any], run_resu
             "action_id": "remote-executor-run",
             "name": "remote executor batch run",
             "target": selected_ip or "remote executor",
-            "method": "ssh + staged packaged scripts",
+            "method": executor_method(run_result, plural=True),
             "status": status or "unknown",
             "performed_at": str(run_result.get("finished_at") or run_result.get("started_at") or ""),
         }
@@ -127,7 +139,7 @@ def merge_remote_executor_result(collection_report: Dict[str, Any], script_id: s
         "action_id": "remote-executor-%s" % script_id.replace(".", "-"),
         "name": "remote executor run %s" % script_id,
         "target": selected_ip or script_id,
-        "method": "ssh + staged packaged script",
+        "method": executor_method(result),
         "status": status or "unknown",
         "performed_at": str(result.get("finished_at") or result.get("started_at") or ""),
     }

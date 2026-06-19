@@ -82,3 +82,23 @@ def test_local_access_from_config_preserves_explicit_node_ssh():
     assert access["node_access"]["ssh"]["auth_preference"] == "password"
     assert access["node_access"]["ssh"]["username"] == "node-user"
     assert access["node_access"]["ssh"]["port"] == 2202
+
+
+def test_run_result_records_transport():
+    contracts = importlib.import_module("execution.remote.contracts")
+
+    result = contracts.build_run_result(
+        "incident-1",
+        "midstack-triage",
+        "local",
+        "local",
+        "mongo",
+        "2026-06-19T00:00:00+08:00",
+        [],
+        [],
+        {"code": "", "message": ""},
+        [],
+        "success",
+    )
+
+    assert result["transport"] == "local"

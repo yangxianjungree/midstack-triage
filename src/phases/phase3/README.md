@@ -26,6 +26,12 @@
 规则：
 
 - 第 3 段负责证据构建和治理，不直接给出最终分析结论。
+- `scenario_inference.unresolved=true` 时，Phase 3 保留 top1 `scenario` 作为主路由，
+  但 skill runtime 会合并候选场景的 evidence/skill 覆盖，避免交叉场景过早收敛。
+- Phase 3 执行 live collection 时必须以显式 `execution_mode` 为权威：
+  `remote` 只使用 `remote-config.yaml`，`local` 只使用 `local-config.yaml`，
+  `offline` 不启动采集或定向补采。`remote_config` / `local_config` 只作为
+  对应 mode 的配置文件，不作为 mode 推断来源。
 - 远程执行器的正式实现已经下沉到 `src/execution/remote/executor.py`。
 - Phase 3 不保留聚合壳；新运行时代码必须从具体模块导入。
 - 仓库不再保留 `tools/remote-*` 兼容壳；工程验证和插件 runtime 统一直接调用 `execution.remote.executor`。

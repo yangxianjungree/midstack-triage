@@ -13,6 +13,14 @@ from shared.analysis_runtime import (
     find_analysis_rules_fallback_file,
     write_report,
 )
+from shared.reasoning_history import (
+    REASONING_MANIFEST_FILENAME,
+    analysis_content_hash,
+    current_head_analysis_hash,
+    current_head_segment_id,
+    current_head_segment_path,
+    write_reasoning_segment,
+)
 from shared.workspace import (
     adapter_output,
     add_record_ref_if_exists,
@@ -44,6 +52,16 @@ def build_finalize_adapter_output(incident_dir: Path, input_data, analysis):
             }
         )
     add_record_ref_if_exists(output, incident_dir, "agent_reasoning_task", AGENT_REASONING_TASK_FILENAME, "phase-4/5 Agent reasoning task and output contract")
+    add_record_ref_if_exists(output, incident_dir, "reasoning_manifest", REASONING_MANIFEST_FILENAME, "append-only reasoning history manifest")
+    current_segment = current_head_segment_path(incident_dir)
+    if current_segment is not None:
+        output["record_refs"].append(
+            {
+                "name": "reasoning_current_segment",
+                "path": str(current_segment),
+                "description": "current append-only reasoning segment",
+            }
+        )
     add_record_ref_if_exists(output, incident_dir, "report", "report.md", "finalized human-readable report")
     add_record_ref_if_exists(output, incident_dir, "collection_report", "collection_report.yaml", "stage-3 collection summary")
     output["next_actions"] = analysis_next_action_texts(analysis)
@@ -124,6 +142,18 @@ def finalize_analysis(args, normalize_collection_report_gaps) -> int:
         analysis["updated_at"] = now_iso()
         write_yaml(analysis_file, analysis)
     write_report(incident_dir, input_data, analysis)
+    if current_head_analysis_hash(incident_dir) != analysis_content_hash(analysis):
+        previous_segment_id = current_head_segment_id(incident_dir)
+        dependencies = [previous_segment_id] if previous_segment_id else []
+        write_reasoning_segment(
+            incident_dir,
+            "agent_refinement",
+            analysis,
+            summary="Agent or human refinement finalized the current analysis",
+            depends_on=dependencies,
+            supersedes=dependencies,
+            output_refs={"analysis": "analysis.yaml", "report": "report.md"},
+        )
     output = build_finalize_adapter_output(incident_dir, input_data, analysis)
 
     update_incident_meta(incident_dir, {"status": "analysed", "current_command": "analyse"})

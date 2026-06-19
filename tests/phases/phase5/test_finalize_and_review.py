@@ -12,6 +12,7 @@ if str(SRC_DIR) not in sys.path:
 
 from phases.phase5.finalize import finalize_analysis
 from phases.phase5.review import build_review_block, run_review
+from shared.reasoning_history import write_reasoning_segment
 
 
 def write_yaml(path: Path, payload) -> None:
@@ -119,6 +120,99 @@ def test_finalize_analysis_completed_output_includes_expected_refs(tmp_path):
     assert "analysis_rules_fallback" not in record_ref_names
     assert adapter["status"] == "completed"
     assert adapter["next_actions"] == ["check pod events"]
+
+
+def test_finalize_analysis_appends_agent_refinement_reasoning_segment(tmp_path):
+    incident_dir = tmp_path / "incident"
+    input_data = {
+        "incident_id": "demo-incident",
+        "middleware": "mongodb",
+        "namespace": "psmdb-test",
+        "customer_clue": "mongo split brain",
+    }
+    rules_analysis = {
+        "conclusion_summary": {
+            "statement": "Replica member health issue suspected",
+            "confidence": "low",
+            "deepest_supported_level": "phenomenon",
+            "primary_cause_category": "unknown",
+            "impact_scope": "shard0",
+            "evidence": ["one replica member looks unhealthy"],
+        },
+        "hypotheses": [
+            {
+                "hypothesis_id": "H1",
+                "statement": "A replica member health issue caused inconsistency symptoms",
+                "supporting_evidence": ["member unhealthy"],
+                "validation_result": "insufficient",
+            }
+        ],
+        "next_actions": [{"action": "compare replica member views"}],
+    }
+    refined_analysis = {
+        "conclusion_summary": {
+            "statement": "Replica set split brain is confirmed by divergent member views",
+            "confidence": "medium",
+            "deepest_supported_level": "mechanism",
+            "primary_cause_category": "replica_set_split_brain",
+            "impact_scope": "shard0",
+            "evidence": ["data-0 and data-1 both report primary paths"],
+        },
+        "hypotheses": [
+            {
+                "hypothesis_id": "H1",
+                "statement": "Replica set members have divergent primary views",
+                "supporting_evidence": ["data-0 primary", "data-1 primary"],
+                "counter_evidence": [],
+                "validation_actions": [{"action": "compare rs.status views", "status": "done"}],
+                "validation_result": "supported",
+            }
+        ],
+        "next_actions": [{"action": "compare rs.conf from all members"}],
+    }
+    write_yaml(incident_dir / "input.yaml", input_data)
+    write_yaml(incident_dir / "analysis.rules-fallback.yaml", rules_analysis)
+    write_yaml(incident_dir / "analysis.yaml", refined_analysis)
+    (incident_dir / "report.md").write_text("# draft\n", encoding="utf-8")
+    write_yaml(incident_dir / "collection_report.yaml", {"evidence_gaps": []})
+    write_yaml(incident_dir / "signal_bundle.yaml", {"abnormal_signals": []})
+    write_yaml(
+        incident_dir / "meta.yaml",
+        {
+            "incident_id": "demo-incident",
+            "middleware": "mongodb",
+            "status": "analysing",
+            "current_command": "analyse",
+        },
+    )
+    first_segment = write_reasoning_segment(
+        incident_dir,
+        "rules_fallback",
+        rules_analysis,
+        summary="rules fallback seeded the first analysis",
+        output_refs={"analysis": "analysis.yaml", "report": "report.md", "rules_fallback": "analysis.rules-fallback.yaml"},
+    )
+    first_content = first_segment.read_text(encoding="utf-8")
+
+    args = SimpleNamespace(output_root=str(tmp_path), incident_dir=str(incident_dir))
+    rc = finalize_analysis(args, lambda report: None)
+
+    assert rc == 0
+    manifest = yaml.safe_load((incident_dir / "reasoning-manifest.yaml").read_text(encoding="utf-8"))
+    adapter = yaml.safe_load((incident_dir / "adapter-output.yaml").read_text(encoding="utf-8"))
+    record_ref_names = {item["name"] for item in adapter["record_refs"]}
+    second_segment = incident_dir / "reasoning" / "0002-agent-refinement.yaml"
+    second = yaml.safe_load(second_segment.read_text(encoding="utf-8"))
+
+    assert first_segment.read_text(encoding="utf-8") == first_content
+    assert second_segment.exists()
+    assert manifest["current_head"] == "reasoning/0002-agent-refinement.yaml"
+    assert [item["source"] for item in manifest["segments"]] == ["rules_fallback", "agent_refinement"]
+    assert manifest["segments"][1]["depends_on"] == ["0001-rules-fallback"]
+    assert manifest["segments"][1]["supersedes"] == ["0001-rules-fallback"]
+    assert second["hypothesis_validations"][0]["isolation"]["private_write_ref"] == "reasoning/0002-agent-refinement.yaml#hypothesis_validations[H1]"
+    assert "reasoning_manifest" in record_ref_names
+    assert "reasoning_current_segment" in record_ref_names
 
 
 def test_build_review_block_scores_supported_analysis():

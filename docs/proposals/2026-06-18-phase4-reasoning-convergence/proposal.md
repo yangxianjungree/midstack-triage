@@ -558,6 +558,36 @@ def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> N
   - Verify: `rg -n "invariants.md|config_version|voting_members_count|rs.conf|rs.reconfig" domains/mongodb/components/replica-set domains/mongodb/skills/replica-set domains/mongodb/runbooks/replica-set`
   - Files: `domains/mongodb/components/replica-set/invariants.md`、`domains/mongodb/components/replica-set/README.md`、`domains/mongodb/skills/replica-set/triage-replica-member-not-healthy/skill.md`、`domains/mongodb/runbooks/replica-set/replica-member-not-healthy/runbook.md`
 
+### Slice 11. Append-only 推理历史与假设验证隔离
+
+目标：
+
+- 保留 `analysis.yaml` 和 `report.md` 作为最新物化视图，同时避免中间推理、论证和猜想验证过程被覆盖。
+- 为每个假设验证过程记录共享只读证据和私有验证写入位置。
+- 让 manifest 指向当前 head，方便用户读最新结论，也方便开发者审计历史变化。
+
+验收：
+
+- `/midstack:analyse` 生成 `reasoning-manifest.yaml` 和 `reasoning/0001-rules-fallback.yaml`。
+- `finalize` 在 `analysis.yaml` 相对当前 head 发生变化时追加 `agent_refinement` segment，不改写旧 segment。
+- `adapter-output.yaml.record_refs` 暴露 `reasoning_manifest` 和 `reasoning_current_segment`。
+- 每个 segment 的 `hypothesis_validations` 包含 `shared_read_refs` 和 `private_write_ref`，表达共享/隔离边界。
+
+任务：
+
+- [x] Task: 推理历史 helper 与单测
+  - Acceptance: 写入第二个 segment 时，第一个 segment 内容保持不变；manifest `current_head` 指向最新段。
+  - Verify: `python3 -m pytest tests/shared/test_reasoning_history.py -q`
+  - Files: `src/shared/reasoning_history.py`、`tests/shared/test_reasoning_history.py`
+- [x] Task: analyse/finalize 接入 append-only 历史
+  - Acceptance: analyse 写 rules fallback segment；finalize 追加 agent refinement segment 并输出 record refs。
+  - Verify: `python3 -m pytest tests/tools/plugin/test_midstack_analyse.py::MidstackAnalyseTest::test_analyse_input_dir_completed_writes_expected_outputs tests/phases/phase5/test_finalize_and_review.py::test_finalize_analysis_appends_agent_refinement_reasoning_segment -q`
+  - Files: `src/commands/analyse.py`、`src/phases/phase5/finalize.py`、`tests/tools/plugin/test_midstack_analyse.py`、`tests/phases/phase5/test_finalize_and_review.py`
+- [x] Task: 文档记录物化视图、append-only 历史和共享隔离模型
+  - Acceptance: incident spec 和 Phase 4 开发文档说明 `reasoning-manifest.yaml`、`reasoning/*.yaml`、共享只读证据池和 hypothesis 私有写入边界。
+  - Verify: `rg -n "reasoning-manifest|append-only|private_write_ref|shared_read_refs" docs/specs docs/project`
+  - Files: `docs/specs/incident-record.spec.md`、`docs/project/phase4-agent-driven-reasoning.md`、`docs/project/phase4-multitrack-integration.md`
+
 ## 测试与门禁
 
 最小验证：
@@ -726,5 +756,6 @@ Pulsar 当前有 skeleton 资产、golden path、两个 MVP 脚本和 rules anal
 - [x] 新增或明确 component / triage surface taxonomy。
 - [x] 预留历史经验召回字段并明确证据边界。
 - [x] 补充 Phase 4 Agent 驱动推理流程文档和 MongoDB replica set 不变量知识。
+- [x] 补充 append-only 推理历史和 hypothesis validation 共享/隔离合同。
 - [x] 补充对应测试或 validator。
 - [x] 运行最小门禁和必要 replay/score gate。

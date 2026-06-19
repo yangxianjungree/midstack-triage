@@ -42,11 +42,15 @@ class MidstackAnalyseTest(unittest.TestCase):
             self.assertIn("analysis_multitrack", record_ref_names)
             self.assertIn("analysis_rules_fallback", record_ref_names)
             self.assertIn("agent_reasoning_task", record_ref_names)
+            self.assertIn("reasoning_manifest", record_ref_names)
+            self.assertIn("reasoning_current_segment", record_ref_names)
             self.assertIn("report", record_ref_names)
             self.assertTrue((output_dir / "analysis.yaml").exists())
             self.assertTrue((output_dir / "analysis.multitrack.yaml").exists())
             self.assertTrue((output_dir / "analysis.rules-fallback.yaml").exists())
             self.assertTrue((output_dir / "agent-reasoning-task.md").exists())
+            self.assertTrue((output_dir / "reasoning-manifest.yaml").exists())
+            self.assertTrue((output_dir / "reasoning" / "0001-rules-fallback.yaml").exists())
             self.assertTrue((output_dir / "report.md").exists())
 
     def test_analyse_offline_input_dir_completed_without_remote_collection(self) -> None:

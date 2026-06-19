@@ -41,6 +41,21 @@ superseded_by: none
 6. Agent refinement 读取上述产物，补充或修正 `analysis.yaml` 与 `report.md`。
 7. 第 5 段把可靠结论、证据缺口、只读下一步和可沉淀知识写回结果与 `knowledge_candidates`。
 
+## 推理历史与共享隔离
+
+`analysis.yaml` 和 `report.md` 是最新物化视图，允许被 rules fallback、Agent refinement 和 finalize 刷新。为了避免推理过程被覆盖，Phase 4/5 同时维护 append-only 历史：
+
+- `reasoning-manifest.yaml`：可变索引，记录当前 `current_head`、物化输出、共享证据池和隔离模型。
+- `reasoning/*.yaml`：不可变 segment，例如 `0001-rules-fallback.yaml`、`0002-agent-refinement.yaml`；每个 segment 保存当轮 `analysis_snapshot`、结论摘要和 hypothesis validation。
+
+共享/隔离规则：
+
+- `input.yaml`、`structured_record.yaml`、`signal_bundle.yaml`、`collection_report.yaml` 属于共享只读证据池。
+- 每个 hypothesis validation 只能写自己的 `private_write_ref`，例如 `reasoning/0002-agent-refinement.yaml#hypothesis_validations[H1]`。
+- 一个 hypothesis 的支持证据、反证、证据缺口和验证请求必须挂回该 hypothesis，不能覆盖另一个 hypothesis 的验证记录。
+- 当某轮 refinement 需要改变总体结论时，追加新的 segment 并移动 manifest `current_head`；不要改写旧 segment。
+- `analysis.yaml` 保持方便消费的最新视图；需要审计过程时读取 manifest 和 segment 历史。
+
 ## Agent 的职责
 
 Agent refinement 应该做：

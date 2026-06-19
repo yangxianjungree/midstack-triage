@@ -416,6 +416,7 @@ def write_agent_reasoning_task(
             "- `analysis.yaml` reflects the final Agent reasoning rather than the rules-only draft.",
             "- `analysis.yaml` records multi-hypothesis reasoning, gap severity, source boundaries, and conclusion ceiling where relevant.",
             "- `report.md` matches the final conclusion, confidence, evidence gaps, supported level, and next actions.",
+            "- Run finalize after refinement so `reasoning-manifest.yaml` points at a new append-only reasoning segment instead of losing the previous reasoning history.",
             "",
         ]
     )

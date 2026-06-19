@@ -29,6 +29,10 @@ from shared.analysis_runtime import (
     write_agent_reasoning_task,
     write_report,
 )
+from shared.reasoning_history import (
+    REASONING_MANIFEST_FILENAME,
+    write_reasoning_segment,
+)
 
 
 ANALYSABLE_STATUSES = ("ready", "analysed")
@@ -257,6 +261,18 @@ def _write_completed_analysis_output(
         report_file,
         matched_skills=skill_runtime.get("skills") if skill_runtime else None,
     )
+    reasoning_segment_file = write_reasoning_segment(
+        output_dir,
+        "rules_fallback",
+        analysis,
+        summary="rules fallback seeded the first analysis",
+        output_refs={
+            "analysis": "analysis.yaml",
+            "report": "report.md",
+            "rules_fallback": rules_fallback_file.name,
+            "agent_reasoning_task": task_file.name,
+        },
+    )
     output["record_refs"].append(
         {
             "name": "analysis_rules_fallback",
@@ -269,6 +285,14 @@ def _write_completed_analysis_output(
             "name": "agent_reasoning_task",
             "path": str(task_file),
             "description": "phase-4/5 Agent reasoning task and output contract",
+        }
+    )
+    add_record_ref_if_exists(output, output_dir, "reasoning_manifest", REASONING_MANIFEST_FILENAME, "append-only reasoning history manifest")
+    output["record_refs"].append(
+        {
+            "name": "reasoning_current_segment",
+            "path": str(reasoning_segment_file),
+            "description": "current append-only reasoning segment",
         }
     )
     output["record_refs"].append({"name": "report", "path": str(report_file), "description": "generated human-readable report"})

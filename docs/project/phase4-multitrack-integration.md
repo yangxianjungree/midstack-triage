@@ -62,6 +62,8 @@ superseded_by: none
 
 - `analysis.yaml`
 - `analysis.rules-fallback.yaml`
+- `reasoning-manifest.yaml`
+- `reasoning/*.yaml`
 - `report.md`
 
 当前生产合同：
@@ -69,6 +71,7 @@ superseded_by: none
 - `analysis.yaml` 的生产者是 `src/phases/phase4/rules/<middleware>.py` rules fallback + guardrails。
 - `analysis.multitrack.yaml` 是 multitrack renderer 产出的辅助诊断草稿，不替代 `analysis.yaml`。
 - `agent-reasoning-task.md` 是人工或 Agent refinement 合同，不代表默认真实 Claude API 推理已经自动闭环。
+- `reasoning-manifest.yaml` 是推理历史索引；`reasoning/*.yaml` 是 append-only segment，用于保留 rules fallback 和 Agent refinement 的过程快照。
 - rules fallback 与 multitrack 辅助草稿都保留 `retrieval_context`、`experience_matches`、`source_boundaries` 顶层字段；共享契约 helper 位于 `src/phases/phase4/analysis_contract.py`。
 - Agent refinement 必须保留这些顶层字段；历史经验、runbook、知识资产和用户线索只能作为假设来源或验证路径来源，不能直接作为当前故障结论证据。
 

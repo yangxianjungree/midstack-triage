@@ -1,6 +1,6 @@
 ---
 status: authoritative
-last_updated: 2026-06-10
+last_updated: 2026-06-20
 supersedes: none
 superseded_by: none
 ---
@@ -30,6 +30,12 @@ incidents/
     signal_bundle.yaml
     collection_report.yaml
     analysis.yaml
+    analysis.rules-fallback.yaml
+    analysis.multitrack.yaml
+    reasoning-manifest.yaml
+    reasoning/
+      0001-rules-fallback.yaml
+      0002-agent-refinement.yaml
     report.md
     logs/
       raw/
@@ -46,6 +52,8 @@ incidents/
 | `signal_bundle.yaml` | 治理后的信号结果 | 第 3 段 |
 | `collection_report.yaml` | 采集过程结果、失败、留白和证据缺口 | 第 3 段 |
 | `analysis.yaml` | 假设、验证、结论、知识沉淀候选、review 结果 | 第 4、5 段 |
+| `reasoning-manifest.yaml` | append-only 推理历史索引、当前 head、共享/隔离模型 | 第 4、5 段 |
+| `reasoning/*.yaml` | 单轮推理 segment；保存当轮分析快照、假设验证记录和证据引用 | 第 4、5 段 |
 | `report.md` | 面向用户的可读排障报告，由 `analyse` 基于 `analysis.yaml` 生成 | 第 5 段 |
 
 ## 3. `meta.yaml`
@@ -206,7 +214,70 @@ updated_at:
 - `source_boundaries` 明确当前故障证据与假设来源的边界；历史经验、runbook 和用户线索不得直接作为 `conclusion_summary` 的支撑证据
 - `review` 并入 `analysis.yaml`，不再单独使用 `review.yaml`
 
-## 9. `logs/`
+## 9. `reasoning-manifest.yaml` 和 `reasoning/`
+
+### 目标
+
+- 保存第 4、5 段推理过程的 append-only 历史
+- 让 `analysis.yaml` 和 `report.md` 继续作为“最新物化视图”，同时保留每轮推理为什么变化
+- 明确多假设验证过程的共享输入和隔离输出边界
+
+### 最小结构
+
+```yaml
+schema_version: reasoning-history.v1
+current_head: reasoning/0002-agent-refinement.yaml
+materialized_outputs:
+  analysis: analysis.yaml
+  report: report.md
+shared_evidence_pool:
+  access: read_only
+  refs:
+    - path: input.yaml
+      access: read_only
+      status: present
+isolation_model:
+  shared_readonly_refs:
+    - input.yaml
+    - structured_record.yaml
+    - signal_bundle.yaml
+    - collection_report.yaml
+  isolated_validation_prefix: reasoning/*.yaml#hypothesis_validations
+segments:
+  - segment_id: 0001-rules-fallback
+    path: reasoning/0001-rules-fallback.yaml
+    source: rules_fallback
+    analysis_sha256: ...
+```
+
+每个 `reasoning/*.yaml` segment 至少包含：
+
+```yaml
+schema_version: reasoning-segment.v1
+segment_id: 0002-agent-refinement
+source: agent_refinement
+shared_evidence_pool:
+  access: read_only
+hypothesis_validations:
+  - hypothesis_id: H1
+    isolation:
+      scope: hypothesis_validation
+      shared_read_refs:
+        - signal_bundle.yaml
+      private_write_ref: reasoning/0002-agent-refinement.yaml#hypothesis_validations[H1]
+analysis_snapshot:
+```
+
+### 使用原则
+
+- `reasoning/*.yaml` 是 append-only 历史段；已存在的段不得被后续推理静默改写。
+- `reasoning-manifest.yaml` 是可变索引；它可以更新 `current_head`，但不得伪造或删除已有 segment。
+- `analysis.yaml` 和 `report.md` 是最新物化视图；允许被 Agent/finalize 刷新，但对应变化必须追加新的 reasoning segment。
+- `shared_evidence_pool` 中的 incident 证据对所有 hypothesis validation 只读共享。
+- 每个 hypothesis validation 只能写自己的 `private_write_ref`，不能覆盖其他 hypothesis 的验证记录。
+- 一个 hypothesis 的反证、证据缺口和验证动作必须挂回该 hypothesis；如果需要影响总体结论，通过新的 segment 发布，而不是直接改写旧段。
+
+## 10. `logs/`
 
 ### 目标
 
@@ -223,7 +294,7 @@ updated_at:
 
 手工粘贴内容在未经治理前不得直接伪装成 `structured_record.yaml`、`signal_bundle.yaml` 或 `collection_report.yaml`。
 
-## 10. 文件之间的关系
+## 11. 文件之间的关系
 
 ### 从前到后的关系
 
@@ -239,7 +310,9 @@ updated_at:
    - 说明采集质量和证据缺口
 6. `analysis.yaml`
    - 基于前面三类结果做推理、结论和 review
-7. `report.md`
+7. `reasoning-manifest.yaml` / `reasoning/`
+   - 记录 `analysis.yaml` 与 `report.md` 每次物化变化背后的推理历史
+8. `report.md`
    - 基于 `analysis.yaml` 生成面向用户的可读报告
 
 ### 脚本与 Agent 的边界
@@ -251,8 +324,9 @@ updated_at:
 - Agent 主要产出：
   - `analysis.yaml`
   - `report.md`
+  - `reasoning/*.yaml` 的追加段
 
-## 11. 当前结论
+## 12. 当前结论
 
 当前编码前已经可以明确以下结构基线：
 

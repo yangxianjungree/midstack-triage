@@ -184,6 +184,28 @@ def event_signals(outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
+def resource_metric_signals(outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    metrics = detail(outputs, "mongodb.collect.resources.metrics", "resource_metrics") or {}
+    nodes = metrics.get("nodes") or []
+    pods = metrics.get("pods") or []
+    return {
+        "node_count": len(nodes),
+        "pod_count": len(pods),
+        "nodes": nodes,
+        "pods": pods,
+        "hot_nodes": [
+            item
+            for item in nodes
+            if int(item.get("cpu_percent") or 0) >= 90 or int(item.get("memory_percent") or 0) >= 90
+        ],
+        "hot_pods": [
+            item
+            for item in pods
+            if int(item.get("cpu_millicores") or 0) >= 1000 or int(item.get("memory_mi") or 0) >= 4096
+        ],
+    }
+
+
 def scheduling_condition(pod: Dict[str, Any]) -> Dict[str, Any]:
     for condition in pod.get("conditions") or []:
         if condition.get("type") == "PodScheduled":
@@ -206,7 +228,7 @@ def is_resource_shortage(message: str) -> bool:
     return "insufficient cpu" in lowered or "insufficient memory" in lowered or "insufficient ephemeral-storage" in lowered
 
 
-def abnormal_signals_from_inventory(inventory: Dict[str, Any], events: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[str]]:
+def abnormal_signals_from_inventory(inventory: Dict[str, Any], events: Dict[str, Any], resources: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[str]]:
     signals: List[Dict[str, Any]] = []
     links: List[Dict[str, Any]] = []
     timeline: List[str] = []
@@ -329,6 +351,24 @@ def abnormal_signals_from_inventory(inventory: Dict[str, Any], events: Dict[str,
             % (sts.get("ready_replicas"), sts.get("replicas"), sts.get("current_replicas"), sts.get("updated_replicas")),
         )
 
+    for node in resources.get("hot_nodes") or []:
+        add(
+            "node-resource-pressure",
+            "medium",
+            "node/%s" % node.get("node_ref"),
+            "Node resource metrics are high; cpu_percent=%s memory_percent=%s"
+            % (node.get("cpu_percent"), node.get("memory_percent")),
+        )
+
+    for pod in resources.get("hot_pods") or []:
+        add(
+            "pod-resource-pressure",
+            "medium",
+            "pod/%s" % pod.get("pod_ref"),
+            "Pod resource metrics are high; cpu_millicores=%s memory_mi=%s"
+            % (pod.get("cpu_millicores"), pod.get("memory_mi")),
+        )
+
     return signals, links, timeline
 
 
@@ -410,10 +450,11 @@ def main() -> int:
         "inventory": inventory_signals(outputs),
         "topology": topology_signals(outputs),
         "events": event_signals(outputs),
+        "resources": resource_metric_signals(outputs),
         "logs": log_signals(outputs),
         "evidence_gaps": evidence_gaps,
     }
-    abnormal_signals, object_signal_links, timeline_summary = abnormal_signals_from_inventory(bundle["inventory"], bundle["events"])
+    abnormal_signals, object_signal_links, timeline_summary = abnormal_signals_from_inventory(bundle["inventory"], bundle["events"], bundle["resources"])
     if abnormal_signals:
         bundle["signal_overview"] = {
             "status": "abnormal",
@@ -460,7 +501,7 @@ def main() -> int:
                 {
                     "item": "signal_bundle",
                     "source": "%d script output(s)" % len(outputs),
-                    "note": "inventory, topology and log signals normalized",
+                    "note": "inventory, topology, resource and log signals normalized",
                 }
             ] if outputs else [],
             "failed_items": [],

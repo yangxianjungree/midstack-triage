@@ -18,7 +18,9 @@ ORCHESTRATION_SIGNAL_IDS = {
 SIGNAL_CATEGORY_BY_ID = {
     "node-memory-pressure": "resource_pressure",
     "node-disk-pressure": "resource_pressure",
+    "node-resource-pressure": "resource_pressure",
     "pod-resource-insufficient": "resource_pressure",
+    "pod-resource-pressure": "resource_pressure",
     "pod-unschedulable": "runtime_failure",
     "pod-node-selector-mismatch": "runtime_failure",
     "pod-volume-binding-failed": "runtime_failure",

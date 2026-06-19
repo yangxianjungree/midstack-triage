@@ -27,6 +27,11 @@ scripts:
     runtime: shell
     readonly: true
 
+  - script_id: mongodb.collect.resources.metrics
+    runtime_path: assets/scripts/mongodb/collect-resource-metrics.sh
+    runtime: shell
+    readonly: true
+
   - script_id: mongodb.collect.mongos.get_shard_map
     runtime_path: assets/scripts/mongodb/collect-mongos-get-shard-map.sh
     runtime: shell

@@ -73,6 +73,23 @@ scripts:
       scope: namespace
       max_events: 200
 
+  - script_id: mongodb.collect.resources.metrics
+    source: collect/collect-resource-metrics.sh
+    phase: collect
+    target: resources
+    action: metrics
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: true
+    collection_tier: baseline
+    signal_layer: system
+    cost_class: medium
+    noise_class: low
+    sample_policy:
+      source: metrics-server
+      max_targets: namespace
+
   - script_id: mongodb.collect.mongos.get_shard_map
     source: collect/collect-mongos-get-shard-map.sh
     phase: collect

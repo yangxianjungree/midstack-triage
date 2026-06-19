@@ -21,6 +21,14 @@ values:
     category: resource-scheduling
     middleware_agnostic: true
     description: Pod is unschedulable because requested CPU, memory, or ephemeral storage cannot be satisfied.
+  - id: node-resource-pressure
+    category: resource-scheduling
+    middleware_agnostic: true
+    description: Node CPU or memory usage is near saturation during the incident window.
+  - id: pod-resource-pressure
+    category: resource-scheduling
+    middleware_agnostic: true
+    description: Pod CPU or memory usage is high enough to affect runtime behavior during the incident window.
   - id: pod-image-pull-failed
     category: image
     middleware_agnostic: true

@@ -54,8 +54,8 @@ def validate_runtime_map_resolution() -> None:
         ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml",
         ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml",
     )
-    if len(entries) != 11:
-        raise AssertionError("expected 11 runtime-map-backed script entries, got %d" % len(entries))
+    if len(entries) != 12:
+        raise AssertionError("expected 12 runtime-map-backed script entries, got %d" % len(entries))
     directed_entries = module.load_script_entries(
         ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml",
         ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml",

@@ -21,9 +21,9 @@ superseded_by: none
 - `tools/plugin/midstack-local.py` 已收敛为本地 CLI 适配层，不再承载膨胀的正式实现
 - Phase 1/2 已支持 remote/local/offline 三类 intake 场景识别；remote 仍是默认主路径，local 已可基于本机 kubectl context 进入 live collection，offline 仍以已有 artifact 消费为主
 - 第 3 段默认日志采集已收敛到共享 `kubernetes.collect.logs.current` / `kubernetes.collect.logs.previous`；MongoDB 日志 alias 仅作兼容入口
-- 第 4 段多轨推理实现已收敛到 `src/phases/phase4/multitrack/`；默认 agent runtime 为 `auto`，可在 `ANTHROPIC_API_KEY` + `anthropic` SDK 可用时尝试 Claude 推理，否则降级 mock。当前 `/midstack:analyse` 的生产 `conclusion_summary` 默认由 rules fallback + guardrails 守底，multitrack 结果会以 `agent_reasoning` 辅助草稿进入 `analysis.yaml` 和 reasoning segment，并由 `agent_conclusion_gate` 基于 `evidence_refs` 与结构化 `conclusion_candidate` 判断是否可覆盖；eligible 时会追加 `agent_conclusion_override` segment
+- 第 4 段多轨推理实现已收敛到 `src/phases/phase4/multitrack/`；默认 agent runtime 为 `auto`，可在 `ANTHROPIC_API_KEY` + `anthropic` SDK 可用时尝试 Claude 推理，否则降级 mock。当前 `/midstack:analyse` 的生产 `conclusion_summary` 默认由 rules fallback + guardrails 守底，multitrack 结果会以 `agent_reasoning` 辅助草稿进入 `analysis.yaml` 和 reasoning segment，并由 `agent_conclusion_gate` 基于 `evidence_refs`、`conclusion_candidate.evidence`、结构化 `conclusion_candidate`、deep analysis 物化状态和 critical gap 判断是否可覆盖；eligible 时会追加 `agent_conclusion_override` segment
 - 第 4/5 段已生成 append-only 推理历史：`reasoning-manifest.yaml` 和 `reasoning/*.yaml` segment；`analysis.yaml` / `report.md` 作为最新物化视图
-- Phase 4 rules 已输出 `reasoning_timeline`、`deepening_findings`、`verification_requests`、`deep_analysis_requests`、`retrieval_context`、`experience_matches` 和 `source_boundaries`；历史经验召回仍是预留字段，当前不接入真实向量库
+- Phase 4 rules 已输出 `reasoning_timeline`、`deepening_findings`、`verification_requests`、`deep_analysis_requests`、`retrieval_context`、`experience_matches` 和 `source_boundaries`；MongoDB split-brain 已能把多视角不变量、当前 TCP 反证和 heartbeat/election/reconfig 日志 highlight 推入成因假设；历史经验召回仍是预留字段，当前不接入真实向量库
 - 受控验证请求已分层：一等只读 `auto_allowed` 脚本可由 analyse 编排交回 Phase 3 定向补采；二等 ad hoc 只读命令必须结构化 argv、approval required；破坏性命令会被 guardrail 标记 blocked
 - Replay fixture 已拆分为 `tests/fixtures/active/` 与 `tests/fixtures/legacy/`，默认 replay、score 和仓库门禁只读取 active 样本
 - Fixture hygiene gate 已覆盖 active、legacy 和 golden-path fixtures，阻断运行时生成物、疑似密钥和公网 IP；内网 IP 当前作为 warning 暴露
@@ -173,9 +173,9 @@ superseded_by: none
 
 - `force_recollect` 参数
 - 复杂多记录切换命令
-- 真实 Claude API 推理结果的生产质量闭环（当前 auto runtime 可尝试 Claude，draft 已进入 `agent_reasoning`，`agent_conclusion_gate` 会基于证据引用和结构化候选结论评估是否具备提升资格，eligible 时可覆盖 `conclusion_summary`；仍需更多真实场景验证和策略调优）
+- 真实 Claude API 推理结果的更多真实场景验证和策略调优（当前 auto runtime 可尝试 Claude，draft 已进入 `agent_reasoning`，`agent_conclusion_gate` 已基于证据引用、结构化候选结论、deep analysis 物化状态和 critical gap 提供保守提升闭环，eligible 时可覆盖 `conclusion_summary`）
 - 深入层自动执行闭环：
-  - 基线扫描结果自动物化
+  - 更复杂的基线扫描结果解释和策略调优
   - 代码逻辑分析结果自动回写生产结论
   - 代码路径追踪自动闭合证据边
   - 复现脚本或 fixture 自动生成

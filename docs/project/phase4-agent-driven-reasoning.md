@@ -89,6 +89,8 @@ Agent refinement 不应该做：
 - 候选 hypothesis 必须是 `supported`，置信度达到门槛。
 - 候选必须通过 `agent_reasoning.hypotheses[].evidence_refs` 引用当前 incident 证据，例如 `structured_record`、`signal_bundle`、`collection_report`、`deepening_findings`、`deep_analysis_results` 或 `verification_requests`。
 - 候选必须提供 `agent_reasoning.hypotheses[].conclusion_candidate`，字段对齐正式 `conclusion_summary` 的核心形状：`statement`、`confidence`、`impact_scope`、`primary_cause_category`，并可包含 `deepest_supported_level`、`evidence`、`limitations`。
+- `agent_reasoning.hypotheses[].conclusion_candidate.evidence` 和外层 `evidence_refs` 使用同一套证据边界；不能在正式结论候选里绕过 gate 引用历史经验或用户线索。
+- `deep_analysis_results.*` 只有在 `deep-analysis.yaml` 已物化并写入 `analysis.yaml.deep_analysis_results` 后才能作为提升证据；物化前引用会被 gate 阻塞，物化后 analyse 会重新评估 gate。
 - `experience_matches`、`retrieval_context`、runbook、历史经验和用户线索不能作为直接证据引用。
 - 未闭合的 `critical_gap` 会阻止提升。
 
@@ -144,7 +146,7 @@ Phase 4 可以提出验证请求，但验证请求分层处理。`verification_r
 - 机制层：成员之间的 `rs.status()` 视角不一致，说明副本集决策视图已经分裂。
 - 深化层：如果 `config_version`、`config_term`、members 列表和 `voting_members_count` 多视角不一致，应记录为配置、成员或 quorum 不变量冲突。
 - 反证层：如果当前 TCP/27017 已经双向连通，不能继续把“持续网络分区”当作未经限定的唯一解释。
-- 成因候选层：将历史网络或 MongoDB heartbeat 分区、reconfig/member metadata drift、MongoDB heartbeat/auth/process 层异常写成 `insufficient` hypothesis，而不是直接升格为根因。
+- 成因候选层：将历史网络或 MongoDB heartbeat 分区、reconfig/member metadata drift、MongoDB heartbeat/auth/process 层异常写成独立 hypothesis。没有日志或配置证据时保持 `insufficient`；如果当前 incident 已采到 heartbeat/election/reconfig/stepdown 日志 highlight，则历史 heartbeat/election 分区假设可以提升为 `supported`，但仍不等同于最终修复方案或数据权威侧判断。
 - 待验证层：下一步应转向只读比较 `rs.conf()`、MongoDB heartbeat/election 日志、变更记录和重启前日志，解释为什么配置或视图会分裂；`mongodb.collect.replicaset.rs_conf` 和仓库内日志脚本都属于一等只读资产。
 - 深入层：输出 `deep_analysis_requests`，让 Agent 或开发者继续做健康基线对比、MongoDB 选举/配置决策逻辑解释、证据路径追踪，以及不改 live 集群的只读复现计划。
 

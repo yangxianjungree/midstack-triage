@@ -419,7 +419,7 @@ def _agent_reasoning_summary(phase4_result: Dict[str, Any]) -> Dict[str, Any]:
         "runtime": phase4_result.get("agent_runtime") or {},
         "total_rounds": phase4_result.get("total_rounds", 0),
         "hypotheses": hypotheses,
-        "boundary": "Agent draft is recorded for the main analyse path but does not override rules fallback conclusion_summary.",
+        "boundary": "Agent draft is recorded for the main analyse path; only an eligible agent_conclusion_gate candidate may update conclusion_summary.",
     }
 
 

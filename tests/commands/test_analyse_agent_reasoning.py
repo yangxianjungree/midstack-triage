@@ -21,3 +21,11 @@ def test_agent_reasoning_summary_preserves_conclusion_candidate():
     candidate = summary["hypotheses"][0]["conclusion_candidate"]
     assert candidate["statement"] == "Replica set rs0 has a split-brain mechanism."
     assert candidate["primary_cause_category"] == "replica_set_split_brain"
+
+
+def test_agent_reasoning_summary_boundary_mentions_gate_override():
+    summary = _agent_reasoning_summary(yaml.safe_load(PHASE4_FIXTURE.read_text(encoding="utf-8")))
+
+    assert "agent_conclusion_gate" in summary["boundary"]
+    assert "eligible" in summary["boundary"]
+    assert "does not override" not in summary["boundary"]

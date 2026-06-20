@@ -126,6 +126,9 @@ def test_finalize_analysis_completed_output_includes_expected_refs(tmp_path):
         },
     )
     (incident_dir / "report.md").write_text("# draft\n", encoding="utf-8")
+    (incident_dir / "analysis.multitrack.yaml").write_text("generated_at: test\n", encoding="utf-8")
+    (incident_dir / "deep-analysis.yaml").write_text("generated_at: test\n", encoding="utf-8")
+    (incident_dir / "reasoning-board.yaml").write_text("generated_at: test\n", encoding="utf-8")
     write_yaml(incident_dir / "collection_report.yaml", {"evidence_gaps": []})
     write_yaml(incident_dir / "signal_bundle.yaml", {"abnormal_signals": []})
     write_yaml(
@@ -146,6 +149,9 @@ def test_finalize_analysis_completed_output_includes_expected_refs(tmp_path):
     record_ref_names = {item["name"] for item in adapter["record_refs"]}
     assert "analysis" in record_ref_names
     assert "report" in record_ref_names
+    assert "analysis_multitrack" in record_ref_names
+    assert "deep_analysis" in record_ref_names
+    assert "reasoning_board" in record_ref_names
     assert "analysis_rules_fallback" not in record_ref_names
     assert adapter["status"] == "completed"
     assert adapter["next_actions"] == ["check pod events"]

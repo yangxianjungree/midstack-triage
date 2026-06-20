@@ -82,6 +82,9 @@ def build_finalize_adapter_output(incident_dir: Path, input_data, analysis):
             }
         )
     add_record_ref_if_exists(output, incident_dir, "agent_reasoning_task", AGENT_REASONING_TASK_FILENAME, "phase-4/5 Agent reasoning task and output contract")
+    add_record_ref_if_exists(output, incident_dir, "reasoning_board", "reasoning-board.yaml", "Phase 4 multitrack reasoning board")
+    add_record_ref_if_exists(output, incident_dir, "analysis_multitrack", "analysis.multitrack.yaml", "Phase 4 multitrack reasoning draft")
+    add_record_ref_if_exists(output, incident_dir, "deep_analysis", "deep-analysis.yaml", "materialized Phase 4 deep analysis results")
     add_record_ref_if_exists(output, incident_dir, "reasoning_manifest", REASONING_MANIFEST_FILENAME, "append-only reasoning history manifest")
     current_segment = current_head_segment_path(incident_dir)
     if current_segment is not None:

@@ -1343,6 +1343,142 @@ def test_reason_scope_applies_eligible_agent_conclusion_candidate(tmp_path, monk
     assert any("eligible agent_conclusion_gate" in item for item in adapter["warnings"])
 
 
+def test_reason_scope_reevaluates_agent_gate_after_deep_analysis_results(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+    incident_dir = tmp_path / ".local" / "incidents" / "mongodb-agent-deep-analysis"
+    incident_dir.mkdir(parents=True)
+    write_yaml(
+        incident_dir / "input.yaml",
+        {
+            "incident_id": "mongodb-agent-deep-analysis",
+            "middleware": "mongodb",
+            "namespace": "psmdb-test",
+            "environment_mode": "remote",
+            "execution_mode": "remote",
+            "customer_clue": "MongoDB replica set is abnormal.",
+            "scenario": "unknown",
+        },
+    )
+    write_yaml(
+        incident_dir / "meta.yaml",
+        {
+            "incident_id": "mongodb-agent-deep-analysis",
+            "middleware": "mongodb",
+            "status": "analysed",
+            "current_command": "analyse",
+        },
+    )
+    write_yaml(
+        incident_dir / "structured_record.yaml",
+        {
+            "details": {
+                "replica_members": [
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "pod/mongo-0",
+                        "self_member": {"state_str": "PRIMARY", "config_version": 1, "config_term": 1},
+                        "voting_members_count": 1,
+                    }
+                ]
+            }
+        },
+    )
+    write_yaml(incident_dir / "signal_bundle.yaml", {"abnormal_signals": []})
+    write_yaml(
+        incident_dir / "collection_report.yaml",
+        {
+            "collection_actions": [],
+            "successful_items": [],
+            "failed_items": [],
+            "blank_items": [],
+            "evidence_gaps": [],
+        },
+    )
+
+    def fail_collection(*_args, **_kwargs):
+        raise AssertionError("reason scope must not run collection")
+
+    def fake_rule_analysis(_middleware, _output_dir):
+        return {
+            "hypotheses": [],
+            "conclusion_summary": {
+                "statement": "rules fallback conclusion",
+                "confidence": "low",
+                "impact_scope": "unknown",
+                "primary_cause_category": "unknown",
+                "evidence": [],
+                "limitations": [],
+                "deepest_supported_level": "phenomenon",
+            },
+            "next_actions": [],
+            "verification_requests": [],
+            "deep_analysis_requests": [
+                {
+                    "request_id": "dar-mongodb-rs-baseline-scan",
+                    "capability": "baseline_scan",
+                    "purpose": "compare replica-set invariants",
+                    "inputs": ["structured_record.details.replica_members"],
+                    "expected_output": ["baseline_diff"],
+                }
+            ],
+            "reasoning_timeline": {"events": []},
+        }
+
+    def fake_phase4(_output_dir):
+        payload = load_yaml(PHASE4_AGENT_ELIGIBLE_FIXTURE)
+        payload["hypotheses"][0]["private_context"]["hypothesis_evolution"][0]["evidence"] = [
+            "deep_analysis_results.highlights"
+        ]
+        payload["hypotheses"][0]["private_context"]["hypothesis_evolution"][0]["conclusion_candidate"]["evidence"] = [
+            "deep_analysis_results.highlights"
+        ]
+        return payload
+
+    monkeypatch.setattr(module, "run_remote_collection", fail_collection)
+    monkeypatch.setattr(module, "run_local_collection", fail_collection)
+    monkeypatch.setattr(module.analyse_command, "generate_rule_analysis", fake_rule_analysis)
+
+    args = SimpleNamespace(
+        input_dir=None,
+        remote_run_dir=None,
+        remote_config=None,
+        incident_dir=str(incident_dir),
+        output_dir=None,
+        output_root=".local/incidents",
+        scenario=None,
+        customer_clue=None,
+        remote_output_dir=".local/remote-runs",
+        remote_namespace="",
+        object_inventory="",
+        execution_mode="",
+        scope="reason",
+    )
+
+    assert module.analyse_command.run(
+        args,
+        run_remote_collection=module.run_remote_collection,
+        run_local_collection=module.run_local_collection,
+        load_remote_executor_run_result=module.load_remote_executor_run_result,
+        build_incident_from_remote_run=module.build_incident_from_remote_run,
+        apply_scenario_routing_if_needed=module.apply_scenario_routing_if_needed,
+        write_collection_plan=module.write_collection_plan,
+        write_collection_coverage=module.write_collection_coverage,
+        write_signal_governance=module.write_signal_governance,
+        enrich_skill_runtime_context=module.enrich_skill_runtime_context,
+        run_directed_recollection_if_needed=module.run_directed_recollection_if_needed,
+        remote_executor_required_user_action=module.remote_executor_required_user_action,
+        remote_executor_next_actions=module.remote_executor_next_actions,
+        normalize_collection_report_gaps=module.normalize_collection_report_gaps,
+        run_phase4_analysis=fake_phase4,
+    ) == 0
+
+    analysis = load_yaml(incident_dir / "analysis.yaml")
+    assert "deep_analysis_results" in analysis
+    assert analysis["agent_conclusion_gate"]["decision"] == "eligible"
+    assert analysis["agent_conclusion_gate"]["override_applied"] is True
+    assert analysis["conclusion_summary"]["statement"] == "Replica set rs0 has a split-brain mechanism."
+
+
 def test_reason_scope_blocks_when_collected_artifacts_are_missing(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
     incident_dir = tmp_path / ".local" / "incidents" / "mongodb-reason-missing"

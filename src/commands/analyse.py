@@ -536,6 +536,9 @@ def _write_completed_analysis_output(
     deep_analysis = _write_deep_analysis(output_dir, analysis, signal_bundle)
     if deep_analysis.get("results"):
         analysis["deep_analysis_results"] = deep_analysis_summary(deep_analysis)
+        if agent_reasoning:
+            analysis["agent_conclusion_gate"] = evaluate_agent_conclusion_gate(analysis)
+            apply_agent_conclusion_override(analysis)
         analysis["updated_at"] = now_iso()
         write_yaml(analysis_file, analysis)
     report_file = write_report(output_dir, input_data, analysis)

@@ -189,6 +189,39 @@ def test_gate_preserves_structured_conclusion_candidate_for_future_override():
     assert candidate["primary_cause_category"] == "replica_set_split_brain"
 
 
+def test_gate_blocks_deep_analysis_result_ref_until_results_are_materialized():
+    agent_reasoning = {
+        "runtime": {"selected_type": "claude", "model": "claude-sonnet-4-6"},
+        "hypotheses": [
+            {
+                "id": "h1",
+                "statement": "Agent candidate",
+                "status": "supported",
+                "confidence": 0.91,
+                "evidence_refs": ["deep_analysis_results.highlights"],
+                "conclusion_candidate": {
+                    "statement": "Replica set rs0 has a split-brain mechanism.",
+                    "confidence": "medium",
+                    "deepest_supported_level": "mechanism",
+                    "primary_cause_category": "replica_set_split_brain",
+                    "impact_scope": "rs0 availability",
+                    "evidence": ["deep_analysis_results.highlights"],
+                    "limitations": [],
+                },
+            }
+        ],
+    }
+    blocked_gate = evaluate_agent_conclusion_gate(_analysis(agent_reasoning))
+
+    analysis = _analysis(agent_reasoning)
+    analysis["deep_analysis_results"] = {"highlights": [{"request_id": "dar-mongodb-rs-baseline-scan"}]}
+    eligible_gate = evaluate_agent_conclusion_gate(analysis)
+
+    assert blocked_gate["decision"] == "blocked"
+    assert any(item["code"] == "deep_analysis_results_not_materialized" for item in blocked_gate["blockers"])
+    assert eligible_gate["decision"] == "eligible"
+
+
 def test_apply_agent_conclusion_override_updates_conclusion_when_gate_is_eligible():
     analysis = _analysis(
         {

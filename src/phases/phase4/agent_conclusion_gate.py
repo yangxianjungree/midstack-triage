@@ -67,6 +67,8 @@ def evaluate_agent_conclusion_gate(analysis: Dict[str, Any]) -> Dict[str, Any]:
         blockers.append(_blocker("hypothesis_only_source_used_as_evidence", "agent candidate cites hypothesis-only sources as evidence"))
     if not _has_current_incident_evidence_ref(candidate["evidence_refs"]):
         blockers.append(_blocker("missing_current_evidence_refs", "agent candidate has no current-incident evidence references"))
+    if _references_deep_analysis_results(candidate["evidence_refs"]) and not isinstance(analysis.get("deep_analysis_results"), dict):
+        blockers.append(_blocker("deep_analysis_results_not_materialized", "agent candidate cites deep_analysis_results before they are materialized"))
     if _has_unresolved_critical_gap(analysis):
         blockers.append(_blocker("unresolved_critical_gap", "critical evidence gaps remain unresolved"))
     missing_candidate_fields = _missing_conclusion_candidate_fields(candidate["conclusion_summary"])
@@ -194,6 +196,10 @@ def _has_current_incident_evidence_ref(refs: Iterable[str]) -> bool:
 
 def _uses_hypothesis_only_refs(refs: Iterable[str]) -> bool:
     return any(_has_prefix(ref, HYPOTHESIS_ONLY_PREFIXES) for ref in refs)
+
+
+def _references_deep_analysis_results(refs: Iterable[str]) -> bool:
+    return any(_has_prefix(ref, ("deep_analysis_results",)) for ref in refs)
 
 
 def _has_prefix(value: str, prefixes: Iterable[str]) -> bool:

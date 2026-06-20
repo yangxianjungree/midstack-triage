@@ -33,6 +33,7 @@ def test_agent_reasoning_task_preserves_experience_retrieval_contract(tmp_path):
     assert "`source_boundaries`" in content
     assert "`reasoning_timeline`" in content
     assert "`verification_requests`" in content
+    assert "`deep_analysis_requests`" in content
     assert "`deepening_findings`" in content
     assert "must stay present" in content
     assert "must not become direct supporting evidence" in content
@@ -64,3 +65,27 @@ def test_agent_reasoning_task_requires_guarded_ad_hoc_verification_requests(tmp_
     assert "`execution_policy: approval_required`" in content
     assert "`execution_policy: blocked`" in content
     assert "does not authorize auto-executing ad hoc commands" in content
+
+
+def test_agent_reasoning_task_describes_deep_analysis_contract(tmp_path):
+    task_file = write_agent_reasoning_task(
+        tmp_path,
+        {
+            "incident_id": "demo",
+            "middleware": "mongodb",
+            "scenario": "replica-inconsistency",
+        },
+        tmp_path / "analysis.yaml",
+        tmp_path / "analysis.rules-fallback.yaml",
+        tmp_path / "report.md",
+        matched_skills=[],
+    )
+
+    content = task_file.read_text(encoding="utf-8")
+
+    assert "`deep_analysis_requests`" in content
+    assert "`baseline_scan`" in content
+    assert "`code_logic_analysis`" in content
+    assert "`code_path_tracing`" in content
+    assert "`repro_script_generation`" in content
+    assert "plan-only" in content

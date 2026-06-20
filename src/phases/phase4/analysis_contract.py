@@ -96,5 +96,6 @@ def analysis_contract_fields(
     return {
         "retrieval_context": build_retrieval_context(input_data, signal_bundle, collection_report),
         "experience_matches": [],
+        "deep_analysis_requests": [],
         "source_boundaries": source_boundaries(),
     }

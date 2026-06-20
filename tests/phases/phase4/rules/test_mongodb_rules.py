@@ -477,6 +477,63 @@ class MongoDBRulesTest(unittest.TestCase):
         self.assertEqual(requests["vr-mongodb-election-logs"]["execution_policy"], "auto_allowed")
         self.assertEqual(requests["vr-mongodb-election-logs"]["hypothesis_id"], "H4")
 
+    def test_split_brain_deepening_adds_deep_analysis_requests(self) -> None:
+        input_data = {"scenario": "replica-inconsistency"}
+        signal_bundle = {"abnormal_signals": [{"signal_id": "replica-member-recovering", "detail": "member state differs"}]}
+        collection_report = {"evidence_gaps": []}
+        structured_record = {
+            "details": {
+                "replica_members": [
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-0",
+                        "voting_members_count": 1,
+                        "self_member": {"state_str": "PRIMARY", "config_version": 2, "config_term": 73},
+                        "members": [
+                            {"name": "mongo-0:27017", "state_str": "PRIMARY", "config_version": 2, "config_term": 73}
+                        ],
+                    },
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-1",
+                        "voting_members_count": 3,
+                        "self_member": {"state_str": "PRIMARY", "config_version": 8, "config_term": 72},
+                        "members": [
+                            {"name": "mongo-0:27017", "state_str": "(not reachable/healthy)"},
+                            {"name": "mongo-1:27017", "state_str": "PRIMARY", "config_version": 8, "config_term": 72},
+                            {"name": "mongo-2:27017", "state_str": "SECONDARY", "config_version": 8, "config_term": 72},
+                        ],
+                    },
+                ],
+                "network_overlay": {
+                    "pod_connectivity_checks": [
+                        {
+                            "source_pod_ref": "mongo-0",
+                            "target_ref": "pod/mongo-1",
+                            "target_port": 27017,
+                            "status": "success",
+                        }
+                    ]
+                },
+            }
+        }
+
+        result = self.mod.analyse(input_data, signal_bundle, collection_report, structured_record)
+
+        requests = {item["request_id"]: item for item in result["deep_analysis_requests"]}
+        self.assertEqual(set(requests), {"dar-mongodb-rs-baseline-scan", "dar-mongodb-rs-code-logic", "dar-mongodb-rs-code-path", "dar-mongodb-rs-repro-script"})
+        self.assertEqual(requests["dar-mongodb-rs-baseline-scan"]["capability"], "baseline_scan")
+        self.assertEqual(requests["dar-mongodb-rs-code-logic"]["capability"], "code_logic_analysis")
+        self.assertEqual(requests["dar-mongodb-rs-code-path"]["capability"], "code_path_tracing")
+        self.assertEqual(requests["dar-mongodb-rs-repro-script"]["capability"], "repro_script_generation")
+        for item in requests.values():
+            self.assertEqual(item["scope"], "current_incident")
+            self.assertEqual(item["risk_level"], "read-only")
+            self.assertEqual(item["status"], "planned")
+            self.assertEqual(item["execution_boundary"], "plan_only")
+            self.assertTrue(item["inputs"])
+            self.assertTrue(item["expected_output"])
+
 
 if __name__ == "__main__":
     unittest.main()

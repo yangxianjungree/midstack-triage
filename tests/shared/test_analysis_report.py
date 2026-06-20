@@ -501,3 +501,45 @@ def test_write_report_includes_verification_requests(tmp_path):
     assert "asset=ad_hoc_command/vr-ad-hoc-events" in content
     assert "argv=kubectl get events -n psmdb-test" in content
     assert "guardrail=requires human approval before execution" in content
+
+
+def test_write_report_includes_deep_analysis_requests(tmp_path):
+    analysis = {
+        "conclusion_summary": {
+            "statement": "MongoDB replica set has split-brain symptoms",
+            "confidence": "medium",
+            "deepest_supported_level": "mechanism",
+            "primary_cause_category": "replication",
+            "impact_scope": "shard replica set",
+            "evidence": ["two members report conflicting PRIMARY views"],
+            "limitations": [],
+        },
+        "hypotheses": [],
+        "next_actions": [],
+        "knowledge_candidates": [],
+        "reasoning_timeline": {"events": []},
+        "deepening_findings": [],
+        "verification_requests": [],
+        "deep_analysis_requests": [
+            {
+                "request_id": "dar-mongodb-rs-baseline-scan",
+                "capability": "baseline_scan",
+                "purpose": "compare replica-set invariants against a healthy baseline",
+                "scope": "current_incident",
+                "risk_level": "read-only",
+                "execution_boundary": "plan_only",
+                "status": "planned",
+                "inputs": ["structured_record.details.replica_members"],
+                "expected_output": ["baseline_diff"],
+            }
+        ],
+    }
+
+    report = write_report(tmp_path, {"incident_id": "demo", "middleware": "mongodb"}, analysis)
+
+    content = report.read_text(encoding="utf-8")
+    assert "## Deep Analysis Requests" in content
+    assert "`planned` `read-only` `plan_only` `baseline_scan` `dar-mongodb-rs-baseline-scan`" in content
+    assert "compare replica-set invariants against a healthy baseline" in content
+    assert "inputs=structured_record.details.replica_members" in content
+    assert "expected=baseline_diff" in content

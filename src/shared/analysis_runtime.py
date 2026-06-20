@@ -140,6 +140,37 @@ def verification_request_report_lines(analysis: Dict[str, Any], limit: int = 8) 
     return lines
 
 
+def deep_analysis_request_report_lines(analysis: Dict[str, Any], limit: int = 8) -> List[str]:
+    requests = as_list(analysis.get("deep_analysis_requests"))
+    lines: List[str] = []
+    for item in requests[:limit]:
+        if not isinstance(item, dict):
+            continue
+        request_id = str(item.get("request_id") or "deep-analysis").strip()
+        capability = str(item.get("capability") or "unknown").strip()
+        purpose = str(item.get("purpose") or "").strip()
+        status = str(item.get("status") or "unknown").strip()
+        risk_level = str(item.get("risk_level") or "unknown").strip()
+        execution_boundary = str(item.get("execution_boundary") or "unknown").strip()
+        inputs = [str(value) for value in as_list(item.get("inputs")) if str(value).strip()]
+        expected = [str(value) for value in as_list(item.get("expected_output")) if str(value).strip()]
+        suffixes = []
+        if inputs:
+            suffixes.append("inputs=%s" % ",".join(inputs))
+        if expected:
+            suffixes.append("expected=%s" % ",".join(expected))
+        suffix = " %s" % " ".join(suffixes) if suffixes else ""
+        lines.append(
+            "- `%s` `%s` `%s` `%s` `%s`: %s%s"
+            % (status, risk_level, execution_boundary, capability, request_id, purpose, suffix)
+        )
+    if not lines:
+        return ["- No deep analysis requests recorded."]
+    if len(requests) > limit:
+        lines.append("- ... %s more request(s) omitted from report; see `analysis.yaml`." % (len(requests) - limit))
+    return lines
+
+
 def analysis_rules_fallback_candidates(output_dir: Path) -> List[Path]:
     return [
         output_dir / ANALYSIS_RULES_FALLBACK_FILENAME,
@@ -367,6 +398,8 @@ def write_report(output_dir: Path, input_data: Dict[str, Any], analysis: Dict[st
         lines.append("- `%s` %s: %s" % (item.get("status", ""), item.get("hypothesis_id", ""), item.get("statement", "")))
     lines.extend(["", "## Verification Requests", ""])
     lines.extend(verification_request_report_lines(analysis))
+    lines.extend(["", "## Deep Analysis Requests", ""])
+    lines.extend(deep_analysis_request_report_lines(analysis))
     lines.extend(["", "## Evidence Gaps", ""])
     gaps = as_list(conclusion.get("limitations"))
     if gaps:
@@ -480,7 +513,7 @@ def write_agent_reasoning_task(
             "- `next_actions` should stay read-only unless the evidence clearly justifies a higher-risk action.",
             "- Distinguish missing evidence from evidence that disproves a hypothesis.",
             "- If evidence is insufficient, keep the conclusion and hypothesis status conservative instead of forcing certainty.",
-            "- Preserve top-level `deepening_findings`, `reasoning_timeline`, `verification_requests`, `retrieval_context`, `experience_matches`, and `source_boundaries`; these fields must stay present when refining `analysis.yaml`.",
+            "- Preserve top-level `deepening_findings`, `reasoning_timeline`, `verification_requests`, `deep_analysis_requests`, `retrieval_context`, `experience_matches`, and `source_boundaries`; these fields must stay present when refining `analysis.yaml`.",
             "- Use `reasoning_timeline` to correlate symptoms, collection actions, and hypothesis checks, but do not treat ordering alone as proof of causality.",
             "- Use `deepening_findings` to continue from a mechanism conclusion toward enabling/root cause; if a finding refutes a candidate mechanism, do not repeat it as an unqualified next action.",
             "",
@@ -515,6 +548,14 @@ def write_agent_reasoning_task(
             "- This task does not authorize auto-executing ad hoc commands; if a command changes state or cannot pass the read-only guardrail, mark it with `execution_policy: blocked`.",
             "- Examples include healthy peer `rs.status`, `kubectl logs --previous`, peer connectivity checks, discovering the application log sink when `kubectl logs` is shallow, collecting MongoDB file log tails after log sink discovery, node-side file log tail from kubelet pod volumes for fast-crashing containers, pod describe/termination detail, CoreDNS/DNS probes for DNS lookup failures, and flannel overlay checks for DNS timeouts with suspicious Service backends.",
             "- DNS lookup errors in MongoDB startup logs support a DNS hypothesis; they should not become a mechanism-level conclusion unless CoreDNS state or an in-cluster DNS probe also supports it.",
+            "",
+            "## Deep Analysis Guidance",
+            "",
+            "- Use `deep_analysis_requests` for deeper reasoning work that should be visible but is not itself an executable collection action.",
+            "- Supported capabilities are `baseline_scan`, `code_logic_analysis`, `code_path_tracing`, and `repro_script_generation`.",
+            "- These requests are plan-only by default: `execution_boundary: plan_only`, `risk_level: read-only`, and `scope: current_incident`.",
+            "- If a deep analysis needs more live evidence, express that as a guarded `verification_requests` entry; do not smuggle shell commands into `deep_analysis_requests`.",
+            "- A repro request should produce a read-only plan, fixture, or simulator proposal. It must not mutate the live cluster, reconfigure MongoDB, restart pods, or write workload data.",
             "",
             "## Timeline Reporting",
             "",

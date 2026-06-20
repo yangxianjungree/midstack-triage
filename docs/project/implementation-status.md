@@ -23,7 +23,7 @@ superseded_by: none
 - 第 3 段默认日志采集已收敛到共享 `kubernetes.collect.logs.current` / `kubernetes.collect.logs.previous`；MongoDB 日志 alias 仅作兼容入口
 - 第 4 段多轨推理实现已收敛到 `src/phases/phase4/multitrack/`；默认 agent runtime 为 `auto`，可在 `ANTHROPIC_API_KEY` + `anthropic` SDK 可用时尝试 Claude 推理，否则降级 mock。当前 `/midstack:analyse` 的生产 `analysis.yaml` 仍由 rules fallback + guardrails 生成，multitrack 输出为辅助产物
 - 第 4/5 段已生成 append-only 推理历史：`reasoning-manifest.yaml` 和 `reasoning/*.yaml` segment；`analysis.yaml` / `report.md` 作为最新物化视图
-- Phase 4 rules 已输出 `reasoning_timeline`、`deepening_findings`、`verification_requests`、`retrieval_context`、`experience_matches` 和 `source_boundaries`；历史经验召回仍是预留字段，当前不接入真实向量库
+- Phase 4 rules 已输出 `reasoning_timeline`、`deepening_findings`、`verification_requests`、`deep_analysis_requests`、`retrieval_context`、`experience_matches` 和 `source_boundaries`；历史经验召回仍是预留字段，当前不接入真实向量库
 - 受控验证请求已分层：一等只读 `auto_allowed` 脚本可由 analyse 编排交回 Phase 3 定向补采；二等 ad hoc 只读命令必须结构化 argv、approval required；破坏性命令会被 guardrail 标记 blocked
 - Replay fixture 已拆分为 `tests/fixtures/active/` 与 `tests/fixtures/legacy/`，默认 replay、score 和仓库门禁只读取 active 样本
 - Fixture hygiene gate 已覆盖 active、legacy 和 golden-path fixtures，阻断运行时生成物、疑似密钥和公网 IP；内网 IP 当前作为 warning 暴露
@@ -87,6 +87,7 @@ superseded_by: none
 - 通过 rules fallback + guardrails 生成生产 `analysis.yaml`
 - 生成 `reasoning-manifest.yaml` 和 append-only reasoning segment，记录本轮分析快照、自动补采审计和 hypothesis validation 隔离引用
 - 对一等只读 `verification_requests` 执行 Phase 3 定向补采并重新物化分析；对 ad hoc 请求只做 guardrail 归一化或 blocked，不自动执行
+- 对机制已成立但 root cause 未闭合的场景可输出 plan-only `deep_analysis_requests`，当前 MongoDB split-brain 已覆盖基线扫描、代码逻辑分析、代码路径追踪和只读复现计划四类深挖请求
 - 输出第 5 段阶段性结论
 - 输出知识沉淀候选
 - 可直接消费：
@@ -172,11 +173,11 @@ superseded_by: none
 - `force_recollect` 参数
 - 复杂多记录切换命令
 - 真实 Claude API 推理结果合并为生产结论的闭环（当前 auto runtime 可尝试 Claude，但生产 `analysis.yaml` 仍由 rules fallback + guardrails 守底）
-- 深入层能力：
-  - 基线扫描
-  - 代码逻辑分析
-  - 代码路径追踪
-  - 复现脚本生成
+- 深入层自动执行闭环：
+  - 基线扫描结果自动物化
+  - 代码逻辑分析结果自动回写生产结论
+  - 代码路径追踪自动闭合证据边
+  - 复现脚本或 fixture 自动生成
 
 ### `/plugin:review`
 

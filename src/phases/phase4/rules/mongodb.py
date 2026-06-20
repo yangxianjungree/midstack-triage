@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Set
 
 try:
     from phases.phase4.analysis_contract import analysis_contract_fields
+    from phases.phase4.deep_analysis import dedupe_deep_analysis_requests, deep_analysis_request
     from phases.phase4.reasoning_timeline import build_reasoning_timeline
     from phases.phase4.verification_requests import dedupe_verification_requests, first_class_script_request
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
@@ -22,6 +23,7 @@ except ImportError:  # pragma: no cover - supports direct file execution
     if str(SRC_DIR) not in sys.path:
         sys.path.insert(0, str(SRC_DIR))
     from phases.phase4.analysis_contract import analysis_contract_fields
+    from phases.phase4.deep_analysis import dedupe_deep_analysis_requests, deep_analysis_request
     from phases.phase4.reasoning_timeline import build_reasoning_timeline
     from phases.phase4.verification_requests import dedupe_verification_requests, first_class_script_request
     from shared.asset_resolver import knowledge_candidates_for_scenario as shared_knowledge_candidates_for_scenario
@@ -382,6 +384,84 @@ def verification_requests_from_deepening_findings(findings: List[Dict[str, Any]]
             )
         )
     return requests
+
+
+def deep_analysis_requests_from_deepening_findings(findings: List[Dict[str, Any]], hypotheses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    finding_ids = {str(item.get("finding_id") or "") for item in findings if isinstance(item, dict)}
+    if "mongodb.replica_set.enabling_cause_candidates" not in finding_ids:
+        return []
+
+    hypothesis_ids = [
+        str(item.get("hypothesis_id") or "")
+        for item in hypotheses
+        if any(
+            token in str(item.get("statement") or "")
+            for token in (
+                "configuration or member metadata drift",
+                "historical network or MongoDB heartbeat partition",
+            )
+        )
+    ]
+    trigger_findings = sorted(
+        finding_ids
+        & {
+            "mongodb.replica_set.config_divergence",
+            "mongodb.replica_set.membership_divergence",
+            "mongodb.replica_set.quorum_divergence",
+            "mongodb.network.current_tcp_reachability",
+            "mongodb.replica_set.enabling_cause_candidates",
+        }
+    )
+    common_inputs = [
+        "structured_record.details.replica_members",
+        "structured_record.details.replica_configs",
+        "signal_bundle.log_highlights",
+        "reasoning_timeline.events",
+    ]
+    return dedupe_deep_analysis_requests(
+        [
+            deep_analysis_request(
+                "dar-mongodb-rs-baseline-scan",
+                "baseline_scan",
+                "Compare current replica-set invariants against the expected healthy member/config/quorum baseline.",
+                common_inputs,
+                ["baseline_diff", "healthy_invariant_violations", "current_vs_expected_member_view"],
+                hypothesis_ids,
+                trigger_findings,
+                "Use current incident artifacts only; do not infer root cause from the baseline alone.",
+            ),
+            deep_analysis_request(
+                "dar-mongodb-rs-code-logic",
+                "code_logic_analysis",
+                "Explain which MongoDB replica-set decision rules can produce the observed divergent PRIMARY and quorum views.",
+                common_inputs,
+                ["decision_rule_mapping", "candidate_enabling_conditions", "required_disconfirming_evidence"],
+                hypothesis_ids,
+                trigger_findings,
+                "Keep this as reasoning guidance unless current incident evidence confirms the mapped condition.",
+            ),
+            deep_analysis_request(
+                "dar-mongodb-rs-code-path",
+                "code_path_tracing",
+                "Trace the evidence path from logs, rs.status, rs.conf, and connectivity checks to each enabling-cause hypothesis.",
+                common_inputs,
+                ["evidence_path_trace", "missing_path_edges", "counter_evidence_by_hypothesis"],
+                hypothesis_ids,
+                trigger_findings,
+                "Prefer existing first-class scripts for missing path edges; ad hoc read-only commands must remain approval_required.",
+            ),
+            deep_analysis_request(
+                "dar-mongodb-rs-repro-script",
+                "repro_script_generation",
+                "Draft a read-only reproduction or simulator plan that validates the reasoning shape without mutating the live cluster.",
+                ["analysis.yaml", "analysis.rules-fallback.yaml", "reasoning_timeline.events"],
+                ["read_only_repro_plan", "synthetic_fixture_requirements", "blocked_mutation_steps"],
+                hypothesis_ids,
+                trigger_findings,
+                "The output is a plan or fixture proposal only; live reconfig, restarts, deletes, and writes stay blocked.",
+            ),
+        ]
+    )
 
 
 def next_actions_from_deepening_findings(scenario: str, findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -1212,6 +1292,7 @@ def analyse(
     verification_requests = dedupe_verification_requests(
         verification_requests + verification_requests_from_deepening_findings(deepening_findings, hypotheses)
     )
+    deep_analysis_requests = deep_analysis_requests_from_deepening_findings(deepening_findings, hypotheses)
     deepening_next_actions = next_actions_from_deepening_findings(scenario, deepening_findings)
     if deepening_next_actions:
         next_actions = deepening_next_actions
@@ -1226,6 +1307,7 @@ def analyse(
         "reasoning_timeline": reasoning_timeline,
         "knowledge_candidates": knowledge_candidates_for_scenario(scenario, str(conclusion.get("primary_cause_category") or "")),
         **analysis_contract_fields(input_data, signal_bundle, collection_report),
+        "deep_analysis_requests": deep_analysis_requests,
         "generated_at": "generated-by-mongodb-analyse",
         "updated_at": "generated-by-mongodb-analyse",
     }

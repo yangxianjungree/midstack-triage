@@ -30,6 +30,7 @@ superseded_by: none
 - `analysis.multitrack.yaml`：multitrack 辅助草稿，不替代生产 `analysis.yaml`。
 - `agent-reasoning-task.md`：人工或 Agent refinement 的任务合同。
 - `retrieval_context` / `experience_matches`：未来历史经验或向量库召回字段；当前未接入真实召回时 `experience_matches` 为空。
+- `deep_analysis_requests`：深入层推理请求，描述基线扫描、代码逻辑、路径追踪或复现计划等 plan-only 工作，不代表自动执行命令。
 
 ## 推理闭环
 
@@ -38,8 +39,9 @@ superseded_by: none
 3. 领域不变量检查把已采证据继续深化成 `deepening_findings`，例如 MongoDB replica set 多视角配置、成员和 quorum 是否一致。
 4. 时间线构建器把用户线索、异常信号、Kubernetes events 和采集动作整理进 `reasoning_timeline`。
 5. Phase 4 根据证据缺口和待验证假设生成 `verification_requests`；命令编排层会把一等只读且 `auto_allowed` 的脚本请求交回 Phase 3 定向补采，然后重新生成生产 `analysis.yaml`。
-6. Agent refinement 读取上述产物，补充或修正 `analysis.yaml` 与 `report.md`。
-7. 第 5 段把可靠结论、证据缺口、只读下一步和可沉淀知识写回结果与 `knowledge_candidates`。
+6. 当机制证据已经成立但 enabling/root cause 未闭合时，Phase 4 可以生成 `deep_analysis_requests`，要求 Agent 或后续开发工作继续做基线扫描、代码逻辑分析、代码路径追踪或只读复现计划。
+7. Agent refinement 读取上述产物，补充或修正 `analysis.yaml` 与 `report.md`。
+8. 第 5 段把可靠结论、证据缺口、只读下一步和可沉淀知识写回结果与 `knowledge_candidates`。
 
 ## 推理历史与共享隔离
 
@@ -66,7 +68,7 @@ Agent refinement 应该做：
 - 使用 `deepening_findings` 从机制继续追问 enabling cause 或 root cause。
 - 将已经出现的反证写入 `counter_evidence`，避免把被反驳路径继续作为无条件下一步。
 - 将缺失证据分成 `expected_gap` 和 `critical_gap`，并据此控制结论层级与置信度。
-- 保留 `verification_requests`、`retrieval_context`、`experience_matches` 和 `source_boundaries` 等顶层字段。
+- 保留 `verification_requests`、`deep_analysis_requests`、`retrieval_context`、`experience_matches` 和 `source_boundaries` 等顶层字段。
 
 Agent refinement 不应该做：
 
@@ -88,6 +90,19 @@ Phase 4 可以提出验证请求，但验证请求分层处理。`verification_r
 自动补采不是 Phase 4 直接执行命令，而是控制面在 rules fallback 产出后调用 Phase 3 recollection 复用既有执行面。补采完成后 rules fallback 会基于更新后的证据重新物化 `analysis.yaml` 和 `report.md`。如果请求仍缺证据，它可以继续以 `planned` 形式保留；因此 `status: planned` 不能单独理解成“从未尝试过”。
 
 开发新能力时，优先把稳定的只读验证沉淀为一等资产，而不是让 Agent 长期依赖自由拼接命令。
+
+## 深入层请求边界
+
+`deep_analysis_requests` 用于把“还需要更深一层推理”的工作显式化。它和 `verification_requests` 的区别是：
+
+| 字段 | 含义 |
+| --- | --- |
+| `capability: baseline_scan` | 对比当前证据和健康基线或领域不变量，输出差异和缺口 |
+| `capability: code_logic_analysis` | 解释组件决策逻辑或协议规则如何允许当前机制发生 |
+| `capability: code_path_tracing` | 把日志、状态、配置和命令输出串成可审计证据路径 |
+| `capability: repro_script_generation` | 生成只读复现计划、合成 fixture 或 simulator 方案，不操作 live 环境 |
+
+当前 `deep_analysis_requests` 默认是 `execution_boundary: plan_only`、`risk_level: read-only`、`scope: current_incident`。如果深挖过程中发现需要新现场证据，必须转换成受 guardrail 保护的 `verification_requests`；不能把 shell 命令或会改环境的动作塞进 `deep_analysis_requests`。
 
 ## 历史经验和领域知识
 
@@ -114,6 +129,7 @@ Phase 4 可以提出验证请求，但验证请求分层处理。`verification_r
 - 反证层：如果当前 TCP/27017 已经双向连通，不能继续把“持续网络分区”当作未经限定的唯一解释。
 - 成因候选层：将历史网络或 MongoDB heartbeat 分区、reconfig/member metadata drift、MongoDB heartbeat/auth/process 层异常写成 `insufficient` hypothesis，而不是直接升格为根因。
 - 待验证层：下一步应转向只读比较 `rs.conf()`、MongoDB heartbeat/election 日志、变更记录和重启前日志，解释为什么配置或视图会分裂；`mongodb.collect.replicaset.rs_conf` 和仓库内日志脚本都属于一等只读资产。
+- 深入层：输出 `deep_analysis_requests`，让 Agent 或开发者继续做健康基线对比、MongoDB 选举/配置决策逻辑解释、证据路径追踪，以及不改 live 集群的只读复现计划。
 
 这类设计不是为某一个 case 写死规则，而是把领域诊断语法沉淀为可复用的不变量、反证和验证请求。
 

@@ -194,6 +194,7 @@ superseded_by: none
 第一版当前仅保留：
 
 - `incident_id`：可选
+- `scope`：可选，默认 `full`；当前仅支持 `full` 与 `reason`
 
 规则：
 
@@ -204,11 +205,13 @@ superseded_by: none
 - `offline` 只消费已有 incident、fixture 或 remote-run 产物，不执行远程采集；ready offline incident 可从 `input.yaml.artifact_source` 补齐采集产物，缺少采集产物时返回 blocked
 - `local` 使用 ready incident 的 `local-config.yaml`，通过本地 transport 调度 Phase 3 采集；缺少 `local-config.yaml` 时返回 blocked，不得隐式回退到 SSH/SSHPass
 - 直接使用 `--input-dir` / `--remote-run-dir` 时按已有采集产物处理；直接使用 `--remote-config` 时按 remote 采集处理
+- `scope=full` 是默认主路径，执行第 3/4/5 段；默认不复用其他历史 incident，也不跨 incident 自动补旧证据
+- `scope=reason` 只重跑第 4/5 段，要求目标目录已有 `input.yaml`、`structured_record.yaml`、`signal_bundle.yaml`、`collection_report.yaml`；不得触发 remote/local collection 或 directed recollection
 - `local` 采集中的 node-host 文件访问是独立 capability；未显式配置 `node_access.ssh.enabled=true` 时，节点文件类脚本必须产出 blocked/evidence gap
 
 后续版本预留但暂不实现：
 
-- `scope`
+- 完整 `scope` 矩阵
 - `force_recollect`
 
 ### `/plugin:review`

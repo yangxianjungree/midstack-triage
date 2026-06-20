@@ -26,6 +26,8 @@ Command boundary:
 - When using direct input sources, `--input-dir` and `--remote-run-dir` are
   treated as existing collected artifacts, while `--remote-config` triggers
   remote collection.
+- Use `--scope reason` only to rerun Phase 4/5 from existing collected
+  artifacts. It must not collect live evidence or run directed recollection.
 
 If `$ARGUMENTS` is empty, analyse the current incident:
 
@@ -43,6 +45,9 @@ python3 "${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py" analyse \
   --incident-dir "$MIDSTACK_TRIAGE_WORKSPACE/.local/incidents/<incident-id>" \
   --output-root "$MIDSTACK_TRIAGE_WORKSPACE/.local/incidents"
 ```
+
+To rerun only reasoning and report materialization for an already collected
+incident, add `--scope reason` to the analyse command.
 
 After analyse succeeds, refine `analysis.yaml` and `report.md` according to
 `agent-reasoning-task.md`, then run `finalize-analysis`.

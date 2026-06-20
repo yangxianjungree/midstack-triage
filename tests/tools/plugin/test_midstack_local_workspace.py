@@ -72,6 +72,12 @@ def test_analyse_parser_rejects_user_execution_mode_argument():
         raise AssertionError("analyse must derive execution mode from the incident or input source")
 
 
+def test_analyse_parser_accepts_reason_scope():
+    args = module.build_parser().parse_args(["analyse", "--scope", "reason"])
+
+    assert args.scope == "reason"
+
+
 def test_start_ready_output_points_to_midstack_analyse(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
 
@@ -1111,3 +1117,159 @@ def test_remote_analyse_runs_auto_allowed_verification_requests_after_rules(tmp_
     ]
     adapter = load_yaml(incident_dir / "adapter-output.yaml")
     assert adapter["status"] == "completed"
+
+
+def test_reason_scope_reruns_reasoning_without_collection_or_recollection(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+    incident_dir = tmp_path / ".local" / "incidents" / "mongodb-reason-ready"
+    incident_dir.mkdir(parents=True)
+    write_yaml(
+        incident_dir / "input.yaml",
+        {
+            "incident_id": "mongodb-reason-ready",
+            "middleware": "mongodb",
+            "namespace": "psmdb-test",
+            "cluster_id": "",
+            "environment_mode": "remote",
+            "execution_mode": "remote",
+            "customer_clue": "MongoDB pod is not ready.",
+            "scenario": "unknown",
+        },
+    )
+    write_yaml(
+        incident_dir / "meta.yaml",
+        {
+            "incident_id": "mongodb-reason-ready",
+            "middleware": "mongodb",
+            "status": "analysed",
+            "current_command": "analyse",
+        },
+    )
+    write_yaml(incident_dir / "structured_record.yaml", {"details": {"pods": []}})
+    write_yaml(incident_dir / "signal_bundle.yaml", {"abnormal_signals": []})
+    write_yaml(
+        incident_dir / "collection_report.yaml",
+        {
+            "collection_actions": [],
+            "successful_items": [],
+            "failed_items": [],
+            "blank_items": [],
+            "evidence_gaps": [],
+        },
+    )
+
+    def fail_collection(*_args, **_kwargs):
+        raise AssertionError("reason scope must not run collection")
+
+    def fail_recollection(*_args, **_kwargs):
+        raise AssertionError("reason scope must not run directed recollection")
+
+    calls = []
+
+    def fake_phase4(output_dir):
+        calls.append(("phase4", output_dir))
+        return {"total_rounds": 0}
+
+    monkeypatch.setattr(module, "run_remote_collection", fail_collection)
+    monkeypatch.setattr(module, "run_local_collection", fail_collection)
+    monkeypatch.setattr(module, "run_directed_recollection_if_needed", fail_recollection)
+
+    args = SimpleNamespace(
+        input_dir=None,
+        remote_run_dir=None,
+        remote_config=None,
+        incident_dir=str(incident_dir),
+        output_dir=None,
+        output_root=".local/incidents",
+        scenario=None,
+        customer_clue=None,
+        remote_output_dir=".local/remote-runs",
+        remote_namespace="",
+        object_inventory="",
+        execution_mode="",
+        scope="reason",
+    )
+
+    assert module.analyse_command.run(
+        args,
+        run_remote_collection=module.run_remote_collection,
+        run_local_collection=module.run_local_collection,
+        load_remote_executor_run_result=module.load_remote_executor_run_result,
+        build_incident_from_remote_run=module.build_incident_from_remote_run,
+        apply_scenario_routing_if_needed=module.apply_scenario_routing_if_needed,
+        write_collection_plan=module.write_collection_plan,
+        write_collection_coverage=module.write_collection_coverage,
+        write_signal_governance=module.write_signal_governance,
+        enrich_skill_runtime_context=module.enrich_skill_runtime_context,
+        run_directed_recollection_if_needed=module.run_directed_recollection_if_needed,
+        remote_executor_required_user_action=module.remote_executor_required_user_action,
+        remote_executor_next_actions=module.remote_executor_next_actions,
+        normalize_collection_report_gaps=module.normalize_collection_report_gaps,
+        run_phase4_analysis=fake_phase4,
+    ) == 0
+
+    assert calls == [("phase4", incident_dir)]
+    adapter = load_yaml(incident_dir / "adapter-output.yaml")
+    assert adapter["status"] == "completed"
+    assert (incident_dir / "analysis.yaml").exists()
+    assert (incident_dir / "report.md").exists()
+    meta = load_yaml(incident_dir / "meta.yaml")
+    assert meta["status"] == "analysed"
+
+
+def test_reason_scope_blocks_when_collected_artifacts_are_missing(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+    incident_dir = tmp_path / ".local" / "incidents" / "mongodb-reason-missing"
+    incident_dir.mkdir(parents=True)
+    write_yaml(
+        incident_dir / "input.yaml",
+        {
+            "incident_id": "mongodb-reason-missing",
+            "middleware": "mongodb",
+            "namespace": "psmdb-test",
+            "environment_mode": "remote",
+            "execution_mode": "remote",
+            "customer_clue": "MongoDB pod is not ready.",
+            "scenario": "unknown",
+        },
+    )
+    write_yaml(
+        incident_dir / "meta.yaml",
+        {
+            "incident_id": "mongodb-reason-missing",
+            "middleware": "mongodb",
+            "status": "analysed",
+            "current_command": "analyse",
+        },
+    )
+    write_yaml(incident_dir / "structured_record.yaml", {"details": {}})
+
+    def fail_collection(*_args, **_kwargs):
+        raise AssertionError("reason scope with missing artifacts must block before collection")
+
+    monkeypatch.setattr(module, "run_remote_collection", fail_collection)
+    monkeypatch.setattr(module, "run_local_collection", fail_collection)
+
+    args = SimpleNamespace(
+        input_dir=None,
+        remote_run_dir=None,
+        remote_config=None,
+        incident_dir=str(incident_dir),
+        output_dir=None,
+        output_root=".local/incidents",
+        scenario=None,
+        customer_clue=None,
+        remote_output_dir=".local/remote-runs",
+        remote_namespace="",
+        object_inventory="",
+        execution_mode="",
+        scope="reason",
+    )
+
+    assert module.command_analyse(args) == 0
+
+    adapter = load_yaml(incident_dir / "adapter-output.yaml")
+    assert adapter["status"] == "blocked"
+    assert adapter["blocking_items"][0]["code"] == "reason_scope_artifacts_missing"
+    assert "signal_bundle.yaml" in adapter["blocking_items"][0]["message"]
+    assert "collection_report.yaml" in adapter["blocking_items"][0]["message"]

@@ -42,6 +42,8 @@ COLLECTED_INPUT_FILES = (
     "signal_bundle.yaml",
     "collection_report.yaml",
 )
+ANALYSE_SCOPE_FULL = "full"
+ANALYSE_SCOPE_REASON = "reason"
 
 
 def _missing_collected_input_files(incident_dir: Path) -> list[str]:
@@ -152,6 +154,42 @@ def _write_unsupported_execution_mode_output(output_root: Path, mode_name: str) 
         ],
         ["rerun /midstack:start or fix the incident input.yaml execution_mode"],
     )
+
+
+def _analyse_scope(args) -> str:
+    value = str(getattr(args, "scope", ANALYSE_SCOPE_FULL) or ANALYSE_SCOPE_FULL).strip().lower()
+    return value or ANALYSE_SCOPE_FULL
+
+
+def _write_reason_scope_missing_artifacts_output(output_dir: Path, input_data: Dict[str, Any], missing_files: list[str]) -> int:
+    incident_id = str(input_data.get("incident_id") or output_dir.name)
+    middleware = str(input_data.get("middleware") or "mongodb")
+    return write_blocked_output(
+        "analyse",
+        incident_id,
+        middleware,
+        output_dir,
+        "reason scope needs existing collected artifacts",
+        [
+            {
+                "code": "reason_scope_artifacts_missing",
+                "message": "missing required collected artifact files: %s" % ", ".join(missing_files),
+                "required_user_action": "run /midstack:analyse once without --scope reason, or provide an incident/output directory containing collected artifacts",
+            }
+        ],
+        ["run /midstack:analyse without --scope reason to collect evidence first"],
+    )
+
+
+def _ensure_reason_scope_artifacts(args, output_dir: Path, input_data: Dict[str, Any], *, incident_mode: bool) -> list[str]:
+    if getattr(args, "input_dir", ""):
+        _copy_collected_input_files(resolve_path(args.input_dir), output_dir)
+    missing_files = _missing_collected_input_files(output_dir)
+    artifact_source = str(input_data.get("artifact_source") or "")
+    if incident_mode and missing_files and artifact_source:
+        _copy_collected_input_files(resolve_path(artifact_source), output_dir, preserve_existing_input=True)
+        missing_files = _missing_collected_input_files(output_dir)
+    return missing_files
 
 
 def _prepare_analysis_inputs(
@@ -330,6 +368,7 @@ def _write_completed_analysis_output(
     run_phase4_analysis,
     run_directed_recollection_if_needed,
 ) -> int:
+    scope = _analyse_scope(args)
     try:
         phase4_result = run_phase4_analysis(output_dir)
         print("Phase 4 reasoning completed: %d rounds" % phase4_result["total_rounds"], file=sys.stderr)
@@ -345,15 +384,18 @@ def _write_completed_analysis_output(
         write_yaml(output_dir / "adapter-output.yaml", output)
         print("ERROR: %s" % exc, file=sys.stderr)
         return 1
-    executed_validations = _run_auto_allowed_verification_recollection(
-        args=args,
-        output_dir=output_dir,
-        middleware=middleware,
-        analysis_file=analysis_file,
-        run_directed_recollection_if_needed=run_directed_recollection_if_needed,
-    )
+    executed_validations = []
+    if scope != ANALYSE_SCOPE_REASON:
+        executed_validations = _run_auto_allowed_verification_recollection(
+            args=args,
+            output_dir=output_dir,
+            middleware=middleware,
+            analysis_file=analysis_file,
+            run_directed_recollection_if_needed=run_directed_recollection_if_needed,
+        )
 
-    output = adapter_output("analyse", incident_id, middleware, "completed", "local analyse completed", output_dir)
+    summary = "reason scope analyse completed" if scope == ANALYSE_SCOPE_REASON else "local analyse completed"
+    output = adapter_output("analyse", incident_id, middleware, "completed", summary, output_dir)
     output["record_refs"].append({"name": "analysis", "path": str(analysis_file), "description": "generated analysis result"})
     add_record_ref_if_exists(output, output_dir, "collection_plan", "collection_plan.yaml", "phase-3 script layer and cost plan")
     add_record_ref_if_exists(
@@ -450,6 +492,7 @@ def run(
     run_phase4_analysis,
 ) -> int:
     output_root = path_from_arg(args.output_root)
+    scope = _analyse_scope(args)
     incident_dir = None
     incident_mode = False
     previous_incident_status = ""
@@ -530,7 +573,13 @@ def run(
         args.remote_namespace = args.remote_namespace or str(input_data.get("namespace") or "")
         args.customer_clue = args.customer_clue or str(input_data.get("customer_clue") or "")
         args.scenario = args.scenario or str(input_data.get("scenario") or "unknown")
-        if execution_mode.name == "offline":
+        if scope == ANALYSE_SCOPE_REASON:
+            missing_files = _ensure_reason_scope_artifacts(args, output_dir, input_data, incident_mode=incident_mode)
+            if missing_files:
+                return _write_reason_scope_missing_artifacts_output(output_dir, input_data, missing_files)
+            args.remote_config = ""
+            args.local_config = ""
+        elif execution_mode.name == "offline":
             missing_files = _missing_collected_input_files(incident_dir)
             artifact_source = str(input_data.get("artifact_source") or "")
             if missing_files and artifact_source:
@@ -564,7 +613,7 @@ def run(
         else:
             args.remote_config = str(incident_dir / "remote-config.yaml")
             args.local_config = ""
-        if execution_mode.name == "remote" and not Path(args.remote_config).exists():
+        if scope != ANALYSE_SCOPE_REASON and execution_mode.name == "remote" and not Path(args.remote_config).exists():
             return write_blocked_output(
                 "analyse",
                 str(input_data.get("incident_id") or incident_dir.name),
@@ -591,18 +640,26 @@ def run(
             print("ERROR: --output-dir is required unless --incident-dir is used", file=sys.stderr)
             return 1
         output_dir = path_from_arg(args.output_dir)
+        if scope == ANALYSE_SCOPE_REASON:
+            missing_files = _ensure_reason_scope_artifacts(args, output_dir, {}, incident_mode=incident_mode)
+            input_data = load_yaml(output_dir / "input.yaml") if (output_dir / "input.yaml").exists() else {}
+            if missing_files:
+                return _write_reason_scope_missing_artifacts_output(output_dir, input_data, missing_files)
+            args.remote_config = ""
+            args.local_config = ""
     try:
         if incident_mode and incident_dir is not None:
             update_incident_meta(incident_dir, {"status": "analysing", "current_command": "analyse"})
-        remote_run_result = _prepare_analysis_inputs(
-            args,
-            output_dir,
-            incident_mode,
-            run_remote_collection,
-            run_local_collection,
-            load_remote_executor_run_result,
-            build_incident_from_remote_run,
-        )
+        if scope != ANALYSE_SCOPE_REASON:
+            remote_run_result = _prepare_analysis_inputs(
+                args,
+                output_dir,
+                incident_mode,
+                run_remote_collection,
+                run_local_collection,
+                load_remote_executor_run_result,
+                build_incident_from_remote_run,
+            )
     except Exception as exc:
         if incident_mode and incident_dir is not None and previous_incident_status:
             update_incident_meta(incident_dir, {"status": previous_incident_status, "current_command": "analyse"})
@@ -643,18 +700,21 @@ def run(
                 error_message,
                 remote_executor_next_actions,
             )
-    input_data, skill_runtime = _prepare_phase3_context(
-        args,
-        output_dir,
-        input_data,
-        remote_run_result,
-        apply_scenario_routing_if_needed,
-        enrich_skill_runtime_context,
-        write_collection_plan,
-        write_collection_coverage,
-        write_signal_governance,
-        run_directed_recollection_if_needed,
-    )
+    if scope == ANALYSE_SCOPE_REASON:
+        skill_runtime = {}
+    else:
+        input_data, skill_runtime = _prepare_phase3_context(
+            args,
+            output_dir,
+            input_data,
+            remote_run_result,
+            apply_scenario_routing_if_needed,
+            enrich_skill_runtime_context,
+            write_collection_plan,
+            write_collection_coverage,
+            write_signal_governance,
+            run_directed_recollection_if_needed,
+        )
 
     analysis_file = output_dir / "analysis.yaml"
     supported = supported_middlewares()

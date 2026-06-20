@@ -99,6 +99,12 @@ def build_parser() -> argparse.ArgumentParser:
     analyse.add_argument("--remote-output-dir", default=".local/remote-runs")
     analyse.add_argument("--remote-namespace", default="")
     analyse.add_argument("--object-inventory", default="")
+    analyse.add_argument(
+        "--scope",
+        choices=("full", "reason"),
+        default="full",
+        help="Pipeline slice to run. full runs collection plus reasoning; reason reruns Phase 4/5 from existing collected artifacts.",
+    )
     analyse.set_defaults(func=command_analyse)
 
     review = subparsers.add_parser("review")

@@ -16,7 +16,13 @@ When the user asks to triage MongoDB or middleware incidents in this workspace:
 - After `/midstack:start`, if the result is ready, print `user_message` from `adapter-output.yaml` verbatim; if blocked, summarize blocking items.
 - For `/midstack:analyse`, run `midstack-local.py analyse` (or `--input-dir` / `--remote-run-dir` / `--remote-config` when appropriate).
 - For `/midstack:review`, run `midstack-local.py review`.
-- After analyse succeeds, read `agent-reasoning-task.md`, update `analysis.yaml` and `report.md`, then run `midstack-local.py finalize-analysis`.
+- After analyse succeeds, read `agent-reasoning-task.md`, `deep-analysis.yaml`
+  when present, and `reasoning-manifest.yaml` plus the current
+  `reasoning/*.yaml` segment when present; do not edit or delete existing
+  `reasoning/*.yaml` files.
+- Update only the latest `analysis.yaml` and `report.md` views, then run
+  `midstack-local.py finalize-analysis`; finalize-analysis appends the new
+  reasoning segment when the latest analysis view changed.
 - Treat DNS probe `blocked` as an evidence gap and DNS probe `failed` as mechanism evidence only when the failed check contains DNS-layer error text.
 
 Do not expose passwords or tokens in chat output; show credentials only as redacted values when needed.

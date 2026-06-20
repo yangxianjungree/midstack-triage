@@ -55,8 +55,17 @@ incident, add `--scope reason` to the analyse command.
 To run only collection/governance for a ready incident, add `--scope collect`;
 then run analyse again with `--scope reason`.
 
-After analyse succeeds, refine `analysis.yaml` and `report.md` according to
-`agent-reasoning-task.md`, then run `finalize-analysis`.
+After analyse succeeds:
+
+- Read `agent-reasoning-task.md`.
+- Read `deep-analysis.yaml` when present; use it as materialized read-only
+  deep analysis, not as permission to run live commands.
+- Read `reasoning-manifest.yaml` and the current `reasoning/*.yaml` segment when present before refining conclusions.
+- Do not edit or delete existing `reasoning/*.yaml` files.
+- Refine only the latest `analysis.yaml` and `report.md` views according to
+  `agent-reasoning-task.md`.
+- Run `finalize-analysis`; finalize-analysis appends the new reasoning segment
+  when the latest analysis view changed.
 
 After finalize succeeds, read `.local/incidents/<incident-id>/adapter-output.yaml`.
 If `status=completed`, print `user_message` from `adapter-output.yaml` verbatim.

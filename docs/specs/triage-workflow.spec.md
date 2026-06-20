@@ -363,7 +363,7 @@ domains/mongodb/scripts/
 - 通用日志采集只负责 Pod/container stdout/stderr 采集、tail 策略、artifact 保存和 `structured_record.details.raw_logs`。
 - 中间件领域层负责日志格式、关键词、严重性、时间解析、log sink 发现和“日志太短意味着什么”的解释。
 - 当 `kubectl logs` 太短时，通用层只记录 stdout/stderr 不足；MongoDB、OceanBase 等领域层再根据启动参数、配置文件、挂载卷、数据盘或日志盘推理真实日志源。
-- 公共 manifest/runtime map 会在独立切片中落地；在此之前不得把 MongoDB log sink 规则复制到其他中间件。
+- 公共 manifest/runtime map 已提供 `kubernetes.collect.logs.current` / `kubernetes.collect.logs.previous`，MongoDB 默认采集计划使用该通用入口；不得把 MongoDB log sink 规则复制到其他中间件。
 
 ### 第 3 段脚本最小调用合同
 

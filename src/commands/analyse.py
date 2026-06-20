@@ -391,6 +391,34 @@ def _run_auto_allowed_verification_recollection(
     return audit
 
 
+def _agent_reasoning_summary(phase4_result: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(phase4_result, dict) or not phase4_result.get("hypotheses"):
+        return {}
+    hypotheses = []
+    for item in phase4_result.get("hypotheses") or []:
+        if not isinstance(item, dict):
+            continue
+        status = item.get("status") if isinstance(item.get("status"), dict) else {}
+        hypotheses.append(
+            {
+                "id": str(item.get("id") or ""),
+                "statement": str(item.get("final_text") or ""),
+                "status": str(status.get("status") or ""),
+                "confidence": status.get("confidence", 0),
+            }
+        )
+    if not hypotheses:
+        return {}
+    return {
+        "artifact": "analysis.multitrack.yaml",
+        "role": "auxiliary_draft",
+        "runtime": phase4_result.get("agent_runtime") or {},
+        "total_rounds": phase4_result.get("total_rounds", 0),
+        "hypotheses": hypotheses,
+        "boundary": "Agent draft is recorded for the main analyse path but does not override rules fallback conclusion_summary.",
+    }
+
+
 def _write_completed_analysis_output(
     args,
     output_root: Path,
@@ -455,6 +483,11 @@ def _write_completed_analysis_output(
         analysis["updated_at"] = now_iso()
         write_yaml(analysis_file, analysis)
     rules_fallback_file = write_analysis_rules_fallback(output_dir, analysis)
+    agent_reasoning = _agent_reasoning_summary(phase4_result)
+    if agent_reasoning:
+        analysis["agent_reasoning"] = agent_reasoning
+        analysis["updated_at"] = now_iso()
+        write_yaml(analysis_file, analysis)
     report_file = write_report(output_dir, input_data, analysis)
     task_file = write_agent_reasoning_task(
         output_dir,
@@ -464,10 +497,10 @@ def _write_completed_analysis_output(
         report_file,
         matched_skills=skill_runtime.get("skills") if skill_runtime else None,
     )
-    reasoning_segment_file = write_reasoning_segment(
+    rules_reasoning_segment_file = write_reasoning_segment(
         output_dir,
         "rules_fallback",
-        analysis,
+        load_yaml(rules_fallback_file),
         summary="rules fallback seeded the first analysis",
         executed_validations=executed_validations,
         output_refs={
@@ -477,6 +510,22 @@ def _write_completed_analysis_output(
             "agent_reasoning_task": task_file.name,
         },
     )
+    reasoning_segment_file = rules_reasoning_segment_file
+    if agent_reasoning:
+        reasoning_segment_file = write_reasoning_segment(
+            output_dir,
+            "agent_multitrack",
+            analysis,
+            summary="agent multitrack draft recorded in production analysis view",
+            depends_on=[rules_reasoning_segment_file.stem],
+            output_refs={
+                "analysis": "analysis.yaml",
+                "report": "report.md",
+                "rules_fallback": rules_fallback_file.name,
+                "agent_reasoning_task": task_file.name,
+                "analysis_multitrack": "analysis.multitrack.yaml",
+            },
+        )
     output["record_refs"].append(
         {
             "name": "analysis_rules_fallback",
@@ -508,10 +557,10 @@ def _write_completed_analysis_output(
             output["warnings"].append("Phase 4 agent runtime selected %s: %s" % (selected_agent, fallback_reason))
         else:
             output["warnings"].append("Phase 4 agent runtime selected %s for multitrack reasoning." % selected_agent)
-    output["warnings"].append("analysis.yaml is currently seeded from the rules fallback analysis; analysis.multitrack.yaml records Phase 4 agent reasoning as an auxiliary draft.")
+    output["warnings"].append("analysis.yaml conclusion_summary is guarded by rules fallback; agent_reasoning records Phase 4 multitrack draft for the main analyse path.")
     output["next_actions"] = [
-        "read agent-reasoning-task.md and update analysis.yaml with Agent-led multi-hypothesis reasoning, gap classification, and conclusion ceiling",
-        "refresh report.md so it matches the final analysis.yaml conclusion",
+        "review report.md and analysis.yaml for guarded conclusion, verification requests, and agent_reasoning draft",
+        "use first-class read-only verification requests to close remaining critical evidence gaps",
     ]
     if incident_mode and incident_dir is not None:
         update_incident_meta(incident_dir, {"status": "analysed", "current_command": "analyse"})

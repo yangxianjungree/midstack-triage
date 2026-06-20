@@ -543,3 +543,44 @@ def test_write_report_includes_deep_analysis_requests(tmp_path):
     assert "compare replica-set invariants against a healthy baseline" in content
     assert "inputs=structured_record.details.replica_members" in content
     assert "expected=baseline_diff" in content
+
+
+def test_write_report_includes_agent_reasoning_summary(tmp_path):
+    analysis = {
+        "conclusion_summary": {
+            "statement": "MongoDB replica set has split-brain symptoms",
+            "confidence": "medium",
+            "deepest_supported_level": "mechanism",
+            "primary_cause_category": "replication",
+            "impact_scope": "shard replica set",
+            "evidence": ["two members report conflicting PRIMARY views"],
+            "limitations": [],
+        },
+        "hypotheses": [],
+        "next_actions": [],
+        "knowledge_candidates": [],
+        "reasoning_timeline": {"events": []},
+        "deepening_findings": [],
+        "verification_requests": [],
+        "deep_analysis_requests": [],
+        "agent_reasoning": {
+            "artifact": "analysis.multitrack.yaml",
+            "role": "auxiliary_draft",
+            "runtime": {"selected_type": "claude", "model": "claude-sonnet-4-6"},
+            "hypotheses": [
+                {
+                    "id": "h1",
+                    "status": "supported",
+                    "confidence": 0.84,
+                    "statement": "Replica set split-brain is plausible.",
+                }
+            ],
+        },
+    }
+
+    report = write_report(tmp_path, {"incident_id": "demo", "middleware": "mongodb"}, analysis)
+
+    content = report.read_text(encoding="utf-8")
+    assert "## Agent Reasoning Draft" in content
+    assert "`claude` `claude-sonnet-4-6` `analysis.multitrack.yaml`" in content
+    assert "`supported` `0.84` h1: Replica set split-brain is plausible." in content

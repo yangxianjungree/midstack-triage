@@ -171,6 +171,32 @@ def deep_analysis_request_report_lines(analysis: Dict[str, Any], limit: int = 8)
     return lines
 
 
+def agent_reasoning_report_lines(analysis: Dict[str, Any], limit: int = 6) -> List[str]:
+    agent_reasoning = analysis.get("agent_reasoning")
+    if not isinstance(agent_reasoning, dict):
+        return ["- No agent reasoning draft recorded."]
+    runtime = agent_reasoning.get("runtime") if isinstance(agent_reasoning.get("runtime"), dict) else {}
+    selected_type = str(runtime.get("selected_type") or "unknown").strip()
+    model = str(runtime.get("model") or "unknown").strip()
+    artifact = str(agent_reasoning.get("artifact") or "unknown").strip()
+    lines = ["- Runtime: `%s` `%s` `%s`" % (selected_type, model, artifact)]
+    boundary = str(agent_reasoning.get("boundary") or "").strip()
+    if boundary:
+        lines.append("- Boundary: %s" % boundary)
+    for item in as_list(agent_reasoning.get("hypotheses"))[:limit]:
+        if not isinstance(item, dict):
+            continue
+        hypothesis_id = str(item.get("id") or "hypothesis").strip()
+        status = str(item.get("status") or "unknown").strip()
+        confidence = str(item.get("confidence") if item.get("confidence") is not None else "unknown").strip()
+        statement = str(item.get("statement") or "").strip()
+        if statement:
+            lines.append("- `%s` `%s` %s: %s" % (status, confidence, hypothesis_id, statement))
+    if len(as_list(agent_reasoning.get("hypotheses"))) > limit:
+        lines.append("- ... %s more hypothesis draft(s) omitted from report; see `analysis.yaml`." % (len(as_list(agent_reasoning.get("hypotheses"))) - limit))
+    return lines
+
+
 def analysis_rules_fallback_candidates(output_dir: Path) -> List[Path]:
     return [
         output_dir / ANALYSIS_RULES_FALLBACK_FILENAME,
@@ -400,6 +426,8 @@ def write_report(output_dir: Path, input_data: Dict[str, Any], analysis: Dict[st
     lines.extend(verification_request_report_lines(analysis))
     lines.extend(["", "## Deep Analysis Requests", ""])
     lines.extend(deep_analysis_request_report_lines(analysis))
+    lines.extend(["", "## Agent Reasoning Draft", ""])
+    lines.extend(agent_reasoning_report_lines(analysis))
     lines.extend(["", "## Evidence Gaps", ""])
     gaps = as_list(conclusion.get("limitations"))
     if gaps:

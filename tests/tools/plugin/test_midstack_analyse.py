@@ -51,7 +51,14 @@ class MidstackAnalyseTest(unittest.TestCase):
             self.assertTrue((output_dir / "agent-reasoning-task.md").exists())
             self.assertTrue((output_dir / "reasoning-manifest.yaml").exists())
             self.assertTrue((output_dir / "reasoning" / "0001-rules-fallback.yaml").exists())
+            self.assertTrue((output_dir / "reasoning" / "0002-agent-multitrack.yaml").exists())
             self.assertTrue((output_dir / "report.md").exists())
+            analysis = yaml.safe_load((output_dir / "analysis.yaml").read_text(encoding="utf-8"))
+            manifest = yaml.safe_load((output_dir / "reasoning-manifest.yaml").read_text(encoding="utf-8"))
+            self.assertEqual(analysis["agent_reasoning"]["artifact"], "analysis.multitrack.yaml")
+            self.assertTrue(analysis["agent_reasoning"]["hypotheses"])
+            self.assertEqual([item["source"] for item in manifest["segments"]], ["rules_fallback", "agent_multitrack"])
+            self.assertNotIn("read agent-reasoning-task.md", "\n".join(adapter["next_actions"]))
 
     def test_analyse_offline_input_dir_completed_without_remote_collection(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

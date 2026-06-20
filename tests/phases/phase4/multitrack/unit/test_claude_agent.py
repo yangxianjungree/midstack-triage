@@ -52,6 +52,30 @@ def test_claude_agent_response_parsing():
     assert "causal_chain_update" in result
 
 
+def test_claude_agent_response_parsing_preserves_evidence_refs():
+    """测试响应解析会保留当前incident证据引用"""
+    agent = ClaudeAgent(api_key="test-key")
+
+    response_text = """{
+        "hypothesis_status": "supported",
+        "confidence": 0.91,
+        "reasoning": "证据充分",
+        "evidence_refs": [
+            "structured_record.details.replica_members",
+            "signal_bundle.topology.replica_sets.rs0"
+        ],
+        "validation_actions": [],
+        "findings": []
+    }"""
+
+    result = agent._parse_response(response_text)
+
+    assert result["evidence_refs"] == [
+        "structured_record.details.replica_members",
+        "signal_bundle.topology.replica_sets.rs0",
+    ]
+
+
 @pytest.mark.skipif(True, reason="需要anthropic包才能mock")
 @patch('anthropic.Anthropic')
 def test_claude_agent_api_call(mock_anthropic):

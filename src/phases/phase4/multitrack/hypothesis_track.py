@@ -279,7 +279,7 @@ class HypothesisTrack:
             ),
             status=status,
             reasoning=reasoning_result.get("reasoning", ""),
-            evidence=reasoning_result.get("evidence_considered", [])
+            evidence=self._reasoning_evidence_refs(reasoning_result)
         )
 
         # 判断是否继续
@@ -328,6 +328,18 @@ class HypothesisTrack:
 
         critical_gaps = self.board.get_critical_gaps_for_track(self.track_id)
         return len(critical_gaps) > 0
+
+    def _reasoning_evidence_refs(self, reasoning_result: Dict) -> List[str]:
+        """Return current-incident evidence refs cited by the Agent."""
+        values = reasoning_result.get("evidence_refs")
+        if values is None:
+            values = reasoning_result.get("evidence_considered", [])
+        refs: List[str] = []
+        for value in values or []:
+            text = str(value or "").strip()
+            if text:
+                refs.append(text)
+        return refs
 
     # ==================== 隔离上下文管理 ====================
 

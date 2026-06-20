@@ -98,9 +98,12 @@ class ClaudeAgent:
     "hypothesis_status": "supported|refuted|insufficient|pending",
     "confidence": 0.0-1.0,
     "reasoning": "推理过程",
+    "evidence_refs": ["structured_record.details...", "signal_bundle..."],
     "validation_actions": [{{"action": "..."}}, ...],
     "findings": [{{"type": "...", "content": "...", "evidence": [], "affects": []}}, ...]
-}}"""
+}}
+
+evidence_refs只能引用当前incident证据路径，例如structured_record、signal_bundle、collection_report、deepening_findings、deep_analysis_results或verification_requests；不要引用历史经验、runbook或用户线索作为直接证据。"""
 
         messages = [{"role": "user", "content": prompt}]
         max_iterations = 5
@@ -173,6 +176,7 @@ class ClaudeAgent:
 - hypothesis_status: "supported" | "refuted" | "insufficient" | "pending"
 - confidence: 0.0-1.0
 - reasoning: 推理过程（1-2句话）
+- evidence_refs: 当前incident证据路径列表，只能引用structured_record、signal_bundle、collection_report、deepening_findings、deep_analysis_results或verification_requests
 - validation_actions: [{{"action": "验证动作描述"}}] (如需要)
 - findings: [{{"type": "support|refutation|gap", "content": "发现内容", "evidence": [], "affects": []}}]
 
@@ -227,5 +231,6 @@ JSON:"""
 
         result.setdefault("validation_actions", [])
         result.setdefault("findings", [])
+        result.setdefault("evidence_refs", [])
         result.setdefault("causal_chain_update", None)
         return result

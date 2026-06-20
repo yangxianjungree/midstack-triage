@@ -87,7 +87,7 @@ Agent refinement 不应该做：
 
 - runtime 必须是真实 `claude`，mock 草稿只能作为辅助信息。
 - 候选 hypothesis 必须是 `supported`，置信度达到门槛。
-- 候选必须引用当前 incident 证据，例如 `structured_record`、`signal_bundle`、`collection_report`、`deepening_findings`、`deep_analysis_results` 或 `verification_requests`。
+- 候选必须通过 `agent_reasoning.hypotheses[].evidence_refs` 引用当前 incident 证据，例如 `structured_record`、`signal_bundle`、`collection_report`、`deepening_findings`、`deep_analysis_results` 或 `verification_requests`。
 - `experience_matches`、`retrieval_context`、runbook、历史经验和用户线索不能作为直接证据引用。
 - 未闭合的 `critical_gap` 会阻止提升。
 

@@ -138,6 +138,29 @@ def test_cross_refutation_written_to_board(tmp_path):
     assert refutations[0]["from_track"] == "track_h1"
 
 
+def test_phase_r2_records_evidence_refs_in_private_context(tmp_path):
+    """测试Agent证据引用会进入隔离上下文"""
+    board = ReasoningBoard(tmp_path)
+    track = HypothesisTrack("track_h1", "h1", "MongoDB复制集脑裂", board)
+
+    track._pending_reasoning_result = {
+        "hypothesis_status": "supported",
+        "confidence": 0.91,
+        "reasoning": "证据支持",
+        "evidence_refs": [
+            "structured_record.details.replica_members",
+            "signal_bundle.topology.replica_sets.rs0",
+        ],
+    }
+    track.run_phase_r2(round_num=1)
+
+    context = track.get_private_context()
+    assert context["hypothesis_evolution"][-1]["evidence"] == [
+        "structured_record.details.replica_members",
+        "signal_bundle.topology.replica_sets.rs0",
+    ]
+
+
 def test_private_context_export(tmp_path):
     """测试隔离上下文导出"""
     board = ReasoningBoard(tmp_path)

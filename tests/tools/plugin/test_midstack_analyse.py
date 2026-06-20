@@ -38,6 +38,10 @@ class MidstackAnalyseTest(unittest.TestCase):
             adapter = yaml.safe_load((output_dir / "adapter-output.yaml").read_text(encoding="utf-8"))
             record_ref_names = {item["name"] for item in adapter["record_refs"]}
             self.assertEqual(adapter["status"], "completed")
+            self.assertIn("| Field | Value |", adapter["user_message"])
+            self.assertIn("| Status | `completed` |", adapter["user_message"])
+            self.assertIn("| Report | `%s` |" % (output_dir / "report.md"), adapter["user_message"])
+            self.assertNotEqual(adapter["user_message"], "local analyse completed")
             self.assertIn("analysis", record_ref_names)
             self.assertIn("analysis_multitrack", record_ref_names)
             self.assertIn("analysis_rules_fallback", record_ref_names)

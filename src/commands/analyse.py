@@ -10,6 +10,8 @@ from execution.modes import resolve_execution_mode
 from phases.phase4.deep_analysis import deep_analysis_summary, materialize_deep_analysis
 from phases.phase4.agent_conclusion_gate import apply_agent_conclusion_override, evaluate_agent_conclusion_gate
 from phases.phase4.rules import generate_rule_analysis, supported_middlewares
+from phases.phase5.finalize import completed_user_message
+from shared.analysis_runtime import analysis_next_action_texts, analysis_summary_text
 from shared.workspace import (
     adapter_output,
     add_record_ref_if_exists,
@@ -505,8 +507,7 @@ def _write_completed_analysis_output(
             run_directed_recollection_if_needed=run_directed_recollection_if_needed,
         )
 
-    summary = "reason scope analyse completed" if scope == ANALYSE_SCOPE_REASON else "local analyse completed"
-    output = adapter_output("analyse", incident_id, middleware, "completed", summary, output_dir)
+    output = adapter_output("analyse", incident_id, middleware, "completed", "analysis is being finalized", output_dir)
     output["record_refs"].append({"name": "analysis", "path": str(analysis_file), "description": "generated analysis result"})
     add_record_ref_if_exists(output, output_dir, "collection_plan", "collection_plan.yaml", "phase-3 script layer and cost plan")
     add_record_ref_if_exists(
@@ -648,10 +649,9 @@ def _write_completed_analysis_output(
         output["warnings"].append("analysis.yaml conclusion_summary was updated from an eligible agent_conclusion_gate candidate.")
     else:
         output["warnings"].append("analysis.yaml conclusion_summary is guarded by rules fallback; agent_reasoning records Phase 4 multitrack draft for the main analyse path.")
-    output["next_actions"] = [
-        "review report.md and analysis.yaml for guarded conclusion, verification requests, and agent_reasoning draft",
-        "use first-class read-only verification requests to close remaining critical evidence gaps",
-    ]
+    output["summary"] = analysis_summary_text(analysis)
+    output["user_message"] = completed_user_message(output_dir, input_data, analysis)
+    output["next_actions"] = analysis_next_action_texts(analysis)
     if incident_mode and incident_dir is not None:
         update_incident_meta(incident_dir, {"status": "analysed", "current_command": "analyse"})
         write_current_incident(output_root, incident_dir)

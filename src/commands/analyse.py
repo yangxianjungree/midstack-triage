@@ -408,6 +408,7 @@ def _write_completed_analysis_output(
     run_directed_recollection_if_needed,
 ) -> int:
     scope = _analyse_scope(args)
+    phase4_result: Dict[str, Any] = {}
     try:
         phase4_result = run_phase4_analysis(output_dir)
         print("Phase 4 reasoning completed: %d rounds" % phase4_result["total_rounds"], file=sys.stderr)
@@ -499,7 +500,15 @@ def _write_completed_analysis_output(
         }
     )
     output["record_refs"].append({"name": "report", "path": str(report_file), "description": "generated human-readable report"})
-    output["warnings"].append("analysis.yaml is currently seeded from the rules fallback analysis; Agent reasoning should refine analysis.yaml and report.md.")
+    agent_runtime = phase4_result.get("agent_runtime") if isinstance(phase4_result, dict) else {}
+    if agent_runtime:
+        selected_agent = str(agent_runtime.get("selected_type") or "")
+        fallback_reason = str(agent_runtime.get("fallback_reason") or "")
+        if fallback_reason:
+            output["warnings"].append("Phase 4 agent runtime selected %s: %s" % (selected_agent, fallback_reason))
+        else:
+            output["warnings"].append("Phase 4 agent runtime selected %s for multitrack reasoning." % selected_agent)
+    output["warnings"].append("analysis.yaml is currently seeded from the rules fallback analysis; analysis.multitrack.yaml records Phase 4 agent reasoning as an auxiliary draft.")
     output["next_actions"] = [
         "read agent-reasoning-task.md and update analysis.yaml with Agent-led multi-hypothesis reasoning, gap classification, and conclusion ceiling",
         "refresh report.md so it matches the final analysis.yaml conclusion",

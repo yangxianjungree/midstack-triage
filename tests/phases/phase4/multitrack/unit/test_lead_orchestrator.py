@@ -14,6 +14,22 @@ def test_orchestrator_initialization(tmp_path):
     assert all(t.is_active for t in orch.tracks.values())
 
 
+def test_orchestrator_records_agent_runtime_fallback(tmp_path, monkeypatch):
+    """测试auto模式降级信息落入result和reasoning-board"""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    hypotheses = ["DNS配置错误"]
+
+    orch = LeadOrchestrator(tmp_path, hypotheses, agent_type="auto")
+    result = orch.run()
+
+    assert result["agent_runtime"]["requested_type"] == "auto"
+    assert result["agent_runtime"]["selected_type"] == "mock"
+    assert "ANTHROPIC_API_KEY" in result["agent_runtime"]["fallback_reason"]
+
+    board = ReasoningBoard(tmp_path)
+    assert board.get_agent_runtime()["selected_type"] == "mock"
+
+
 def test_single_round_execution(tmp_path):
     """测试单轮执行"""
     hypotheses = ["DNS配置错误"]

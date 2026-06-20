@@ -27,11 +27,20 @@ class LeadOrchestrator:
 
         agent_kwargs = dict(agent_kwargs or {})
         agent_kwargs.setdefault("incident_dir", self.incident_dir)
+        self.agent_runtime: Dict[str, str] = {
+            "requested_type": str(agent_type or "mock"),
+            "selected_type": "",
+            "fallback_reason": "",
+            "model": str(agent_kwargs.get("model") or ""),
+        }
 
         for i, hyp_text in enumerate(initial_hypotheses, 1):
             hyp_id = f"h{i}"
             track_id = f"track_{hyp_id}"
-            agent = AgentFactory.create(agent_type, **agent_kwargs)
+            agent, runtime = AgentFactory.create_with_runtime(agent_type, **agent_kwargs)
+            if i == 1:
+                self.agent_runtime = runtime
+                self.board.set_agent_runtime(runtime)
             self.tracks[track_id] = HypothesisTrack(
                 track_id=track_id,
                 hypothesis_id=hyp_id,
@@ -144,6 +153,7 @@ class LeadOrchestrator:
         return {
             "incident_id": self.board.get_incident_id(),
             "total_rounds": self.current_round,
+            "agent_runtime": self.agent_runtime,
             "hypotheses": [
                 {
                     "id": track.hypothesis_id,

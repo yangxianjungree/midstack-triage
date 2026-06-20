@@ -70,7 +70,7 @@ superseded_by: none
 
 - `analysis.yaml` 的生产者是 `src/phases/phase4/rules/<middleware>.py` rules fallback + guardrails。
 - `analysis.multitrack.yaml` 是 multitrack renderer 产出的辅助诊断草稿，不替代 `analysis.yaml`。
-- `agent-reasoning-task.md` 是人工或 Agent refinement 合同，不代表默认真实 Claude API 推理已经自动闭环。
+- `agent-reasoning-task.md` 是后续人工或 Agent refinement 合同；当前默认 Phase 4 multitrack 会以 `auto` agent runtime 尝试 Claude API 推理，无法满足 API key / SDK 条件时自动降级到 mock，并在 `reasoning-board.yaml` 与 `analysis.multitrack.yaml` 记录 agent runtime。
 - `reasoning-manifest.yaml` 是推理历史索引；`reasoning/*.yaml` 是 append-only segment，用于保留 rules fallback 和 Agent refinement 的过程快照。
 - rules fallback 与 multitrack 辅助草稿都保留 `retrieval_context`、`experience_matches`、`source_boundaries` 顶层字段；共享契约 helper 位于 `src/phases/phase4/analysis_contract.py`。
 - Agent refinement 必须保留这些顶层字段；历史经验、runbook、知识资产和用户线索只能作为假设来源或验证路径来源，不能直接作为当前故障结论证据。
@@ -95,7 +95,7 @@ python3 examples/phase4/demo_mongodb_timeout.py
 
 ## 当前限制
 
-- Phase 4 默认仍使用 mock agent 路径
-- 真实 Claude API 推理仍是后续能力，不在这份集成说明里承诺为当前默认行为
+- Phase 4 默认使用 `auto` agent runtime：有 `ANTHROPIC_API_KEY` 且安装 `anthropic` SDK 时选择 Claude，否则降级 mock，不阻断 analyse 主链路
+- 生产 `analysis.yaml` 当前仍由 rules fallback + guardrails 守底生成；`analysis.multitrack.yaml` 记录 Agent 推理辅助草稿
 - 过程黑板 `reasoning-board.yaml` 已经是当前实现的一部分，但其结构仍以提案和代码为准，尚未上升为独立 L1 规范
 - 新中间件如需进入生产 analyse 主链路，除 `domains/<product>/` 资产外，还需要补 `src/phases/phase4/rules/<middleware>.py` 或明确保持 skeleton 状态

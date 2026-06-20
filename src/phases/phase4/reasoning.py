@@ -32,12 +32,12 @@ def write_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> None:
     write_multitrack_analysis(incident_dir, analysis)
 
 
-def run_phase4_analysis(incident_dir: Path) -> Dict[str, Any]:
+def run_phase4_analysis(incident_dir: Path, agent_type: str = "auto", agent_kwargs: Dict[str, Any] | None = None) -> Dict[str, Any]:
     """Run the Phase 4 multitrack reasoning flow for an incident directory."""
     incident_dir = Path(incident_dir)
     signal_bundle = load_signal_bundle(incident_dir)
     hypotheses = plan_initial_hypotheses(signal_bundle)
-    result = LeadOrchestrator(incident_dir, hypotheses).run()
+    result = LeadOrchestrator(incident_dir, hypotheses, agent_type=agent_type, agent_kwargs=agent_kwargs).run()
 
     analysis = format_analysis_output(result, signal_bundle)
     write_multitrack_analysis(incident_dir, analysis)

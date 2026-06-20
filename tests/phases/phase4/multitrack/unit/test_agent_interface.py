@@ -2,6 +2,7 @@
 
 import pytest
 from phases.phase4.multitrack.agents import MockAgent, AgentFactory, ClaudeAgent
+from phases.phase4.multitrack.agents import factory as agent_factory_module
 
 
 def test_mock_agent_basic():
@@ -43,6 +44,43 @@ def test_agent_factory_claude():
     agent = AgentFactory.create("claude", api_key="test_key", incident_dir="/tmp/midstack-phase4")
     assert isinstance(agent, ClaudeAgent)
     assert agent.incident_dir == "/tmp/midstack-phase4"
+
+
+def test_agent_factory_auto_uses_mock_without_api_key(monkeypatch):
+    """测试auto模式无API key时安全降级到MockAgent"""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    agent, runtime = AgentFactory.create_with_runtime("auto", incident_dir="/tmp/midstack-phase4")
+
+    assert isinstance(agent, MockAgent)
+    assert runtime["requested_type"] == "auto"
+    assert runtime["selected_type"] == "mock"
+    assert "ANTHROPIC_API_KEY" in runtime["fallback_reason"]
+
+
+def test_agent_factory_auto_uses_claude_when_api_key_and_sdk_available(monkeypatch):
+    """测试auto模式在API key和SDK可用时选择ClaudeAgent"""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setattr(agent_factory_module, "anthropic_sdk_available", lambda: True)
+
+    agent, runtime = AgentFactory.create_with_runtime("auto", incident_dir="/tmp/midstack-phase4")
+
+    assert isinstance(agent, ClaudeAgent)
+    assert runtime["requested_type"] == "auto"
+    assert runtime["selected_type"] == "claude"
+    assert runtime["fallback_reason"] == ""
+
+
+def test_agent_factory_auto_falls_back_when_sdk_missing(monkeypatch):
+    """测试auto模式在缺anthropic SDK时安全降级到MockAgent"""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setattr(agent_factory_module, "anthropic_sdk_available", lambda: False)
+
+    agent, runtime = AgentFactory.create_with_runtime("auto", incident_dir="/tmp/midstack-phase4")
+
+    assert isinstance(agent, MockAgent)
+    assert runtime["selected_type"] == "mock"
+    assert "anthropic package" in runtime["fallback_reason"]
 
 
 def test_agent_factory_invalid():

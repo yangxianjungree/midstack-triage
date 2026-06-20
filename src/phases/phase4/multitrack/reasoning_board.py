@@ -35,6 +35,7 @@ class ReasoningBoard:
             "findings": [],
             "cross_refutations": [],
             "evidence_gaps": [],
+            "agent_runtime": {},
             "rounds": []
         }
         self._save()
@@ -82,6 +83,16 @@ class ReasoningBoard:
     def get_incident_id(self) -> str:
         """获取incident ID"""
         return str(self._data.get("incident_id") or "")
+
+    def set_agent_runtime(self, runtime: Dict[str, Any]) -> None:
+        """Record the reasoning agent runtime selected for this Phase 4 run."""
+        with self._lock:
+            self._data["agent_runtime"] = dict(runtime)
+            self._save()
+
+    def get_agent_runtime(self) -> Dict[str, Any]:
+        """Return the selected reasoning agent runtime metadata."""
+        return dict(self._data.get("agent_runtime") or {})
 
     # ==================== 验证队列 ====================
 

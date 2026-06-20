@@ -30,6 +30,7 @@ def format_analysis_output(phase4_result: Dict[str, Any], signal_bundle: Dict[st
             "total_rounds": phase4_result["total_rounds"],
             "hypotheses_evaluated": len(hypotheses),
             "reasoning_board": "reasoning-board.yaml",
+            "agent_runtime": phase4_result.get("agent_runtime") or {},
         },
         "reasoning_timeline": build_reasoning_timeline(signal_bundle, {"evidence_gaps": []}, {}, []),
         **analysis_contract_fields(signal_bundle, signal_bundle, {"evidence_gaps": []}),

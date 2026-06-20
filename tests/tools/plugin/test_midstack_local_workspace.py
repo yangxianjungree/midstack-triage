@@ -1085,5 +1085,18 @@ def test_remote_analyse_runs_auto_allowed_verification_requests_after_rules(tmp_
     ]
     analysis = load_yaml(incident_dir / "analysis.yaml")
     assert analysis["conclusion_summary"]["statement"] == "verified logs collected"
+    reasoning_segment = load_yaml(incident_dir / "reasoning" / "0001-rules-fallback.yaml")
+    assert reasoning_segment["executed_validations"] == [
+        {
+            "request_id": "vr-mongodb-election-logs",
+            "hypothesis_id": "",
+            "asset": {"type": "script", "id": "kubernetes.collect.logs.previous"},
+            "execution_policy": "auto_allowed",
+            "risk_level": "read-only",
+            "status": "success",
+            "summary": "previous logs collected",
+            "output_ref": "script_outputs/kubernetes.collect.logs.previous/output.yaml",
+        }
+    ]
     adapter = load_yaml(incident_dir / "adapter-output.yaml")
     assert adapter["status"] == "completed"

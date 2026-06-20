@@ -46,13 +46,14 @@ superseded_by: none
 `analysis.yaml` 和 `report.md` 是最新物化视图，允许被 rules fallback、Agent refinement 和 finalize 刷新。为了避免推理过程被覆盖，Phase 4/5 同时维护 append-only 历史：
 
 - `reasoning-manifest.yaml`：可变索引，记录当前 `current_head`、物化输出、共享证据池和隔离模型。
-- `reasoning/*.yaml`：不可变 segment，例如 `0001-rules-fallback.yaml`、`0002-agent-refinement.yaml`；每个 segment 保存当轮 `analysis_snapshot`、结论摘要和 hypothesis validation。
+- `reasoning/*.yaml`：不可变 segment，例如 `0001-rules-fallback.yaml`、`0002-agent-refinement.yaml`；每个 segment 保存当轮 `analysis_snapshot`、结论摘要、自动验证执行审计和 hypothesis validation。
 
 共享/隔离规则：
 
 - `input.yaml`、`structured_record.yaml`、`signal_bundle.yaml`、`collection_report.yaml` 属于共享只读证据池。
 - 每个 hypothesis validation 只能写自己的 `private_write_ref`，例如 `reasoning/0002-agent-refinement.yaml#hypothesis_validations[H1]`。
 - 一个 hypothesis 的支持证据、反证、证据缺口和验证请求必须挂回该 hypothesis，不能覆盖另一个 hypothesis 的验证记录。
+- 一等只读 `auto_allowed` 请求如果被编排层执行，其脚本状态和输出引用写入当前 segment 的 `executed_validations`；请求本身仍可在 `analysis.yaml.verification_requests` 中保留为待闭合证据缺口。
 - 当某轮 refinement 需要改变总体结论时，追加新的 segment 并移动 manifest `current_head`；不要改写旧 segment。
 - `analysis.yaml` 保持方便消费的最新视图；需要审计过程时读取 manifest 和 segment 历史。
 

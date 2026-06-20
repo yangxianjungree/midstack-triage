@@ -578,7 +578,7 @@ domains/mongodb/scripts/
 - 临时只读命令是二等资产，必须先经过只读 guardrail 后才能进入执行路径。
 - 会改变 Kubernetes、数据库、文件系统、进程或网络状态的动作必须标记为 `execution_policy: blocked`，不得自动执行。
 - 历史经验、runbook 和知识资产可以启发 `verification_requests`，但不能绕过当前故障证据和风险分级。
-- 如果自动补采后证据仍不足，请求可以继续以 `status: planned` 保留；执行过程应通过 `reasoning-manifest.yaml`、`reasoning/*.yaml`、`collection_report.yaml` 和 recollection 输出审计。
+- 如果自动补采后证据仍不足，请求可以继续以 `status: planned` 保留；执行过程应通过 `reasoning/*.yaml.executed_validations`、`collection_report.yaml` 和 recollection 输出审计。
 
 ### `reasoning_timeline` 字段
 

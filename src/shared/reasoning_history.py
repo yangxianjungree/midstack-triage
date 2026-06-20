@@ -100,6 +100,7 @@ def write_reasoning_segment(
     supersedes: Optional[List[str]] = None,
     input_refs: Optional[List[str]] = None,
     output_refs: Optional[Dict[str, str]] = None,
+    executed_validations: Optional[List[Dict[str, Any]]] = None,
 ) -> Path:
     """Write an immutable reasoning segment and update the mutable manifest."""
 
@@ -126,6 +127,7 @@ def write_reasoning_segment(
         "analysis_sha256": analysis_content_hash(analysis),
         "shared_evidence_pool": _shared_evidence_pool(shared_refs),
         "materialized_outputs": _copy_yaml_value(output_refs),
+        "executed_validations": _copy_yaml_value(executed_validations or []),
         "hypothesis_validations": analysis_to_hypothesis_validations(analysis, segment_relpath, shared_refs),
         "conclusion_delta": _conclusion_delta(analysis),
         "analysis_snapshot": _copy_yaml_value(analysis),

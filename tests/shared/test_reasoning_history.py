@@ -68,6 +68,15 @@ def test_write_reasoning_segment_creates_manifest_and_isolated_hypothesis_record
         _analysis("split brain detected"),
         summary="rules fallback seeded the first analysis",
         output_refs={"analysis": "analysis.yaml", "report": "report.md"},
+        executed_validations=[
+            {
+                "request_id": "VR1",
+                "hypothesis_id": "H1",
+                "asset": {"type": "script", "id": "mongodb.collect.replicaset.rs_conf"},
+                "status": "success",
+                "output_ref": "script_outputs/mongodb.collect.replicaset.rs_conf/output.yaml",
+            }
+        ],
     )
 
     manifest = yaml.safe_load((incident_dir / "reasoning-manifest.yaml").read_text(encoding="utf-8"))
@@ -90,6 +99,8 @@ def test_write_reasoning_segment_creates_manifest_and_isolated_hypothesis_record
     assert segment["schema_version"] == "reasoning-segment.v1"
     assert segment["source"] == "rules_fallback"
     assert segment["shared_evidence_pool"]["access"] == "read_only"
+    assert segment["executed_validations"][0]["request_id"] == "VR1"
+    assert segment["executed_validations"][0]["status"] == "success"
     validations = segment["hypothesis_validations"]
     assert [item["hypothesis_id"] for item in validations] == ["H1", "H2"]
     assert all(item["isolation"]["scope"] == "hypothesis_validation" for item in validations)

@@ -259,6 +259,14 @@ segment_id: 0002-agent-refinement
 source: agent_refinement
 shared_evidence_pool:
   access: read_only
+executed_validations:
+  - request_id: vr-mongodb-election-logs
+    hypothesis_id: H4
+    asset:
+      type: script
+      id: kubernetes.collect.logs.previous
+    status: success
+    output_ref: script_outputs/kubernetes.collect.logs.previous/output.yaml
 hypothesis_validations:
   - hypothesis_id: H1
     isolation:
@@ -274,6 +282,7 @@ analysis_snapshot:
 - `reasoning/*.yaml` 是 append-only 历史段；已存在的段不得被后续推理静默改写。
 - `reasoning-manifest.yaml` 是可变索引；它可以更新 `current_head`，但不得伪造或删除已有 segment。
 - `analysis.yaml` 和 `report.md` 是最新物化视图；允许被 Agent/finalize 刷新，但对应变化必须追加新的 reasoning segment。
+- `executed_validations` 记录本轮由一等只读 `auto_allowed` 请求触发的补采事实；`verification_requests` 仍表达当前请求队列，不承担完整执行日志职责。
 - `shared_evidence_pool` 中的 incident 证据对所有 hypothesis validation 只读共享。
 - 每个 hypothesis validation 只能写自己的 `private_write_ref`，不能覆盖其他 hypothesis 的验证记录。
 - 一个 hypothesis 的反证、证据缺口和验证动作必须挂回该 hypothesis；如果需要影响总体结论，通过新的 segment 发布，而不是直接改写旧段。

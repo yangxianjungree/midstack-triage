@@ -217,23 +217,71 @@ def _record_verification_recollection_gap(output_dir: Path, exc: Exception) -> N
     write_yaml(output_dir / "collection_report.yaml", collection_report)
 
 
+def _auto_allowed_verification_requests(analysis: Dict[str, Any]) -> list[Dict[str, Any]]:
+    requests: list[Dict[str, Any]] = []
+    for item in analysis.get("verification_requests") or []:
+        if not isinstance(item, dict):
+            continue
+        asset = item.get("asset") or {}
+        if not isinstance(asset, dict):
+            continue
+        if (
+            item.get("asset_tier") == "first_class"
+            and item.get("execution_policy") == "auto_allowed"
+            and item.get("risk_level") == "read-only"
+            and asset.get("type") == "script"
+            and asset.get("id")
+        ):
+            requests.append(item)
+    return requests
+
+
+def _verification_execution_audit(output_dir: Path, requests: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    audit: list[Dict[str, Any]] = []
+    for item in requests:
+        asset = item.get("asset") or {}
+        script_id = str(asset.get("id") or "")
+        if not script_id:
+            continue
+        output_file = output_dir / "script_outputs" / script_id / "output.yaml"
+        script_output = load_yaml(output_file) if output_file.exists() else {}
+        audit.append(
+            {
+                "request_id": str(item.get("request_id") or ""),
+                "hypothesis_id": str(item.get("hypothesis_id") or ""),
+                "asset": {"type": "script", "id": script_id},
+                "execution_policy": str(item.get("execution_policy") or ""),
+                "risk_level": str(item.get("risk_level") or ""),
+                "status": str(script_output.get("status") or "not_collected"),
+                "summary": str(script_output.get("summary") or ""),
+                "output_ref": "script_outputs/%s/output.yaml" % script_id if output_file.exists() else "",
+            }
+        )
+    return audit
+
+
 def _run_auto_allowed_verification_recollection(
     args,
     output_dir: Path,
     middleware: str,
     analysis_file: Path,
     run_directed_recollection_if_needed,
-) -> bool:
+) -> list[Dict[str, Any]]:
+    initial_analysis = load_yaml(analysis_file) if analysis_file.exists() else {}
+    requests = _auto_allowed_verification_requests(initial_analysis)
+    if not requests:
+        return []
     try:
         recollected = run_directed_recollection_if_needed(args, output_dir)
     except Exception as exc:
         _record_verification_recollection_gap(output_dir, exc)
-        return False
+        return _verification_execution_audit(output_dir, requests)
     if not recollected:
-        return False
+        return _verification_execution_audit(output_dir, requests)
+    audit = _verification_execution_audit(output_dir, requests)
     analysis = generate_rule_analysis(middleware, output_dir)
     write_yaml(analysis_file, analysis)
-    return True
+    return audit
 
 
 def _write_completed_analysis_output(
@@ -267,7 +315,7 @@ def _write_completed_analysis_output(
         write_yaml(output_dir / "adapter-output.yaml", output)
         print("ERROR: %s" % exc, file=sys.stderr)
         return 1
-    _run_auto_allowed_verification_recollection(
+    executed_validations = _run_auto_allowed_verification_recollection(
         args=args,
         output_dir=output_dir,
         middleware=middleware,
@@ -309,6 +357,7 @@ def _write_completed_analysis_output(
         "rules_fallback",
         analysis,
         summary="rules fallback seeded the first analysis",
+        executed_validations=executed_validations,
         output_refs={
             "analysis": "analysis.yaml",
             "report": "report.md",

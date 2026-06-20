@@ -189,6 +189,62 @@ def collection_report_has_critical_gap(collection_report: Dict[str, Any]) -> boo
     return False
 
 
+def hypothesis_has_gap(hypothesis: Dict[str, Any], text: str) -> bool:
+    needle = text.lower()
+    for item in as_list(hypothesis.get("evidence_gaps")):
+        if isinstance(item, dict) and needle in str(item.get("gap") or "").lower():
+            return True
+        if needle in str(item).lower():
+            return True
+    return False
+
+
+def hypothesis_has_planned_validation(hypothesis: Dict[str, Any], text: str) -> bool:
+    needle = text.lower()
+    for item in as_list(hypothesis.get("validation_actions")):
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status") or "").lower()
+        action = str(item.get("action") or "").lower()
+        if status == "planned" and needle in action:
+            return True
+    return False
+
+
+def enforce_split_brain_enabling_cause_guardrail(analysis: Dict[str, Any]) -> bool:
+    changed = False
+    for hypothesis in as_list(analysis.get("hypotheses")):
+        if not isinstance(hypothesis, dict):
+            continue
+        statement = str(hypothesis.get("statement") or "").lower()
+        if "configuration or member metadata drift" not in statement:
+            continue
+        needs_rs_conf = hypothesis_has_gap(hypothesis, "rs.conf") or hypothesis_has_planned_validation(hypothesis, "rs.conf")
+        if not needs_rs_conf:
+            continue
+        if hypothesis.get("status") == "supported":
+            hypothesis["status"] = "insufficient"
+            changed = True
+        if hypothesis.get("validation_result") == "supported":
+            hypothesis["validation_result"] = "insufficient"
+            changed = True
+
+        conclusion = analysis.get("conclusion_summary") or {}
+        if isinstance(conclusion, dict) and conclusion.get("primary_cause_category") == "replica_set_config_divergence":
+            conclusion["primary_cause_category"] = "split_brain_enabling_cause_unproven"
+            append_limitation(
+                conclusion,
+                {
+                    "gap": "rs.conf() comparison across all affected members is not available",
+                    "gap_type": "critical_gap",
+                    "related_stage": "finalize",
+                    "why_important": "Divergent member views support a split-brain mechanism, but config drift as the enabling cause remains unproven until rs.conf() is compared.",
+                },
+            )
+            changed = True
+    return changed
+
+
 def direct_root_cause_terms_present(analysis: Dict[str, Any], signal_bundle: Dict[str, Any]) -> bool:
     text = analysis_text(analysis)
     if direct_error_terms_present(analysis):
@@ -206,6 +262,8 @@ def apply_analysis_guardrails(analysis: Dict[str, Any], collection_report: Dict[
     if not isinstance(conclusion, dict):
         return False
     changed = False
+    if enforce_split_brain_enabling_cause_guardrail(analysis):
+        changed = True
     direct_root_cause_supported = direct_root_cause_terms_present(analysis, signal_bundle)
     if not conclusion.get("deepest_supported_level"):
         category = str(conclusion.get("primary_cause_category") or "")

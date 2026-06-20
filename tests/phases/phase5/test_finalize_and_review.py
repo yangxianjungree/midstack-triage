@@ -215,6 +215,76 @@ def test_finalize_analysis_appends_agent_refinement_reasoning_segment(tmp_path):
     assert "reasoning_current_segment" in record_ref_names
 
 
+def test_finalize_demotes_unverified_split_brain_enabling_cause(tmp_path):
+    incident_dir = tmp_path / "incident"
+    input_data = {
+        "incident_id": "demo-incident",
+        "middleware": "mongodb",
+        "namespace": "psmdb-test",
+        "customer_clue": "mongo split brain",
+    }
+    analysis = {
+        "conclusion_summary": {
+            "statement": "Split-brain is confirmed; config drift caused divergent decision views.",
+            "confidence": "medium",
+            "deepest_supported_level": "mechanism",
+            "primary_cause_category": "replica_set_config_divergence",
+            "impact_scope": "shard0",
+            "evidence": ["two primary members", "divergent config_version views"],
+            "limitations": [],
+        },
+        "hypotheses": [
+            {
+                "hypothesis_id": "H3",
+                "statement": "Replica set configuration or member metadata drift created divergent decision views.",
+                "supporting_evidence": ["divergent config_version views"],
+                "counter_evidence": [],
+                "validation_actions": [
+                    {
+                        "action": "Compare read-only rs.conf() output from all affected members.",
+                        "status": "planned",
+                        "risk_level": "read-only",
+                    }
+                ],
+                "evidence_gaps": [
+                    {
+                        "gap": "rs.conf() comparison across all affected members is not available",
+                        "gap_type": "critical_gap",
+                    }
+                ],
+                "validation_result": "supported",
+                "status": "supported",
+            }
+        ],
+        "next_actions": [{"action": "compare rs.conf from all members"}],
+    }
+    write_yaml(incident_dir / "input.yaml", input_data)
+    write_yaml(incident_dir / "analysis.yaml", analysis)
+    (incident_dir / "report.md").write_text("# draft\n", encoding="utf-8")
+    write_yaml(incident_dir / "collection_report.yaml", {"evidence_gaps": []})
+    write_yaml(incident_dir / "signal_bundle.yaml", {"abnormal_signals": []})
+    write_yaml(
+        incident_dir / "meta.yaml",
+        {
+            "incident_id": "demo-incident",
+            "middleware": "mongodb",
+            "status": "analysing",
+            "current_command": "analyse",
+        },
+    )
+
+    args = SimpleNamespace(output_root=str(tmp_path), incident_dir=str(incident_dir))
+    assert finalize_analysis(args, lambda report: None) == 0
+
+    finalized = yaml.safe_load((incident_dir / "analysis.yaml").read_text(encoding="utf-8"))
+    report = (incident_dir / "report.md").read_text(encoding="utf-8")
+
+    assert finalized["hypotheses"][0]["status"] == "insufficient"
+    assert finalized["hypotheses"][0]["validation_result"] == "insufficient"
+    assert finalized["conclusion_summary"]["primary_cause_category"] == "split_brain_enabling_cause_unproven"
+    assert "split_brain_enabling_cause_unproven" in report
+
+
 def test_build_review_block_scores_supported_analysis():
     review = build_review_block(
         {

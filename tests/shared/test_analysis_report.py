@@ -7,7 +7,53 @@ SRC_DIR = ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from shared.analysis_runtime import write_report
+from shared.analysis_runtime import apply_analysis_guardrails, write_report
+
+
+def test_guardrails_do_not_allow_config_drift_hypothesis_supported_without_rs_conf():
+    analysis = {
+        "conclusion_summary": {
+            "statement": "Split-brain is confirmed; config drift caused divergent decision views.",
+            "confidence": "medium",
+            "deepest_supported_level": "mechanism",
+            "primary_cause_category": "replica_set_config_divergence",
+            "impact_scope": "shard replica set",
+            "evidence": ["two PRIMARY members", "divergent config_version views"],
+            "limitations": [],
+        },
+        "hypotheses": [
+            {
+                "hypothesis_id": "H3",
+                "statement": "Replica set configuration or member metadata drift created divergent decision views.",
+                "status": "supported",
+                "validation_result": "supported",
+                "evidence_gaps": [
+                    {
+                        "gap": "rs.conf() comparison across all affected members is not available",
+                        "gap_type": "critical_gap",
+                        "related_stage": "reasoning",
+                    }
+                ],
+                "validation_actions": [
+                    {
+                        "action": "Compare read-only rs.conf() output from all affected members.",
+                        "status": "planned",
+                        "risk_level": "read-only",
+                    }
+                ],
+            }
+        ],
+        "next_actions": [],
+    }
+
+    changed = apply_analysis_guardrails(analysis, {"evidence_gaps": []}, {"abnormal_signals": []})
+
+    assert changed is True
+    hypothesis = analysis["hypotheses"][0]
+    assert hypothesis["status"] == "insufficient"
+    assert hypothesis["validation_result"] == "insufficient"
+    assert analysis["conclusion_summary"]["primary_cause_category"] == "split_brain_enabling_cause_unproven"
+    assert any("rs.conf() comparison" in item["gap"] for item in analysis["conclusion_summary"]["limitations"])
 
 
 def test_write_report_includes_reasoning_timeline(tmp_path):

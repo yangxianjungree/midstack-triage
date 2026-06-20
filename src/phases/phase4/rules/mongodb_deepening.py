@@ -153,6 +153,52 @@ def network_counter_findings(structured_record: Dict[str, Any]) -> List[Dict[str
     ]
 
 
+def history_log_findings(signal_bundle: Dict[str, Any]) -> List[Dict[str, Any]]:
+    highlights = [item for item in (signal_bundle or {}).get("log_highlights") or [] if isinstance(item, dict)]
+    matched = []
+    for item in highlights:
+        category = _text(item.get("category")).lower()
+        message = _text(item.get("message") or item.get("detail"))
+        lowered = message.lower()
+        if category in {"election", "heartbeat", "reconfig", "stepdown"} or any(
+            token in lowered
+            for token in (
+                "heartbeat",
+                "hostunreachable",
+                "election",
+                "stepdown",
+                "step down",
+                "transition to primary",
+                "setting node as primary",
+                "reconfig",
+                "rsconfig",
+            )
+        ):
+            matched.append(item)
+    if not matched:
+        return []
+    examples = "; ".join(
+        "pod/%s %s: %s"
+        % (
+            _text(item.get("pod_ref") or item.get("object_ref")) or "unknown",
+            _text(item.get("category")) or "log",
+            _text(item.get("message") or item.get("detail"))[:220],
+        )
+        for item in matched[:3]
+    )
+    return [
+        _finding(
+            "mongodb.replica_set.history_election_heartbeat_logs",
+            "MongoDB logs contain heartbeat/election/reconfig evidence around the split-brain path: %s."
+            % examples,
+            ["signal_bundle.log_highlights"],
+            ["historical_network_or_heartbeat_partition", "mongodb_heartbeat_or_auth_layer_failure"],
+            [],
+            "high",
+        )
+    ]
+
+
 def enabling_cause_candidate_findings(findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     finding_ids = {str(item.get("finding_id") or "") for item in findings if isinstance(item, dict)}
     has_split_brain_invariant = bool(
@@ -189,11 +235,12 @@ def enabling_cause_candidate_findings(findings: List[Dict[str, Any]]) -> List[Di
     ]
 
 
-def build_mongodb_deepening_findings(structured_record: Dict[str, Any]) -> List[Dict[str, Any]]:
+def build_mongodb_deepening_findings(structured_record: Dict[str, Any], signal_bundle: Dict[str, Any] = None) -> List[Dict[str, Any]]:
     details = (structured_record or {}).get("details") or {}
     member_records = [item for item in details.get("replica_members") or [] if isinstance(item, dict)]
     findings = []
     findings.extend(replica_set_invariant_findings(member_records))
     findings.extend(network_counter_findings(structured_record))
+    findings.extend(history_log_findings(signal_bundle or {}))
     findings.extend(enabling_cause_candidate_findings(findings))
     return findings

@@ -279,12 +279,37 @@ def split_brain_enabling_hypotheses(findings: List[Dict[str, Any]], existing_cou
     finding_ids = {str(item.get("finding_id") or "") for item in findings if isinstance(item, dict)}
     if "mongodb.replica_set.enabling_cause_candidates" not in finding_ids:
         return []
+    history_log_finding = next(
+        (item for item in findings if str(item.get("finding_id") or "") == "mongodb.replica_set.history_election_heartbeat_logs"),
+        None,
+    )
     evidence = [
         {
             "source": "deepening_findings",
             "detail": "Replica set config/member/quorum divergence requires enabling-cause validation.",
         }
     ]
+    history_evidence = evidence
+    history_gaps = [
+        {
+            "gap": "MongoDB heartbeat/election/reconfig logs for the incident window are missing",
+            "gap_type": "critical_gap",
+            "related_stage": "reasoning",
+            "why_important": "Current TCP success weakens ongoing network partition, so historical heartbeat and election evidence is required.",
+        }
+    ]
+    history_status = "insufficient"
+    history_validation_result = "Needed to distinguish historical partition from current config drift or process/auth failure."
+    if isinstance(history_log_finding, dict):
+        history_evidence = [
+            {
+                "source": "deepening_findings.mongodb.replica_set.history_election_heartbeat_logs",
+                "detail": str(history_log_finding.get("statement") or ""),
+            }
+        ]
+        history_gaps = []
+        history_status = "supported"
+        history_validation_result = "Supported by current incident MongoDB heartbeat/election/reconfig log highlights."
     hypotheses = [
         hypothesis_with_actions(
             "H%s" % (existing_count + 1),
@@ -318,21 +343,14 @@ def split_brain_enabling_hypotheses(findings: List[Dict[str, Any]], existing_cou
         hypothesis_with_actions(
             "H%s" % (existing_count + 2),
             "A historical network or MongoDB heartbeat partition triggered divergent elections before current probes recovered.",
-            evidence,
-            [
-                {
-                    "gap": "MongoDB heartbeat/election/reconfig logs for the incident window are missing",
-                    "gap_type": "critical_gap",
-                    "related_stage": "reasoning",
-                    "why_important": "Current TCP success weakens ongoing network partition, so historical heartbeat and election evidence is required.",
-                }
-            ],
-            "insufficient",
+            history_evidence,
+            history_gaps,
+            history_status,
             [
                 {
                     "action": "Collect and compare heartbeat, election, stepdown and reconfig log lines from all affected members.",
                     "status": "planned",
-                    "result": "Needed to distinguish historical partition from current config drift or process/auth failure.",
+                    "result": history_validation_result,
                     "risk_level": "read-only",
                 }
             ],
@@ -1280,7 +1298,7 @@ def analyse(
         ]
 
     conclusion = apply_conclusion_ceiling(conclusion, evidence, gaps, ids)
-    deepening_findings = build_mongodb_deepening_findings(structured_record)
+    deepening_findings = build_mongodb_deepening_findings(structured_record, signal_bundle)
     hypotheses.extend(split_brain_enabling_hypotheses(deepening_findings, len(hypotheses)))
     verification_requests = verification_requests_for_gaps(
         scenario,

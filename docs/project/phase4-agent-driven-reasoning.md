@@ -122,7 +122,7 @@ Phase 4 可以提出验证请求，但验证请求分层处理。`verification_r
 | `capability: code_path_tracing` | 把日志、状态、配置和命令输出串成可审计证据路径 |
 | `capability: repro_script_generation` | 生成只读复现计划、合成 fixture 或 simulator 方案，不操作 live 环境 |
 
-当前 `deep_analysis_requests` 默认是 `execution_boundary: plan_only`、`risk_level: read-only`、`scope: current_incident`。analyse 主链路可以基于已有 incident 证据把这些请求派生成 `deep-analysis.yaml` 和 `analysis.yaml.deep_analysis_results`，但这个物化过程仍是只读的派生分析，不执行仓库外命令，也不接触 live 环境。如果深挖过程中发现需要新现场证据，必须转换成受 guardrail 保护的 `verification_requests`；不能把 shell 命令或会改环境的动作塞进 `deep_analysis_requests`。
+当前 `deep_analysis_requests` 默认是 `execution_boundary: plan_only`、`risk_level: read-only`、`scope: current_incident`。analyse 主链路可以基于已有 incident 证据把这些请求派生成 `deep-analysis.yaml` 和 `analysis.yaml.deep_analysis_results`，但这个物化过程仍是只读的派生分析，不执行仓库外命令，也不接触 live 环境。`deep-analysis.yaml` 保留完整输出；`analysis.yaml.deep_analysis_results.highlights` 只保留轻量摘要、baseline invariant violations、supports/refutes 和 missing path edges，供报告、gate 和 Agent refinement 引用。如果深挖过程中发现需要新现场证据，必须转换成受 guardrail 保护的 `verification_requests`；不能把 shell 命令或会改环境的动作塞进 `deep_analysis_requests`。
 
 ## 历史经验和领域知识
 

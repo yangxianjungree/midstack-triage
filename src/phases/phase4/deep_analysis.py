@@ -79,16 +79,45 @@ def deep_analysis_summary(deep_analysis: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "artifact": "deep-analysis.yaml",
         "summary": dict(deep_analysis.get("summary") or {}),
-        "highlights": [
-            {
-                "request_id": str(item.get("request_id") or ""),
-                "capability": str(item.get("capability") or ""),
-                "status": str(item.get("status") or ""),
-                "summary": str(item.get("summary") or ""),
-            }
-            for item in results[:6]
-        ],
+        "highlights": [_highlight_for_result(item) for item in results[:6]],
     }
+
+
+def _highlight_for_result(item: Dict[str, Any]) -> Dict[str, Any]:
+    highlight: Dict[str, Any] = {
+        "request_id": str(item.get("request_id") or ""),
+        "capability": str(item.get("capability") or ""),
+        "status": str(item.get("status") or ""),
+        "summary": str(item.get("summary") or ""),
+    }
+    output = item.get("output") if isinstance(item.get("output"), dict) else {}
+    baseline_diff = output.get("baseline_diff") if isinstance(output.get("baseline_diff"), dict) else {}
+    replica_sets = [rs for rs in baseline_diff.get("replica_sets") or [] if isinstance(rs, dict)]
+    violations = _unique(violation for rs in replica_sets for violation in rs.get("violations") or [])
+    if violations:
+        highlight["violations"] = violations
+    replica_set_ids = _unique(rs.get("replica_set_id") for rs in replica_sets)
+    if replica_set_ids:
+        highlight["replica_sets"] = replica_set_ids
+
+    trace = [entry for entry in output.get("evidence_path_trace") or [] if isinstance(entry, dict)]
+    supports = _unique(value for entry in trace for value in entry.get("supports") or [])
+    refutes = _unique(value for entry in trace for value in entry.get("refutes") or [])
+    if supports:
+        highlight["supports"] = supports
+    if refutes:
+        highlight["refutes"] = refutes
+    missing_edges = [edge for edge in output.get("missing_path_edges") or [] if isinstance(edge, dict)]
+    if missing_edges:
+        highlight["missing_path_edges"] = [
+            {
+                "request_id": str(edge.get("request_id") or ""),
+                "purpose": str(edge.get("purpose") or ""),
+                "status": str(edge.get("status") or ""),
+            }
+            for edge in missing_edges[:4]
+        ]
+    return highlight
 
 
 def _materialize_request(

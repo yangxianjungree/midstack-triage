@@ -7,7 +7,7 @@ SRC_DIR = ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from phases.phase4.deep_analysis import materialize_deep_analysis
+from phases.phase4.deep_analysis import deep_analysis_summary, materialize_deep_analysis
 
 
 def test_materialize_deep_analysis_outputs_readonly_results_for_split_brain_requests():
@@ -47,6 +47,14 @@ def test_materialize_deep_analysis_outputs_readonly_results_for_split_brain_requ
                 "finding_id": "mongodb.replica_set.config_divergence",
                 "statement": "Replica set rs0 has divergent config views.",
                 "severity": "high",
+                "supports": ["replica_set_config_divergence"],
+            }
+        ],
+        "verification_requests": [
+            {
+                "request_id": "vr-mongodb-rs-conf-compare",
+                "purpose": "compare rs.conf from all affected members",
+                "status": "planned",
             }
         ],
     }
@@ -88,3 +96,61 @@ def test_materialize_deep_analysis_outputs_readonly_results_for_split_brain_requ
     assert by_id["dar-mongodb-rs-code-path"]["output"]["evidence_path_trace"]
     assert by_id["dar-mongodb-rs-repro-script"]["output"]["read_only_repro_plan"]
     assert all(item["risk_level"] == "read-only" for item in result["results"])
+
+
+def test_deep_analysis_summary_carries_structured_highlight_hints():
+    deep_analysis = {
+        "summary": {"total_requests": 2, "completed_requests": 2},
+        "results": [
+            {
+                "request_id": "dar-mongodb-rs-baseline-scan",
+                "capability": "baseline_scan",
+                "status": "completed",
+                "summary": "Detected baseline invariant violations.",
+                "output": {
+                    "baseline_diff": {
+                        "replica_sets": [
+                            {
+                                "replica_set_id": "rs0",
+                                "violations": ["multiple_primary_views", "quorum_view_divergence"],
+                            }
+                        ]
+                    }
+                },
+            },
+            {
+                "request_id": "dar-mongodb-rs-code-path",
+                "capability": "code_path_tracing",
+                "status": "completed",
+                "summary": "Traced evidence path with 1 missing validation edge.",
+                "output": {
+                    "evidence_path_trace": [
+                        {
+                            "source": "analysis.deepening_findings.mongodb.replica_set.config_divergence",
+                            "supports": ["replica_set_config_divergence"],
+                            "refutes": ["sustained_network_partition"],
+                        }
+                    ],
+                    "missing_path_edges": [
+                        {
+                            "request_id": "vr-mongodb-rs-conf-compare",
+                            "purpose": "compare rs.conf from all affected members",
+                            "status": "planned",
+                        }
+                    ],
+                },
+            },
+        ],
+    }
+
+    summary = deep_analysis_summary(deep_analysis)
+
+    by_id = {item["request_id"]: item for item in summary["highlights"]}
+    assert by_id["dar-mongodb-rs-baseline-scan"]["violations"] == [
+        "multiple_primary_views",
+        "quorum_view_divergence",
+    ]
+    assert by_id["dar-mongodb-rs-baseline-scan"]["replica_sets"] == ["rs0"]
+    assert by_id["dar-mongodb-rs-code-path"]["supports"] == ["replica_set_config_divergence"]
+    assert by_id["dar-mongodb-rs-code-path"]["refutes"] == ["sustained_network_partition"]
+    assert by_id["dar-mongodb-rs-code-path"]["missing_path_edges"][0]["request_id"] == "vr-mongodb-rs-conf-compare"

@@ -74,7 +74,7 @@ python3 "$(pwd)/.cursor/midstack-triage-runtime/bin/midstack-local.py" analyse -
 | `/midstack:start` | `midstack-local.py start` |
 | `/midstack:analyse` | `midstack-local.py analyse` |
 | `/midstack:review` | `midstack-local.py review` |
-| `/midstack:validate` | `validate-repo.py --skip-cursor` |
+| `/midstack:validate` | `selfcheck.py` |
 
 After analyse, the agent still edits `analysis.yaml` / `report.md`, then runs `finalize-analysis`.
 

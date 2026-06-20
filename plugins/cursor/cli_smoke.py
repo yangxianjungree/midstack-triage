@@ -45,6 +45,10 @@ def workspace_validate_repo(workspace: Path) -> Path:
     return workspace_runtime_root(workspace) / "bin" / "validate-repo.py"
 
 
+def workspace_selfcheck(workspace: Path) -> Path:
+    return workspace_runtime_root(workspace) / "bin" / "selfcheck.py"
+
+
 def stage_fixture(workspace: Path, fixture_relpath: str) -> Path:
     source = ROOT / fixture_relpath
     if not source.exists():
@@ -100,8 +104,8 @@ def assert_command_contracts() -> None:
         if "runtime_root" not in text:
             errors.append("%s must reference runtime_root workspace state" % name)
         if name == "midstack:validate.md":
-            if "validate-repo.py" not in text:
-                errors.append("%s must reference validate-repo.py" % name)
+            if "selfcheck.py" not in text:
+                errors.append("%s must reference selfcheck.py" % name)
         elif "midstack-local.py" not in text:
             errors.append("%s must reference midstack-local.py" % name)
         else:

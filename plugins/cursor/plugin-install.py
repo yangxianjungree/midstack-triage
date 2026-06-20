@@ -50,6 +50,7 @@ RUNTIME_COPY_DIRS = RuntimeBundleLayout().copy_dirs()
 RUNTIME_MARKER_FILES = [
     "bin/midstack-local.py",
     "bin/validate-repo.py",
+    "bin/selfcheck.py",
 ] + list(prefixed_runtime_markers())
 RUNTIME_FORBIDDEN_TEXT = [
     "Cursor source-checkout",
@@ -143,6 +144,7 @@ def write_runtime_wrappers(bin_dir: Path) -> None:
     bin_dir.mkdir(parents=True, exist_ok=True)
     write_runtime_wrapper(bin_dir / "midstack-local.py", "tools/plugin/midstack-local.py")
     write_runtime_wrapper(bin_dir / "validate-repo.py", "tools/validators/validate-repo.py")
+    copy_file(PLUGIN_DIR / "runtime" / "bin" / "selfcheck.py", bin_dir / "selfcheck.py")
     for path in sorted(bin_dir.glob("*.py")):
         path.chmod(0o755)
 

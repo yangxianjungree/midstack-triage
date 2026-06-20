@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -107,6 +108,7 @@ def test_workspace_init_projects_slash_commands_and_runtime(tmp_path):
     assert runtime_root == cursor / "midstack-triage-runtime"
     assert (runtime_root / "bin" / "midstack-local.py").exists()
     assert (runtime_root / "bin" / "validate-repo.py").exists()
+    assert (runtime_root / "bin" / "selfcheck.py").exists()
     assert (runtime_root / "domains" / "mongodb" / "scripts" / "manifest.yaml").exists()
     assert (runtime_root / "src" / "commands" / "plugin_cli.py").exists()
     assert not (tmp_path / "AGENTS.md").exists()
@@ -119,3 +121,31 @@ def test_workspace_init_projects_slash_commands_and_runtime(tmp_path):
         universal_newlines=True,
     )
     assert check.returncode == 0, check.stderr or check.stdout
+
+
+def test_workspace_runtime_selfcheck_passes_after_workspace_init(tmp_path):
+    migrate = subprocess.run(
+        [sys.executable, str(PLUGIN_INSTALL), "--workspace-init", str(tmp_path)],
+        cwd=str(ROOT),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    assert migrate.returncode == 0, migrate.stderr or migrate.stdout
+
+    selfcheck = tmp_path / ".cursor" / "midstack-triage-runtime" / "bin" / "selfcheck.py"
+    env = os.environ.copy()
+    env["MIDSTACK_TRIAGE_WORKSPACE"] = str(tmp_path)
+    proc = subprocess.run(
+        [sys.executable, str(selfcheck)],
+        cwd=str(tmp_path),
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
+    payload = json.loads(proc.stdout)
+    assert proc.returncode == 0, proc.stderr or proc.stdout
+    assert payload["status"] == "passed"
+    assert payload["dependency_boundary"]["source_repo_required"] is False

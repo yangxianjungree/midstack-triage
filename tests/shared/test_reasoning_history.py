@@ -82,6 +82,14 @@ def _write_incident_inputs(incident_dir: Path) -> None:
 def test_write_reasoning_segment_creates_manifest_and_isolated_hypothesis_records(tmp_path):
     incident_dir = tmp_path / "incident"
     _write_incident_inputs(incident_dir)
+    for name in (
+        "analysis.rules-fallback.yaml",
+        "analysis.multitrack.yaml",
+        "deep-analysis.yaml",
+        "agent-reasoning-task.md",
+        "reasoning-board.yaml",
+    ):
+        (incident_dir / name).write_text("generated_at: test\n", encoding="utf-8")
 
     segment_path = write_reasoning_segment(
         incident_dir,
@@ -115,11 +123,23 @@ def test_write_reasoning_segment_creates_manifest_and_isolated_hypothesis_record
         "structured_record.yaml",
         "signal_bundle.yaml",
         "collection_report.yaml",
+        "analysis.rules-fallback.yaml",
+        "analysis.multitrack.yaml",
+        "deep-analysis.yaml",
+        "agent-reasoning-task.md",
+        "reasoning-board.yaml",
     }
 
     assert segment["schema_version"] == "reasoning-segment.v1"
     assert segment["source"] == "rules_fallback"
     assert segment["shared_evidence_pool"]["access"] == "read_only"
+    assert {item["path"] for item in segment["shared_evidence_pool"]["refs"]} >= {
+        "analysis.rules-fallback.yaml",
+        "analysis.multitrack.yaml",
+        "deep-analysis.yaml",
+        "agent-reasoning-task.md",
+        "reasoning-board.yaml",
+    }
     assert segment["executed_validations"][0]["request_id"] == "VR1"
     assert segment["executed_validations"][0]["status"] == "success"
     validations = segment["hypothesis_validations"]

@@ -24,6 +24,13 @@ DEFAULT_SHARED_EVIDENCE_REFS = (
     "signal_bundle.yaml",
     "collection_report.yaml",
 )
+OPTIONAL_SHARED_EVIDENCE_REFS = (
+    "analysis.rules-fallback.yaml",
+    "analysis.multitrack.yaml",
+    "deep-analysis.yaml",
+    "agent-reasoning-task.md",
+    "reasoning-board.yaml",
+)
 
 
 def reasoning_manifest_file(incident_dir: Path) -> Path:
@@ -250,7 +257,7 @@ def _update_manifest(
 
 
 def _shared_evidence_refs(incident_dir: Path, input_refs: Optional[List[str]]) -> List[Dict[str, str]]:
-    refs = input_refs or list(DEFAULT_SHARED_EVIDENCE_REFS)
+    refs = input_refs or _default_shared_evidence_refs(incident_dir)
     result: List[Dict[str, str]] = []
     for ref in refs:
         ref_text = str(ref).strip()
@@ -263,6 +270,12 @@ def _shared_evidence_refs(incident_dir: Path, input_refs: Optional[List[str]]) -
             item["status"] = "missing"
         result.append(item)
     return result
+
+
+def _default_shared_evidence_refs(incident_dir: Path) -> List[str]:
+    refs = list(DEFAULT_SHARED_EVIDENCE_REFS)
+    refs.extend(ref for ref in OPTIONAL_SHARED_EVIDENCE_REFS if (incident_dir / ref).exists())
+    return refs
 
 
 def _shared_evidence_pool(shared_refs: List[Dict[str, str]]) -> Dict[str, Any]:

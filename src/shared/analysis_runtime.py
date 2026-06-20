@@ -210,6 +210,17 @@ def agent_conclusion_gate_report_lines(analysis: Dict[str, Any], limit: int = 6)
         hypothesis_id = str(candidate.get("hypothesis_id") or "candidate").strip()
         confidence = str(candidate.get("confidence") if candidate.get("confidence") is not None else "unknown").strip()
         lines.append("- Candidate `%s` confidence=`%s`: %s" % (hypothesis_id, confidence, statement))
+    conclusion_candidate = candidate.get("conclusion_summary") if isinstance(candidate.get("conclusion_summary"), dict) else {}
+    if conclusion_candidate:
+        lines.append(
+            "- Conclusion candidate: `%s` `%s` `%s` %s"
+            % (
+                conclusion_candidate.get("confidence", ""),
+                conclusion_candidate.get("deepest_supported_level", ""),
+                conclusion_candidate.get("primary_cause_category", ""),
+                conclusion_candidate.get("impact_scope", ""),
+            )
+        )
     for item in as_list(gate.get("blockers"))[:limit]:
         if not isinstance(item, dict):
             continue

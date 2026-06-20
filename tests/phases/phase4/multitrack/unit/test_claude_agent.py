@@ -76,6 +76,34 @@ def test_claude_agent_response_parsing_preserves_evidence_refs():
     ]
 
 
+def test_claude_agent_response_parsing_preserves_conclusion_candidate():
+    """测试响应解析会保留结构化结论候选"""
+    agent = ClaudeAgent(api_key="test-key")
+
+    response_text = """{
+        "hypothesis_status": "supported",
+        "confidence": 0.91,
+        "reasoning": "证据充分",
+        "evidence_refs": ["structured_record.details.replica_members"],
+        "conclusion_candidate": {
+            "statement": "Replica set rs0 has a split-brain mechanism.",
+            "confidence": "medium",
+            "deepest_supported_level": "mechanism",
+            "primary_cause_category": "replica_set_split_brain",
+            "impact_scope": "rs0 availability",
+            "evidence": ["structured_record.details.replica_members"],
+            "limitations": []
+        },
+        "validation_actions": [],
+        "findings": []
+    }"""
+
+    result = agent._parse_response(response_text)
+
+    assert result["conclusion_candidate"]["statement"] == "Replica set rs0 has a split-brain mechanism."
+    assert result["conclusion_candidate"]["deepest_supported_level"] == "mechanism"
+
+
 @pytest.mark.skipif(True, reason="需要anthropic包才能mock")
 @patch('anthropic.Anthropic')
 def test_claude_agent_api_call(mock_anthropic):

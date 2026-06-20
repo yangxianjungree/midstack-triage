@@ -161,6 +161,34 @@ def test_phase_r2_records_evidence_refs_in_private_context(tmp_path):
     ]
 
 
+def test_phase_r2_records_conclusion_candidate_in_private_context(tmp_path):
+    """测试Agent结构化结论候选会进入隔离上下文"""
+    board = ReasoningBoard(tmp_path)
+    track = HypothesisTrack("track_h1", "h1", "MongoDB复制集脑裂", board)
+
+    track._pending_reasoning_result = {
+        "hypothesis_status": "supported",
+        "confidence": 0.91,
+        "reasoning": "证据支持",
+        "evidence_refs": ["structured_record.details.replica_members"],
+        "conclusion_candidate": {
+            "statement": "Replica set rs0 has a split-brain mechanism.",
+            "confidence": "medium",
+            "deepest_supported_level": "mechanism",
+            "primary_cause_category": "replica_set_split_brain",
+            "impact_scope": "rs0 availability",
+            "evidence": ["structured_record.details.replica_members"],
+            "limitations": [],
+        },
+    }
+    track.run_phase_r2(round_num=1)
+
+    context = track.get_private_context()
+    candidate = context["hypothesis_evolution"][-1]["conclusion_candidate"]
+    assert candidate["statement"] == "Replica set rs0 has a split-brain mechanism."
+    assert candidate["primary_cause_category"] == "replica_set_split_brain"
+
+
 def test_private_context_export(tmp_path):
     """测试隔离上下文导出"""
     board = ReasoningBoard(tmp_path)

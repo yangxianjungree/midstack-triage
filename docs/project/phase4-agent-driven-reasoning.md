@@ -88,10 +88,11 @@ Agent refinement 不应该做：
 - runtime 必须是真实 `claude`，mock 草稿只能作为辅助信息。
 - 候选 hypothesis 必须是 `supported`，置信度达到门槛。
 - 候选必须通过 `agent_reasoning.hypotheses[].evidence_refs` 引用当前 incident 证据，例如 `structured_record`、`signal_bundle`、`collection_report`、`deepening_findings`、`deep_analysis_results` 或 `verification_requests`。
+- 候选必须提供 `agent_reasoning.hypotheses[].conclusion_candidate`，字段对齐正式 `conclusion_summary` 的核心形状：`statement`、`confidence`、`impact_scope`、`primary_cause_category`，并可包含 `deepest_supported_level`、`evidence`、`limitations`。
 - `experience_matches`、`retrieval_context`、runbook、历史经验和用户线索不能作为直接证据引用。
 - 未闭合的 `critical_gap` 会阻止提升。
 
-当前实现只写入 `decision`、`selected_candidate`、`blockers` 和 `override_applied: false`。即使 `decision: eligible`，生产 `conclusion_summary` 仍由 rules fallback + guardrails 守底；后续如果要启用覆盖，需要单独实现“应用 override 并追加 reasoning segment”的闭环。
+当前实现只写入 `decision`、`selected_candidate`、`selected_candidate.conclusion_summary`、`blockers` 和 `override_applied: false`。即使 `decision: eligible`，生产 `conclusion_summary` 仍由 rules fallback + guardrails 守底；后续如果要启用覆盖，需要单独实现“应用 override 并追加 reasoning segment”的闭环。
 
 ## 动态验证边界
 

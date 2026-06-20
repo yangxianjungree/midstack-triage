@@ -23,6 +23,12 @@ HYPOTHESIS_ONLY_PREFIXES = (
     "runbook",
     "knowledge_asset",
 )
+CONCLUSION_CANDIDATE_REQUIRED_FIELDS = (
+    "statement",
+    "confidence",
+    "impact_scope",
+    "primary_cause_category",
+)
 
 
 def evaluate_agent_conclusion_gate(analysis: Dict[str, Any]) -> Dict[str, Any]:
@@ -63,6 +69,14 @@ def evaluate_agent_conclusion_gate(analysis: Dict[str, Any]) -> Dict[str, Any]:
         blockers.append(_blocker("missing_current_evidence_refs", "agent candidate has no current-incident evidence references"))
     if _has_unresolved_critical_gap(analysis):
         blockers.append(_blocker("unresolved_critical_gap", "critical evidence gaps remain unresolved"))
+    missing_candidate_fields = _missing_conclusion_candidate_fields(candidate["conclusion_summary"])
+    if missing_candidate_fields:
+        blockers.append(
+            _blocker(
+                "conclusion_candidate_incomplete",
+                "agent conclusion candidate missing required field(s): %s" % ",".join(missing_candidate_fields),
+            )
+        )
 
     return _gate_result(candidate, blockers)
 
@@ -103,6 +117,7 @@ def _candidate_from_hypothesis(item: Dict[str, Any]) -> Dict[str, Any]:
         "status": str(item.get("status") or "").strip(),
         "confidence": _confidence(item.get("confidence")),
         "evidence_refs": _evidence_refs(item),
+        "conclusion_summary": _conclusion_candidate(item),
     }
 
 
@@ -124,6 +139,32 @@ def _evidence_refs(item: Dict[str, Any]) -> List[str]:
         elif str(evidence).strip():
             refs.append(str(evidence).strip())
     return _unique(refs)
+
+
+def _conclusion_candidate(item: Dict[str, Any]) -> Dict[str, Any]:
+    candidate = item.get("conclusion_candidate")
+    if not isinstance(candidate, dict):
+        return {}
+    result: Dict[str, Any] = {}
+    for key in (
+        "statement",
+        "confidence",
+        "deepest_supported_level",
+        "primary_cause_category",
+        "impact_scope",
+    ):
+        value = candidate.get(key)
+        if value is not None:
+            result[key] = str(value).strip()
+    for key in ("evidence", "limitations"):
+        values = [value for value in _as_list(candidate.get(key))]
+        if values:
+            result[key] = values
+    return result
+
+
+def _missing_conclusion_candidate_fields(candidate: Dict[str, Any]) -> List[str]:
+    return [key for key in CONCLUSION_CANDIDATE_REQUIRED_FIELDS if not str(candidate.get(key) or "").strip()]
 
 
 def _has_current_incident_evidence_ref(refs: Iterable[str]) -> bool:

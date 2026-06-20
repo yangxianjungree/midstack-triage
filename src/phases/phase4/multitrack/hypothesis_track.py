@@ -279,7 +279,8 @@ class HypothesisTrack:
             ),
             status=status,
             reasoning=reasoning_result.get("reasoning", ""),
-            evidence=self._reasoning_evidence_refs(reasoning_result)
+            evidence=self._reasoning_evidence_refs(reasoning_result),
+            conclusion_candidate=self._reasoning_conclusion_candidate(reasoning_result),
         )
 
         # 判断是否继续
@@ -341,6 +342,10 @@ class HypothesisTrack:
                 refs.append(text)
         return refs
 
+    def _reasoning_conclusion_candidate(self, reasoning_result: Dict) -> Optional[Dict]:
+        candidate = reasoning_result.get("conclusion_candidate")
+        return dict(candidate) if isinstance(candidate, dict) else None
+
     # ==================== 隔离上下文管理 ====================
 
     def _add_hypothesis_version(
@@ -349,7 +354,8 @@ class HypothesisTrack:
         text: str,
         status: str,
         reasoning: str,
-        evidence: List[str]
+        evidence: List[str],
+        conclusion_candidate: Optional[Dict] = None
     ) -> None:
         """添加假设版本到演化历史"""
         self.hypothesis_evolution.append(HypothesisVersion(
@@ -357,7 +363,8 @@ class HypothesisTrack:
             hypothesis_text=text,
             status=status,
             reasoning=reasoning,
-            evidence_considered=evidence
+            evidence_considered=evidence,
+            conclusion_candidate=conclusion_candidate
         ))
 
     def get_current_hypothesis(self) -> str:
@@ -378,7 +385,8 @@ class HypothesisTrack:
                     "text": v.hypothesis_text,
                     "status": v.status,
                     "reasoning": v.reasoning,
-                    "evidence": v.evidence_considered
+                    "evidence": v.evidence_considered,
+                    "conclusion_candidate": v.conclusion_candidate or {}
                 }
                 for v in self.hypothesis_evolution
             ],

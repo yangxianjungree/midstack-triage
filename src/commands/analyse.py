@@ -408,6 +408,7 @@ def _agent_reasoning_summary(phase4_result: Dict[str, Any]) -> Dict[str, Any]:
                 "status": str(status.get("status") or ""),
                 "confidence": status.get("confidence", 0),
                 "evidence_refs": _agent_hypothesis_evidence_refs(item),
+                "conclusion_candidate": _agent_hypothesis_conclusion_candidate(item),
             }
         )
     if not hypotheses:
@@ -441,6 +442,17 @@ def _agent_hypothesis_evidence_refs(hypothesis: Dict[str, Any]) -> list[str]:
             if source:
                 refs.append(source)
     return refs
+
+
+def _agent_hypothesis_conclusion_candidate(hypothesis: Dict[str, Any]) -> Dict[str, Any]:
+    private_context = hypothesis.get("private_context") if isinstance(hypothesis.get("private_context"), dict) else {}
+    for version in reversed(private_context.get("hypothesis_evolution") or []):
+        if not isinstance(version, dict):
+            continue
+        candidate = version.get("conclusion_candidate")
+        if isinstance(candidate, dict) and candidate:
+            return dict(candidate)
+    return {}
 
 
 def _write_deep_analysis(output_dir: Path, analysis: Dict[str, Any], signal_bundle: Dict[str, Any]) -> Dict[str, Any]:

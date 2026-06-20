@@ -1,7 +1,7 @@
 """基础数据结构定义"""
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 
 @dataclass
@@ -61,6 +61,7 @@ class HypothesisVersion:
     status: str
     reasoning: str
     evidence_considered: List[str]
+    conclusion_candidate: Optional[Dict] = None
 
 
 @dataclass

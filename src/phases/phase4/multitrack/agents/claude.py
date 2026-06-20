@@ -99,6 +99,7 @@ class ClaudeAgent:
     "confidence": 0.0-1.0,
     "reasoning": "推理过程",
     "evidence_refs": ["structured_record.details...", "signal_bundle..."],
+    "conclusion_candidate": {{"statement": "...", "confidence": "low|medium|high", "deepest_supported_level": "phenomenon|impact|mechanism|root_cause", "primary_cause_category": "...", "impact_scope": "...", "evidence": ["structured_record..."], "limitations": []}},
     "validation_actions": [{{"action": "..."}}, ...],
     "findings": [{{"type": "...", "content": "...", "evidence": [], "affects": []}}, ...]
 }}
@@ -177,6 +178,7 @@ evidence_refs只能引用当前incident证据路径，例如structured_record、
 - confidence: 0.0-1.0
 - reasoning: 推理过程（1-2句话）
 - evidence_refs: 当前incident证据路径列表，只能引用structured_record、signal_bundle、collection_report、deepening_findings、deep_analysis_results或verification_requests
+- conclusion_candidate: 如果当前假设可作为正式结论候选，填入statement、confidence、deepest_supported_level、primary_cause_category、impact_scope、evidence、limitations；证据不足时可为空对象
 - validation_actions: [{{"action": "验证动作描述"}}] (如需要)
 - findings: [{{"type": "support|refutation|gap", "content": "发现内容", "evidence": [], "affects": []}}]
 
@@ -232,5 +234,6 @@ JSON:"""
         result.setdefault("validation_actions", [])
         result.setdefault("findings", [])
         result.setdefault("evidence_refs", [])
+        result.setdefault("conclusion_candidate", {})
         result.setdefault("causal_chain_update", None)
         return result

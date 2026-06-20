@@ -16,7 +16,7 @@ from install_contracts import (
     assert_no_common_source_checkout_contract,
     assert_review_and_validate_not_main_path,
     assert_slash_command_surface_doc,
-    assert_start_command_ready_next_step,
+    assert_start_command_ready_message_table,
     assert_start_command_uses_runtime_first_hop,
 )
 
@@ -178,7 +178,7 @@ def test_claude_start_command_contract_forces_bundled_runtime_first():
     for token in required:
         assert token in text
     assert_start_command_uses_runtime_first_hop(path)
-    assert_start_command_ready_next_step(path)
+    assert_start_command_ready_message_table(path)
 
 
 def test_slash_command_surface_documents_phase_mapping():

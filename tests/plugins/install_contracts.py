@@ -79,10 +79,17 @@ def assert_start_command_uses_runtime_first_hop(path: Path) -> None:
         raise AssertionError("%s is missing runtime first-hop contract tokens: %s" % (path, ", ".join(errors)))
 
 
-def assert_start_command_ready_next_step(path: Path) -> None:
+def assert_start_command_ready_message_table(path: Path) -> None:
     text = path.read_text(encoding="utf-8")
-    if "next run /midstack:analyse" not in text:
-        raise AssertionError("%s must state the exact ready follow-up: next run /midstack:analyse" % path)
+    required = [
+        "user_message",
+        "adapter-output.yaml",
+        "Markdown table",
+        "verbatim",
+    ]
+    missing = [token for token in required if token not in text]
+    if missing:
+        raise AssertionError("%s must display the ready user_message Markdown table verbatim: %s" % (path, ", ".join(missing)))
 
 
 def assert_analyse_command_runtime_first_contract(path: Path) -> None:

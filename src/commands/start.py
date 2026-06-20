@@ -33,6 +33,41 @@ def unique_incident_id(middleware: str, output_root) -> str:
     return generated_incident_id(middleware)
 
 
+def _table_value(value: Any) -> str:
+    text = str(value or "").strip()
+    return text if text else "-"
+
+
+def _ready_next_step(environment_mode: str) -> str:
+    if environment_mode in ("local", "offline"):
+        return "next run /midstack:analyse --execution-mode %s" % environment_mode
+    return "next run /midstack:analyse"
+
+
+def _ready_user_message(
+    *,
+    incident_id: str,
+    middleware: str,
+    environment_mode: str,
+    namespace: str,
+    output_dir: Path,
+    next_step: str,
+) -> str:
+    return "\n".join(
+        [
+            "| Field | Value |",
+            "| --- | --- |",
+            "| Status | `ready` |",
+            "| Incident | `%s` |" % _table_value(incident_id),
+            "| Middleware | `%s` |" % _table_value(middleware),
+            "| Mode | `%s` |" % _table_value(environment_mode),
+            "| Namespace | `%s` |" % _table_value(namespace),
+            "| Output directory | `%s` |" % output_dir,
+            "| Next | `%s` |" % next_step,
+        ]
+    )
+
+
 def _load_prior_start_values(output_dir: Path) -> Dict[str, Any]:
     values: Dict[str, Any] = {}
     input_file = output_dir / "input.yaml"
@@ -250,33 +285,38 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory, probe_
     output = adapter_output("start", incident_id, args.middleware, status, "local incident %s is %s" % (incident_id, status), output_dir)
     output["warnings"].extend(readiness_warnings)
     if status == "ready":
+        next_step = _ready_next_step(intake["environment_mode"])
         if intake["environment_mode"] == "offline":
             output["summary"] = "%s; offline artifact source ready" % output["summary"]
             output["next_actions"] = [
                 "run /midstack:analyse --execution-mode offline",
                 "or run /midstack:analyse %s --execution-mode offline" % incident_id,
             ]
-            output["user_message"] = "%s; next run /midstack:analyse --execution-mode offline" % output["summary"]
         elif intake["environment_mode"] == "local":
             output["summary"] = "%s; local kubectl context ready" % output["summary"]
             output["next_actions"] = [
                 "run /midstack:analyse --execution-mode local",
                 "or run /midstack:analyse %s --execution-mode local" % incident_id,
             ]
-            output["user_message"] = "%s; next run /midstack:analyse --execution-mode local" % output["summary"]
         elif object_inventory.get("namespace_source") == "auto_discovered":
             output["summary"] = "%s; namespace auto-discovered as %s" % (output["summary"], object_inventory.get("selected_namespace"))
             output["next_actions"] = [
                 "run /midstack:analyse",
                 "or run /midstack:analyse %s" % incident_id,
             ]
-            output["user_message"] = "%s; next run /midstack:analyse" % output["summary"]
         else:
             output["next_actions"] = [
                 "run /midstack:analyse",
                 "or run /midstack:analyse %s" % incident_id,
             ]
-            output["user_message"] = "%s; next run /midstack:analyse" % output["summary"]
+        output["user_message"] = _ready_user_message(
+            incident_id=incident_id,
+            middleware=args.middleware,
+            environment_mode=intake["environment_mode"],
+            namespace=args.namespace,
+            output_dir=output_dir,
+            next_step=next_step,
+        )
     else:
         output["blocking_items"] = blocking_items
         output["follow_up_questions"] = follow_up_questions

@@ -77,9 +77,8 @@ safe fields.
 
 When `status=ready`:
 
-- show incident id, namespace, and output directory
-- state exactly: `next run /midstack:analyse`
-- if `environment_mode=offline`, state exactly: `next run /midstack:analyse --execution-mode offline`
+- print `user_message` from `adapter-output.yaml` verbatim; it is the fixed Markdown table for the ready response
+- do not rewrite the table as prose
 - do not ask a follow-up confirmation question
 
 When `status=blocked`:

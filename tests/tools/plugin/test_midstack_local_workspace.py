@@ -19,6 +19,22 @@ def write_yaml(path: Path, payload) -> None:
     path.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=False), encoding="utf-8")
 
 
+def assert_start_ready_user_message_table(output, incident_dir: Path, *, mode: str, namespace: str, next_step: str) -> None:
+    assert output["user_message"] == "\n".join(
+        [
+            "| Field | Value |",
+            "| --- | --- |",
+            "| Status | `ready` |",
+            "| Incident | `%s` |" % incident_dir.name,
+            "| Middleware | `mongodb` |",
+            "| Mode | `%s` |" % mode,
+            "| Namespace | `%s` |" % namespace,
+            "| Output directory | `%s` |" % incident_dir,
+            "| Next | `%s` |" % next_step,
+        ]
+    )
+
+
 def test_path_from_arg_uses_workspace_env(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
     assert path_from_arg(".local/incidents") == tmp_path / ".local/incidents"
@@ -85,9 +101,12 @@ def test_start_ready_output_points_to_midstack_analyse(tmp_path, monkeypatch):
         "run /midstack:analyse",
         "or run /midstack:analyse %s" % current_incident.name,
     ]
-    assert output["user_message"] == (
-        "local incident %s is ready; namespace auto-discovered as psmdb-test; next run /midstack:analyse"
-        % current_incident.name
+    assert_start_ready_user_message_table(
+        output,
+        current_incident,
+        mode="remote",
+        namespace="psmdb-test",
+        next_step="next run /midstack:analyse",
     )
 
 
@@ -486,6 +505,13 @@ def test_start_local_mode_ready_with_local_context_and_inventory(tmp_path, monke
         "run /midstack:analyse --execution-mode local",
         "or run /midstack:analyse local-ready-start --execution-mode local",
     ]
+    assert_start_ready_user_message_table(
+        output,
+        incident_dir,
+        mode="local",
+        namespace="psmdb-test",
+        next_step="next run /midstack:analyse --execution-mode local",
+    )
 
 
 def test_start_local_mode_blocks_when_local_context_unavailable(tmp_path, monkeypatch):
@@ -627,6 +653,13 @@ def test_start_offline_mode_ready_with_valid_artifact_source(tmp_path, monkeypat
         "run /midstack:analyse --execution-mode offline",
         "or run /midstack:analyse offline-artifact-start --execution-mode offline",
     ]
+    assert_start_ready_user_message_table(
+        output,
+        incident_dir,
+        mode="offline",
+        namespace="-",
+        next_step="next run /midstack:analyse --execution-mode offline",
+    )
 
 
 def test_start_manual_offline_pasted_evidence_is_saved_as_raw_only(tmp_path, monkeypatch):

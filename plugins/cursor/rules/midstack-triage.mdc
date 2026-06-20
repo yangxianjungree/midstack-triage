@@ -13,7 +13,7 @@ When the user asks to triage MongoDB or middleware incidents in this workspace:
 - Do not call repository source-tree `tools/plugin/midstack-local.py`.
 - Do not implement triage directly in the rule or slash command layer; remote execution tools are runtime implementation details.
 - For `/midstack:start`, run `midstack-local.py start` after extracting middleware, IPs, username/password, optional port, and customer clue.
-- After `/midstack:start`, if the result is ready, state exactly `next run /midstack:analyse`; if blocked, summarize blocking items.
+- After `/midstack:start`, if the result is ready, print `user_message` from `adapter-output.yaml` verbatim; if blocked, summarize blocking items.
 - For `/midstack:analyse`, run `midstack-local.py analyse` (or `--input-dir` / `--remote-run-dir` / `--remote-config` when appropriate).
 - For `/midstack:review`, run `midstack-local.py review`.
 - After analyse succeeds, read `agent-reasoning-task.md`, update `analysis.yaml` and `report.md`, then run `midstack-local.py finalize-analysis`.

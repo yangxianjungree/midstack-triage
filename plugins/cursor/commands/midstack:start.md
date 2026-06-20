@@ -72,9 +72,7 @@ python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/midstack-loc
 
 After `start`, report whether the incident is `ready` or `blocked` from `adapter-output.yaml`.
 
-If `ready`, state exactly `next run /midstack:analyse`.
-
-If `ready` and `environment_mode` is `offline`, state exactly `next run /midstack:analyse --execution-mode offline`.
+If `ready`, print `user_message` from `adapter-output.yaml` verbatim. It is the fixed Markdown table for the ready response; do not rewrite it as prose.
 
 If `blocked`, summarize blocking items. If multiple MongoDB namespaces were detected, list candidates and ask the user to choose one.
 

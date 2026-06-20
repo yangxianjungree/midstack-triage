@@ -87,4 +87,4 @@ git diff --check
 - Whether production platform intake should become a separate adapter profile or
   remain an offline/local evidence source.
 - Whether manual guided offline needs a dedicated command loop or can be served
-  by repeated `/start` and `/analyse --execution-mode offline` interactions.
+  by repeated `/start` and incident-derived offline `/analyse` interactions.

@@ -120,7 +120,7 @@ slash 命令与 5 阶段流程的简明说明见 [Slash 命令面说明](../proj
 ### `ready` 时的行为
 
 - 提示用户可执行 `/midstack:analyse`
-- `offline` 模式提示用户执行 `/midstack:analyse --execution-mode offline`
+- `/midstack:analyse` 根据 `/midstack:start` 写入 incident 的 `execution_mode` / `environment_mode` 自动选择 remote、local 或 offline 路径
 
 ## 4. `/midstack:analyse`
 

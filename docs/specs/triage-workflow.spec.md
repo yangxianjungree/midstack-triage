@@ -125,7 +125,8 @@ Phase 2 负责持续从用户交互中补齐信息，并通过只读命令判断
 Kubernetes context，帮助用户判断是否应切换到 `local`、继续提供 SSH 信息，
 或改用 `offline` 证据路径。显式 `local` 模式会在 Phase 2 重新探测本机
 context；context 可用且目标对象盘点通过时，`/start` 可返回 `ready` 并写入
-`local-config.yaml`。`/analyse --execution-mode local` 读取该文件并在本机执行
+`local-config.yaml`。`/analyse` 根据 incident 中的 `execution_mode: local`
+读取该文件并在本机执行
 只读采集脚本。如果 context 缺失、不可达，或 ready incident 缺少
 `local-config.yaml`，应返回结构化 `blocked`，并在追问或 next action 中说明
 本机 kubectl context 状态。

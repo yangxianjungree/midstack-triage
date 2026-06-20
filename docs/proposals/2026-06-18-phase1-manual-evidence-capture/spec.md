@@ -24,7 +24,7 @@ set.
 2. `/start --environment-mode offline --pasted-evidence <text>` writes the raw
    text under `logs/raw/` and keeps the incident `blocked`.
 3. The user must still provide a complete `--artifact-source` or a future
-   normalization step before `/analyse --execution-mode offline` can complete.
+   normalization step before `/analyse` can complete in an offline incident.
 4. This slice does not parse commands, infer signals, or run local/remote tools.
 
 ## Success Criteria

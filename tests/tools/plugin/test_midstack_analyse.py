@@ -61,8 +61,6 @@ class MidstackAnalyseTest(unittest.TestCase):
                     sys.executable,
                     str(ROOT / "tools" / "plugin" / "midstack-local.py"),
                     "analyse",
-                    "--execution-mode",
-                    "offline",
                     "--input-dir",
                     str(FIXTURE_ROOT),
                     "--output-dir",
@@ -80,7 +78,7 @@ class MidstackAnalyseTest(unittest.TestCase):
             self.assertTrue((output_dir / "analysis.yaml").exists())
             self.assertFalse((output_dir / "remote-executor.stdout.txt").exists())
 
-    def test_analyse_local_mode_without_current_incident_is_blocked(self) -> None:
+    def test_analyse_without_current_incident_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output_root = Path(tmp) / "incidents"
             proc = subprocess.run(
@@ -88,8 +86,6 @@ class MidstackAnalyseTest(unittest.TestCase):
                     sys.executable,
                     str(ROOT / "tools" / "plugin" / "midstack-local.py"),
                     "analyse",
-                    "--execution-mode",
-                    "local",
                     "--output-root",
                     str(output_root),
                 ],
@@ -104,32 +100,6 @@ class MidstackAnalyseTest(unittest.TestCase):
             self.assertEqual(adapter["status"], "blocked")
             self.assertEqual(adapter["blocking_items"][0]["code"], "missing_current_incident")
 
-    def test_analyse_local_input_dir_is_blocked(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            output_dir = Path(tmp) / "mongodb-incident"
-            proc = subprocess.run(
-                [
-                    sys.executable,
-                    str(ROOT / "tools" / "plugin" / "midstack-local.py"),
-                    "analyse",
-                    "--execution-mode",
-                    "local",
-                    "--input-dir",
-                    str(FIXTURE_ROOT),
-                    "--output-dir",
-                    str(output_dir),
-                ],
-                cwd=str(ROOT),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                universal_newlines=True,
-            )
-
-            self.assertEqual(proc.returncode, 0)
-            adapter = yaml.safe_load((output_dir / "adapter-output.yaml").read_text(encoding="utf-8"))
-            self.assertEqual(adapter["status"], "blocked")
-            self.assertEqual(adapter["blocking_items"][0]["code"], "execution_mode_existing_artifacts_disabled")
-
     def test_analyse_offline_incident_without_artifacts_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
@@ -141,6 +111,8 @@ class MidstackAnalyseTest(unittest.TestCase):
                         "incident_id": "mongodb-ready-incident",
                         "middleware": "mongodb",
                         "namespace": "mongo",
+                        "environment_mode": "offline",
+                        "execution_mode": "offline",
                         "customer_clue": "MongoDB pod is not ready.",
                         "scenario": "unknown",
                     },
@@ -169,8 +141,6 @@ class MidstackAnalyseTest(unittest.TestCase):
                     sys.executable,
                     str(ROOT / "tools" / "plugin" / "midstack-local.py"),
                     "analyse",
-                    "--execution-mode",
-                    "offline",
                     "--incident-dir",
                     str(incident_dir),
                 ],
@@ -230,8 +200,6 @@ class MidstackAnalyseTest(unittest.TestCase):
                     sys.executable,
                     str(ROOT / "tools" / "plugin" / "midstack-local.py"),
                     "analyse",
-                    "--execution-mode",
-                    "offline",
                     "--incident-dir",
                     str(incident_dir),
                 ],
@@ -486,8 +454,6 @@ class MidstackAnalyseTest(unittest.TestCase):
                     sys.executable,
                     str(ROOT / "tools" / "plugin" / "midstack-local.py"),
                     "analyse",
-                    "--execution-mode",
-                    "local",
                     "--incident-dir",
                     str(incident_dir),
                 ],

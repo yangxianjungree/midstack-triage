@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-from execution.modes import mode_allows_existing_artifacts, mode_allows_remote_collection, resolve_execution_mode
+from execution.modes import resolve_execution_mode
 from phases.phase4.rules import generate_rule_analysis, supported_middlewares
 from shared.workspace import (
     adapter_output,
@@ -121,6 +121,36 @@ def _write_missing_local_config_output(incident_dir: Path, input_data: Dict[str,
             }
         ],
         ["rerun /midstack:start --environment-mode local with a working local kubectl context"],
+    )
+
+
+def _execution_mode_name_from_incident(input_data: Dict[str, Any]) -> str:
+    return str(input_data.get("execution_mode") or input_data.get("environment_mode") or "remote").strip().lower()
+
+
+def _execution_mode_name_from_input_source(args) -> str:
+    if getattr(args, "remote_config", ""):
+        return "remote"
+    if getattr(args, "input_dir", "") or getattr(args, "remote_run_dir", ""):
+        return "offline"
+    return "remote"
+
+
+def _write_unsupported_execution_mode_output(output_root: Path, mode_name: str) -> int:
+    return write_blocked_output(
+        "analyse",
+        "none",
+        "mongodb",
+        output_root,
+        "unsupported execution mode",
+        [
+            {
+                "code": "unsupported_execution_mode",
+                "message": "unsupported execution mode: %s" % mode_name,
+                "required_user_action": "rerun /midstack:start so execution_mode is recorded as remote, local, or offline",
+            }
+        ],
+        ["rerun /midstack:start or fix the incident input.yaml execution_mode"],
     )
 
 
@@ -420,24 +450,6 @@ def run(
     run_phase4_analysis,
 ) -> int:
     output_root = path_from_arg(args.output_root)
-    try:
-        execution_mode = resolve_execution_mode(getattr(args, "execution_mode", None))
-    except ValueError as exc:
-        return write_blocked_output(
-            "analyse",
-            "none",
-            "mongodb",
-            output_root,
-            "unsupported execution mode",
-            [
-                {
-                    "code": "unsupported_execution_mode",
-                    "message": str(exc),
-                    "required_user_action": "use --execution-mode remote, local, or offline",
-                }
-            ],
-            ["rerun analyse with a supported execution mode"],
-        )
     incident_dir = None
     incident_mode = False
     previous_incident_status = ""
@@ -461,38 +473,6 @@ def run(
                 ],
                 ["run /midstack:start with remote access information"],
             )
-    if args.remote_config and not mode_allows_remote_collection(execution_mode):
-        return write_blocked_output(
-            "analyse",
-            "none",
-            "mongodb",
-            output_root,
-            "execution mode does not allow remote collection",
-            [
-                {
-                    "code": "execution_mode_remote_collection_disabled",
-                    "message": "--remote-config requires --execution-mode remote",
-                    "required_user_action": "use --execution-mode remote or provide --input-dir/--remote-run-dir",
-                }
-            ],
-            ["rerun analyse with --execution-mode remote or use existing collected artifacts"],
-        )
-    if (args.input_dir or args.remote_run_dir) and not mode_allows_existing_artifacts(execution_mode):
-        return write_blocked_output(
-            "analyse",
-            "none",
-            "mongodb",
-            path_from_arg(args.output_dir) if getattr(args, "output_dir", "") else output_root,
-            "execution mode does not allow existing artifacts",
-            [
-                {
-                    "code": "execution_mode_existing_artifacts_disabled",
-                    "message": "--input-dir/--remote-run-dir requires --execution-mode remote or offline",
-                    "required_user_action": "use --execution-mode offline for existing artifacts, or use a ready local incident for local live collection",
-                }
-            ],
-            ["rerun analyse with --execution-mode offline or provide --incident-dir for local live collection"],
-        )
     if args.incident_dir:
         incident_mode = True
         incident_dir = resolve_path(args.incident_dir)
@@ -536,6 +516,12 @@ def run(
                 ["fix the blocked start conditions or choose a ready incident"],
             )
         input_data = load_yaml(incident_dir / "input.yaml")
+        mode_name = _execution_mode_name_from_incident(input_data)
+        try:
+            execution_mode = resolve_execution_mode(mode_name)
+        except ValueError:
+            return _write_unsupported_execution_mode_output(incident_dir, mode_name)
+        args.execution_mode = execution_mode.name
         args.incident_input = input_data
         args.incident_id_override = str(input_data.get("incident_id") or incident_dir.name)
         object_inventory_file = incident_dir / "object-inventory.yaml"
@@ -566,7 +552,7 @@ def run(
                             "required_user_action": "run remote analyse first or provide --input-dir/--remote-run-dir",
                         }
                     ],
-                    ["run /midstack:analyse with --execution-mode remote or provide existing artifacts"],
+                    ["run /midstack:analyse from a remote incident or provide existing artifacts"],
                 )
             args.remote_config = ""
             args.local_config = ""
@@ -595,6 +581,12 @@ def run(
                 ["rerun /midstack:start with remote access information"],
             )
     else:
+        mode_name = _execution_mode_name_from_input_source(args)
+        try:
+            execution_mode = resolve_execution_mode(mode_name)
+        except ValueError:
+            return _write_unsupported_execution_mode_output(output_root, mode_name)
+        args.execution_mode = execution_mode.name
         if not args.output_dir:
             print("ERROR: --output-dir is required unless --incident-dir is used", file=sys.stderr)
             return 1

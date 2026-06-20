@@ -21,10 +21,11 @@ Command boundary:
   succeeds.
 - If `analyse` returns `blocked`, summarize `blocking_items` and stop.
 - Do not print passwords or tokens; redact credentials in summaries.
-- `--execution-mode remote` is the default live-collection mode. Use
-  `--execution-mode offline` only when analysing existing incident artifacts or
-  a remote-run directory; local execution is reserved and currently returns
-  blocked.
+- Do not pass `--execution-mode` to `analyse`; the runtime derives execution
+  mode from the current incident's `execution_mode` / `environment_mode`.
+- When using direct input sources, `--input-dir` and `--remote-run-dir` are
+  treated as existing collected artifacts, while `--remote-config` triggers
+  remote collection.
 
 If `$ARGUMENTS` is empty, analyse the current incident:
 

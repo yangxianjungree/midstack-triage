@@ -13,9 +13,10 @@ related:
 
 ## Objective
 
-Enable `/midstack:analyse --execution-mode local` for ready local incidents by
-reusing the existing Phase 3 script orchestration and replacing only the SSH
-transport with a local subprocess/file-copy transport.
+Enable `/midstack:analyse` for ready local incidents by reusing the existing
+Phase 3 script orchestration and replacing only the SSH transport with a local
+subprocess/file-copy transport. Analyse derives local mode from the incident
+written by `/start --environment-mode local`.
 
 This keeps the architectural model explicit:
 
@@ -40,8 +41,8 @@ This keeps the architectural model explicit:
   existing collection scripts through local subprocesses.
 - Phase 3 can invoke collection with local transport while preserving existing
   remote invocation behavior.
-- Analyse incident mode uses `local-config.yaml` for
-  `--execution-mode local`, and still uses `remote-config.yaml` for remote.
+- Analyse incident mode uses `local-config.yaml` for incidents recorded as
+  local, and still uses `remote-config.yaml` for remote.
 - Local analyse without `local-config.yaml` returns a structured blocked output.
 - Remote and offline analyse behavior remains compatible.
 

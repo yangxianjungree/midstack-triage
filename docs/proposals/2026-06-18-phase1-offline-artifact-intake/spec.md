@@ -76,7 +76,7 @@ git diff --check
   - Verify: `python3 -m pytest tests/tools/plugin/test_midstack_local_workspace.py -q`
   - Files: `src/commands/start.py`, `tests/tools/plugin/test_midstack_local_workspace.py`
 - [x] Task: Let offline analyse consume start artifact references
-  - Acceptance: a ready offline incident with `input.yaml.artifact_source` completes `analyse --execution-mode offline`.
+  - Acceptance: a ready offline incident with `input.yaml.artifact_source` completes `analyse`; execution mode is derived from the incident.
   - Verify: `python3 -m pytest tests/tools/plugin/test_midstack_analyse.py::MidstackAnalyseTest::test_analyse_offline_incident_uses_artifact_source_from_start -q`
   - Files: `src/commands/analyse.py`, `tests/tools/plugin/test_midstack_analyse.py`
 - [x] Task: Document offline artifact intake

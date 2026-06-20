@@ -61,6 +61,17 @@ def test_resolve_path_falls_back_to_repo_for_fixtures(monkeypatch):
     assert fixture == ROOT / "tests" / "fixtures" / "active" / "mongodb" / "connection-failure-sample"
 
 
+def test_analyse_parser_rejects_user_execution_mode_argument():
+    parser = module.build_parser()
+
+    try:
+        parser.parse_args(["analyse", "--execution-mode", "local"])
+    except SystemExit as exc:
+        assert exc.code == 2
+    else:
+        raise AssertionError("analyse must derive execution mode from the incident or input source")
+
+
 def test_start_ready_output_points_to_midstack_analyse(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
 
@@ -503,15 +514,15 @@ def test_start_local_mode_ready_with_local_context_and_inventory(tmp_path, monke
     }
     assert calls == [({"execution_mode": "local", "current_context": "prod-cluster"}, "")]
     assert output["next_actions"] == [
-        "run /midstack:analyse --execution-mode local",
-        "or run /midstack:analyse local-ready-start --execution-mode local",
+        "run /midstack:analyse",
+        "or run /midstack:analyse local-ready-start",
     ]
     assert_start_ready_user_message_table(
         output,
         incident_dir,
         mode="local",
         namespace="psmdb-test",
-        next_step="next run /midstack:analyse --execution-mode local",
+        next_step="next run /midstack:analyse",
     )
 
 
@@ -651,15 +662,15 @@ def test_start_offline_mode_ready_with_valid_artifact_source(tmp_path, monkeypat
     assert input_data["execution_mode"] == "offline"
     assert not (incident_dir / "remote-config.yaml").exists()
     assert output["next_actions"] == [
-        "run /midstack:analyse --execution-mode offline",
-        "or run /midstack:analyse offline-artifact-start --execution-mode offline",
+        "run /midstack:analyse",
+        "or run /midstack:analyse offline-artifact-start",
     ]
     assert_start_ready_user_message_table(
         output,
         incident_dir,
         mode="offline",
         namespace="-",
-        next_step="next run /midstack:analyse --execution-mode offline",
+        next_step="next run /midstack:analyse",
     )
 
 
@@ -908,7 +919,7 @@ def test_local_analyse_incident_uses_local_collection(tmp_path, monkeypatch):
         remote_output_dir=".local/remote-runs",
         remote_namespace="",
         object_inventory="",
-        execution_mode="local",
+        execution_mode="",
     )
 
     assert module.command_analyse(args) == 0

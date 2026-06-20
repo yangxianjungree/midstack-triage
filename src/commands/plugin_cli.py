@@ -99,12 +99,6 @@ def build_parser() -> argparse.ArgumentParser:
     analyse.add_argument("--remote-output-dir", default=".local/remote-runs")
     analyse.add_argument("--remote-namespace", default="")
     analyse.add_argument("--object-inventory", default="")
-    analyse.add_argument(
-        "--execution-mode",
-        choices=sorted(execution_mode_names()),
-        default="remote",
-        help="Evidence collection mode. remote uses SSH, local uses this machine, offline only consumes existing artifacts.",
-    )
     analyse.set_defaults(func=command_analyse)
 
     review = subparsers.add_parser("review")

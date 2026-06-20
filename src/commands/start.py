@@ -39,8 +39,6 @@ def _table_value(value: Any) -> str:
 
 
 def _ready_next_step(environment_mode: str) -> str:
-    if environment_mode in ("local", "offline"):
-        return "next run /midstack:analyse --execution-mode %s" % environment_mode
     return "next run /midstack:analyse"
 
 
@@ -289,14 +287,14 @@ def run(args, *, validate_remote_environment, discover_mongodb_inventory, probe_
         if intake["environment_mode"] == "offline":
             output["summary"] = "%s; offline artifact source ready" % output["summary"]
             output["next_actions"] = [
-                "run /midstack:analyse --execution-mode offline",
-                "or run /midstack:analyse %s --execution-mode offline" % incident_id,
+                "run /midstack:analyse",
+                "or run /midstack:analyse %s" % incident_id,
             ]
         elif intake["environment_mode"] == "local":
             output["summary"] = "%s; local kubectl context ready" % output["summary"]
             output["next_actions"] = [
-                "run /midstack:analyse --execution-mode local",
-                "or run /midstack:analyse %s --execution-mode local" % incident_id,
+                "run /midstack:analyse",
+                "or run /midstack:analyse %s" % incident_id,
             ]
         elif object_inventory.get("namespace_source") == "auto_discovered":
             output["summary"] = "%s; namespace auto-discovered as %s" % (output["summary"], object_inventory.get("selected_namespace"))

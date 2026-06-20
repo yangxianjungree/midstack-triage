@@ -24,6 +24,7 @@ ANALYSE_COMMAND_CONTRACT_TOKENS = [
     *START_COMMAND_FIRST_HOP_TOKENS,
     "Do not create or edit `analysis.yaml` before",
     "If `analyse` returns `blocked`, summarize `blocking_items` and stop",
+    "Do not pass `--execution-mode` to `analyse`",
     "print `user_message` from `adapter-output.yaml` verbatim",
     "fixed Markdown table for the completed analysis response",
     "Do not print passwords or tokens",
@@ -175,7 +176,6 @@ def assert_cli_command_options_documented(
             "--remote-run-dir",
             "--remote-config",
             "--remote-output-dir",
-            "--execution-mode",
         },
         "review": {
             "--incident-dir",

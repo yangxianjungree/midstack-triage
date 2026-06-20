@@ -467,8 +467,10 @@ class MongoDBRulesTest(unittest.TestCase):
         self.assertIn("Replica set configuration or member metadata drift", hypothesis_text)
 
         requests = {item["request_id"]: item for item in result["verification_requests"]}
-        self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["asset_tier"], "ad_hoc_readonly")
-        self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["execution_policy"], "approval_required")
+        self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["asset_tier"], "first_class")
+        self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["asset"]["type"], "script")
+        self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["asset"]["id"], "mongodb.collect.replicaset.rs_conf")
+        self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["execution_policy"], "auto_allowed")
         self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["risk_level"], "read-only")
         self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["hypothesis_id"], "H3")
         self.assertEqual(requests["vr-mongodb-election-logs"]["asset"]["id"], "mongodb.collect.logs.previous")

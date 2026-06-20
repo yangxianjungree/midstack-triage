@@ -42,6 +42,11 @@ scripts:
     runtime: shell
     readonly: true
 
+  - script_id: mongodb.collect.replicaset.rs_conf
+    runtime_path: assets/scripts/mongodb/collect-replicaset-rs-conf.sh
+    runtime: shell
+    readonly: true
+
   - script_id: mongodb.collect.logs.current
     runtime_path: assets/scripts/mongodb/collect-logs-current.sh
     runtime: shell

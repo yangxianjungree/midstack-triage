@@ -8,6 +8,7 @@ DETAILS_LIST_MERGE_BY_KEY: Dict[str, str] = {
     "services": "name",
     "nodes": "name",
     "replica_members": "source_pod_ref",
+    "replica_configs": "source_pod_ref",
     "components": "component_id",
     "log_sinks": "source_pod_ref",
     "pod_terminations": "pod_container_ref",
@@ -165,4 +166,3 @@ def apply_script_output(
     patch = script_output.get("collection_report_patch")
     if isinstance(patch, dict):
         append_collection_report_patch(collection_report, patch)
-

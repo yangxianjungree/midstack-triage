@@ -788,10 +788,10 @@ def test_directed_recollection_runs_auto_allowed_first_class_verification_reques
                 },
                 {
                     "request_id": "vr-mongodb-rs-conf-compare",
-                    "asset_tier": "ad_hoc_readonly",
-                    "execution_policy": "approval_required",
+                    "asset_tier": "first_class",
+                    "execution_policy": "auto_allowed",
                     "risk_level": "read-only",
-                    "asset": {"type": "ad_hoc_command", "id": "vr-mongodb-rs-conf-compare"},
+                    "asset": {"type": "script", "id": "mongodb.collect.replicaset.rs_conf"},
                 },
             ]
         },
@@ -819,7 +819,7 @@ def test_directed_recollection_runs_auto_allowed_first_class_verification_reques
         (
             str(tmp_path / "remote.yaml"),
             output_dir / "directed-recollection",
-            ["mongodb.collect.logs.previous"],
+            ["mongodb.collect.logs.previous", "mongodb.collect.replicaset.rs_conf"],
         )
     ]
 

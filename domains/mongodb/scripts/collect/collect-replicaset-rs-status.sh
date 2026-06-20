@@ -94,6 +94,20 @@ def make_action_id(script_id: str) -> str:
     return script_id.replace(".", "-")
 
 
+def command_name(script_id: str) -> str:
+    return "rs.conf" if script_id.endswith(".rs_conf") else "rs.status"
+
+
+def command_js(script_id: str) -> str:
+    if script_id.endswith(".rs_conf"):
+        return 'const result = rs.conf(); print(JSON.stringify(result));'
+    return 'const result = rs.status(); print(JSON.stringify(result));'
+
+
+def detail_key(script_id: str) -> str:
+    return "replica_configs" if script_id.endswith(".rs_conf") else "replica_members"
+
+
 def safe_name(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", value)
 
@@ -120,9 +134,9 @@ def blocked_output(
             "collection_actions": [
                 {
                     "action_id": make_action_id(script_id),
-                    "name": "collect replica set rs.status",
+                    "name": "collect replica set %s" % command_name(script_id),
                     "target": "replicaset",
-                    "method": "kubectl exec + rs.status",
+                    "method": "kubectl exec + %s" % command_name(script_id),
                     "status": "blocked",
                     "performed_at": finished_at,
                 }
@@ -359,6 +373,35 @@ def status_record(source_pod: str, raw: Dict[str, Any], collected_at: str) -> Di
     }
 
 
+def config_record(source_pod: str, raw: Dict[str, Any], collected_at: str) -> Dict[str, Any]:
+    members = raw.get("members") or []
+    return {
+        "replica_set_id": raw.get("_id"),
+        "source_pod_ref": source_pod,
+        "source_method": "rs.conf",
+        "version": raw.get("version"),
+        "term": raw.get("term"),
+        "protocol_version": raw.get("protocolVersion"),
+        "settings": raw.get("settings") or {},
+        "members": [
+            {
+                "id": member.get("_id"),
+                "host": member.get("host"),
+                "arbiter_only": member.get("arbiterOnly"),
+                "build_indexes": member.get("buildIndexes"),
+                "hidden": member.get("hidden"),
+                "priority": member.get("priority"),
+                "votes": member.get("votes"),
+            }
+            for member in members
+            if isinstance(member, dict)
+        ],
+        "raw_ok": raw.get("ok"),
+        "collection_status": "success",
+        "collected_at": collected_at,
+    }
+
+
 def build_inner_command(resolved_shell: str, username: str, password: str, password_env: str, password_file_env: str, auth_database: str, js: str) -> str:
     resolve_shell = "MONGO_SHELL=%s; " % shlex.quote(resolved_shell)
     if username and password_file_env:
@@ -412,6 +455,7 @@ def main() -> int:
     context = load_yaml(context_file)
 
     script_id = str(context.get("script_id") or "mongodb.collect.replicaset.rs_status")
+    command = command_name(script_id)
     namespace = context.get("namespace") or ((context.get("targets") or {}).get("namespace"))
     if not namespace:
         raise ValueError("context-file missing namespace")
@@ -428,7 +472,7 @@ def main() -> int:
             started_at,
             "kubectl is not available in current runtime",
             ["capabilities.kubectl_available is false"],
-            [{"gap": "rs.status not collected", "related_stage": "signal_collection", "why_important": "replica member state is required for MongoDB diagnosis"}],
+            [{"gap": "%s not collected" % command, "related_stage": "signal_collection", "why_important": "%s output is required for MongoDB diagnosis" % command}],
         )
         return 0
     if not capabilities.get("kubectl_exec_available", False):
@@ -438,7 +482,7 @@ def main() -> int:
             started_at,
             "kubectl exec is not available in current runtime",
             ["capabilities.kubectl_exec_available is false"],
-            [{"gap": "rs.status not collected", "related_stage": "signal_collection", "why_important": "rs.status must be executed inside mongod Pods"}],
+            [{"gap": "%s not collected" % command, "related_stage": "signal_collection", "why_important": "%s must be executed inside mongod Pods" % command}],
         )
         return 0
 
@@ -450,7 +494,7 @@ def main() -> int:
             started_at,
             "kubectl command not found in runtime environment",
             ["kubectl binary is missing"],
-            [{"gap": "rs.status not collected", "related_stage": "signal_collection", "why_important": "kubectl exec is required for rs.status collection"}],
+            [{"gap": "%s not collected" % command, "related_stage": "signal_collection", "why_important": "kubectl exec is required for %s collection" % command}],
         )
         return 0
 
@@ -476,11 +520,11 @@ def main() -> int:
             started_at,
             "no Running mongod pods could be resolved",
             ["no Running configsvr or shard mongod pods were detected"],
-            [{"gap": "replica set target pods not resolved", "related_stage": "signal_collection", "why_important": "rs.status must be collected from Running mongod Pods"}],
+            [{"gap": "replica set target pods not resolved", "related_stage": "signal_collection", "why_important": "%s must be collected from Running mongod Pods" % command}],
         )
         return 0
 
-    js = 'const result = rs.status(); print(JSON.stringify(result));'
+    js = command_js(script_id)
     if username and not (password or password_env or password_file_env) and secret_ref:
         password, secret_error = read_secret_value(kubectl, str(namespace), secret_ref)
         if secret_error:
@@ -494,13 +538,13 @@ def main() -> int:
                     {
                         "gap": "MongoDB authentication secret not resolved",
                         "related_stage": "signal_collection",
-                        "why_important": "authenticated rs.status command cannot run without a password source",
+                        "why_important": "authenticated %s command cannot run without a password source" % command,
                     }
                 ],
             )
             return 0
 
-    statuses: List[Dict[str, Any]] = []
+    records: List[Dict[str, Any]] = []
     artifacts: List[Dict[str, Any]] = [
         {
             "path": os.path.join("raw", "pods-for-replicaset-resolution.json"),
@@ -522,11 +566,11 @@ def main() -> int:
             failed_items.append({"item": "pod/%s" % pod, "reason": probe_error, "impact": "missing replica set state from this member"})
             evidence_gaps.append(
                 {
-                    "gap": "rs.status not collected from pod/%s" % pod,
+                    "gap": "%s not collected from pod/%s" % (command, pod),
                     "gap_type": "expected_gap",
                     "related_stage": "signal_collection",
-                    "why_important": "A single mongod shell probe failure should not block rs.status from other Running members.",
-                    "recommended_action": "use rs.status from another healthy member in the same replica set",
+                    "why_important": "A single mongod shell probe failure should not block %s from other Running members." % command,
+                    "recommended_action": "use %s from another healthy member in the same replica set" % command,
                 }
             )
             continue
@@ -534,75 +578,85 @@ def main() -> int:
         cmd = kubectl_exec_command(kubectl, str(namespace), pod, container, inner_cmd)
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         base = safe_name(pod)
-        stdout_relpath = os.path.join("raw", "%s-rs-status.stdout" % base)
-        stderr_relpath = os.path.join("raw", "%s-rs-status.stderr" % base)
+        artifact_slug = command.replace(".", "-")
+        stdout_relpath = os.path.join("raw", "%s-%s.stdout" % (base, artifact_slug))
+        stderr_relpath = os.path.join("raw", "%s-%s.stderr" % (base, artifact_slug))
         with open(os.path.join(artifact_dir, stdout_relpath), "w", encoding="utf-8") as fh:
             fh.write(proc.stdout)
         with open(os.path.join(artifact_dir, stderr_relpath), "w", encoding="utf-8") as fh:
             fh.write(proc.stderr)
-        artifacts.append({"path": stdout_relpath, "kind": "raw_command_output", "description": "raw rs.status stdout from %s" % pod})
-        artifacts.append({"path": stderr_relpath, "kind": "raw_command_error", "description": "raw rs.status stderr from %s" % pod})
+        artifacts.append({"path": stdout_relpath, "kind": "raw_command_output", "description": "raw %s stdout from %s" % (command, pod)})
+        artifacts.append({"path": stderr_relpath, "kind": "raw_command_error", "description": "raw %s stderr from %s" % (command, pod)})
         if proc.returncode != 0:
-            failed_items.append({"item": "pod/%s" % pod, "reason": proc.stderr.strip() or "rs.status returned non-zero exit code", "impact": "missing replica set state from this member"})
+            failed_items.append({"item": "pod/%s" % pod, "reason": proc.stderr.strip() or "%s returned non-zero exit code" % command, "impact": "missing replica set %s from this member" % command})
             evidence_gaps.append(
                 {
-                    "gap": "rs.status not collected from pod/%s" % pod,
+                    "gap": "%s not collected from pod/%s" % (command, pod),
                     "gap_type": "expected_gap",
                     "related_stage": "signal_collection",
-                    "why_important": "A failed member often cannot provide its own rs.status; healthy peer fallback should be used when available.",
-                    "recommended_action": "use rs.status from another healthy member in the same replica set",
+                    "why_important": "A failed member often cannot provide its own %s; healthy peer fallback should be used when available." % command,
+                    "recommended_action": "use %s from another healthy member in the same replica set" % command,
                 }
             )
             continue
         try:
             raw = extract_json(proc.stdout)
         except ValueError as exc:
-            failed_items.append({"item": "pod/%s" % pod, "reason": str(exc), "impact": "unparsed replica set state from this member"})
+            failed_items.append({"item": "pod/%s" % pod, "reason": str(exc), "impact": "unparsed replica set %s from this member" % command})
             evidence_gaps.append(
                 {
-                    "gap": "rs.status output not parsed from pod/%s" % pod,
+                    "gap": "%s output not parsed from pod/%s" % (command, pod),
                     "gap_type": "expected_gap",
                     "related_stage": "signal_collection",
                     "why_important": "A single unparsed member state should not block diagnosis if another healthy peer provides replica set state.",
-                    "recommended_action": "use rs.status from another healthy member in the same replica set",
+                    "recommended_action": "use %s from another healthy member in the same replica set" % command,
                 }
             )
             continue
-        raw_json_relpath = os.path.join("raw", "%s-rs-status.json" % base)
+        raw_json_relpath = os.path.join("raw", "%s-%s.json" % (base, artifact_slug))
         with open(os.path.join(artifact_dir, raw_json_relpath), "w", encoding="utf-8") as fh:
             json.dump(raw, fh, indent=2, sort_keys=False)
             fh.write("\n")
-        artifacts.append({"path": raw_json_relpath, "kind": "raw_command_output", "description": "parsed rs.status JSON from %s" % pod})
-        statuses.append(status_record(pod, raw, now_iso()))
+        artifacts.append({"path": raw_json_relpath, "kind": "raw_command_output", "description": "parsed %s JSON from %s" % (command, pod)})
+        if script_id.endswith(".rs_conf"):
+            records.append(config_record(pod, raw, now_iso()))
+        else:
+            records.append(status_record(pod, raw, now_iso()))
 
     finished_at = now_iso()
     successful_items = [
         {
             "item": "pod/%s" % item["source_pod_ref"],
-            "source": "rs.status",
-            "note": "replica_set=%s self_state=%s" % (item.get("replica_set_id"), (item.get("self_member") or {}).get("state_str")),
+            "source": command,
+            "note": "replica_set=%s %s"
+            % (
+                item.get("replica_set_id"),
+                "version=%s term=%s" % (item.get("version"), item.get("term"))
+                if script_id.endswith(".rs_conf")
+                else "self_state=%s" % ((item.get("self_member") or {}).get("state_str")),
+            ),
         }
-        for item in statuses
+        for item in records
     ]
-    if not statuses:
+    if not records:
         status = "blocked"
-        summary = "no rs.status result collected from replica set member pods"
+        summary = "no %s result collected from replica set member pods" % command
     elif failed_items:
         status = "partial"
-        summary = "collected %d rs.status result(s), %d failed" % (len(statuses), len(failed_items))
+        summary = "collected %d %s result(s), %d failed" % (len(records), command, len(failed_items))
     else:
         status = "success"
-        summary = "collected %d rs.status result(s)" % len(statuses)
+        summary = "collected %d %s result(s)" % (len(records), command)
 
-    if not statuses:
-        warnings.append("all rs.status collection attempts failed")
+    if not records:
+        warnings.append("all %s collection attempts failed" % command)
         evidence_gaps.append(
             {
-                "gap": "rs.status not collected from any healthy replica set peer",
+                "gap": "%s not collected from any healthy replica set peer" % command,
                 "gap_type": "critical_gap",
                 "related_stage": "signal_collection",
-                "why_important": "Without any peer rs.status result, replica set internal state cannot be validated.",
-                "recommended_action": "identify a healthy member Pod with mongosh/mongo access and rerun rs.status",
+                "why_important": "Without any peer %s result, replica set internal state cannot be validated." % command,
+                "recommended_action": "identify a healthy member Pod with mongosh/mongo access and rerun %s" % command,
                 "affects": ["mechanism", "root_cause"],
             }
         )
@@ -616,7 +670,7 @@ def main() -> int:
         "artifacts": artifacts,
         "structured_record_patch": {
             "details": {
-                "replica_members": statuses,
+                detail_key(script_id): records,
             }
         },
         "signal_bundle_patch": {},
@@ -624,9 +678,9 @@ def main() -> int:
             "collection_actions": [
                 {
                     "action_id": make_action_id(script_id),
-                    "name": "collect replica set rs.status",
+                    "name": "collect replica set %s" % command,
                     "target": ",".join(target_pods),
-                    "method": "kubectl exec + rs.status",
+                    "method": "kubectl exec + %s" % command,
                     "status": status,
                     "performed_at": finished_at,
                 }

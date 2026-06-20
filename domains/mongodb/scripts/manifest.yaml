@@ -118,6 +118,20 @@ scripts:
     cost_class: medium
     noise_class: low
 
+  - script_id: mongodb.collect.replicaset.rs_conf
+    source: collect/collect-replicaset-rs-status.sh
+    phase: collect
+    target: replicaset
+    action: rs_conf
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: false
+    collection_tier: directed
+    signal_layer: service
+    cost_class: medium
+    noise_class: low
+
   - script_id: mongodb.collect.logs.current
     source: collect/collect-logs-current.sh
     phase: collect

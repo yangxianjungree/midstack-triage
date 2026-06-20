@@ -250,13 +250,13 @@ def test_write_report_includes_verification_requests(tmp_path):
                 "request_id": "vr-mongodb-rs-conf-compare",
                 "hypothesis_id": "H3",
                 "purpose": "compare rs.conf from all affected replica set members",
-                "asset_tier": "ad_hoc_readonly",
+                "asset_tier": "first_class",
                 "asset": {
-                    "type": "ad_hoc_command",
-                    "id": "vr-mongodb-rs-conf-compare",
+                    "type": "script",
+                    "id": "mongodb.collect.replicaset.rs_conf",
                 },
                 "risk_level": "read-only",
-                "execution_policy": "approval_required",
+                "execution_policy": "auto_allowed",
                 "reason": "Configuration drift is a plausible enabling cause.",
                 "status": "planned",
             },
@@ -281,8 +281,8 @@ def test_write_report_includes_verification_requests(tmp_path):
 
     content = report.read_text(encoding="utf-8")
     assert "## Verification Requests" in content
-    assert "`planned` `read-only` `approval_required` `ad_hoc_readonly` `vr-mongodb-rs-conf-compare` H3" in content
-    assert "asset=ad_hoc_command/vr-mongodb-rs-conf-compare" in content
+    assert "`planned` `read-only` `auto_allowed` `first_class` `vr-mongodb-rs-conf-compare` H3" in content
+    assert "asset=script/mongodb.collect.replicaset.rs_conf" in content
     assert "Configuration drift is a plausible enabling cause." in content
     assert "`planned` `read-only` `auto_allowed` `first_class` `vr-mongodb-election-logs` H4" in content
     assert "asset=script/mongodb.collect.logs.previous" in content

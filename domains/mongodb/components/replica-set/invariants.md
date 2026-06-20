@@ -33,6 +33,7 @@ Phase 4 应把这些分支写成候选假设，并用当前证据支持、反驳
 优先使用仓库内一等只读资产：
 
 - `mongodb.collect.replicaset.rs_status`：采集多个成员视角的 `rs.status()`。
+- `mongodb.collect.replicaset.rs_conf`：采集多个成员视角的 `rs.conf()`，比较 members、votes、priority、version、term 和 settings。
 - `mongodb.collect.network.overlay`：当存在网络或 DNS 症状时采集 overlay、DNS 和 pod connectivity。
 - `mongodb.collect.dns.coredns`：当存在服务解析、mongos startup DNS 错误或 kube-dns 连接异常时采集 DNS 证据。
 - `mongodb.collect.logs.previous`：采集重启前日志，寻找 election、heartbeat、startup 和 fatal 线索。
@@ -40,7 +41,6 @@ Phase 4 应把这些分支写成候选假设，并用当前证据支持、反驳
 
 二等临时只读验证可包括：
 
-- 在各 mongod 成员上执行 `rs.conf()` 并比较 members、votes、priority、version 和 settings。
 - 只读查询 `rs.status()` 中 election、term、optime、heartbeat message 和 sync source 字段。
 - 只读查询 `config.shards` 或 mongos `getShardMap`，确认 mongos 广播的 shard host 是否与副本集视图一致。
 - 从 MongoDB 日志中搜索 election、heartbeat、reconfig、stepdown、network timeout、auth failed 等关键词。

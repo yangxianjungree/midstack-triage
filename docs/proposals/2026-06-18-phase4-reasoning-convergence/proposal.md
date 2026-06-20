@@ -533,7 +533,7 @@ def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> N
   - Verify: `python3 -m pytest tests/phases/phase4/rules/test_mongodb_rules.py -q`
   - Files: `src/phases/phase4/rules/mongodb_deepening.py`、`src/phases/phase4/rules/mongodb.py`、`tests/phases/phase4/rules/test_mongodb_rules.py`
 - [x] Task: split-brain enabling-cause 候选和验证请求
-  - Acceptance: Phase 4 rules 在 split-brain 不变量冲突后追加 enabling-cause hypotheses，并生成 `rs.conf()` 二等只读请求和 heartbeat/election 日志一等资产请求。
+  - Acceptance: Phase 4 rules 在 split-brain 不变量冲突后追加 enabling-cause hypotheses，并生成 `rs.conf()` 和 heartbeat/election 日志一等只读资产请求。
   - Verify: `python3 -m pytest tests/phases/phase4/rules/test_mongodb_rules.py::MongoDBRulesTest::test_split_brain_deepening_adds_enabling_cause_hypotheses_and_verification_requests -q`
   - Files: `src/phases/phase4/rules/mongodb_deepening.py`、`src/phases/phase4/rules/mongodb.py`、`tests/phases/phase4/rules/test_mongodb_rules.py`
 - [x] Task: 模板和合同记录 deepening 字段

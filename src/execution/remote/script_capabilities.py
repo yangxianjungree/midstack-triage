@@ -20,9 +20,11 @@ RunSshFn = Callable[[Dict[str, Any], str, int], subprocess.CompletedProcess]
 SCRIPT_IDS_REQUIRING_MONGOSH = {
     "mongodb.collect.mongos.get_shard_map",
     "mongodb.collect.replicaset.rs_status",
+    "mongodb.collect.replicaset.rs_conf",
 }
 SCRIPT_ID_MONGOS_SHARD_MAP = "mongodb.collect.mongos.get_shard_map"
 SCRIPT_ID_REPLICASET_STATUS = "mongodb.collect.replicaset.rs_status"
+SCRIPT_ID_REPLICASET_CONF = "mongodb.collect.replicaset.rs_conf"
 
 
 def shell_candidates(shell_name: str) -> List[str]:
@@ -48,7 +50,7 @@ def build_required_capabilities(script_id: str) -> Dict[str, Any]:
     }
     if script_id == SCRIPT_ID_MONGOS_SHARD_MAP:
         payload["target_pod"] = {"kind": "mongos", "required": True}
-    elif script_id == SCRIPT_ID_REPLICASET_STATUS:
+    elif script_id in (SCRIPT_ID_REPLICASET_STATUS, SCRIPT_ID_REPLICASET_CONF):
         payload["target_pods"] = {"kind": "mongod", "required": True}
     return payload
 

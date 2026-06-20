@@ -273,32 +273,6 @@ def verification_requests_for_gaps(
     return dedupe_verification_requests(requests)
 
 
-def ad_hoc_readonly_request(
-    request_id: str,
-    hypothesis_id: str,
-    purpose: str,
-    command_summary: str,
-    expected_evidence: List[str],
-    reason: str,
-) -> Dict[str, Any]:
-    return {
-        "request_id": request_id,
-        "hypothesis_id": hypothesis_id,
-        "purpose": purpose,
-        "asset_tier": "ad_hoc_readonly",
-        "asset": {
-            "type": "ad_hoc_command",
-            "id": request_id,
-            "summary": command_summary,
-        },
-        "risk_level": "read-only",
-        "execution_policy": "approval_required",
-        "expected_evidence": expected_evidence,
-        "reason": reason,
-        "status": "planned",
-    }
-
-
 def split_brain_enabling_hypotheses(findings: List[Dict[str, Any]], existing_count: int) -> List[Dict[str, Any]]:
     finding_ids = {str(item.get("finding_id") or "") for item in findings if isinstance(item, dict)}
     if "mongodb.replica_set.enabling_cause_candidates" not in finding_ids:
@@ -387,12 +361,12 @@ def verification_requests_from_deepening_findings(findings: List[Dict[str, Any]]
     requests: List[Dict[str, Any]] = []
     if config_hypothesis_id:
         requests.append(
-            ad_hoc_readonly_request(
+            first_class_script_request(
                 "vr-mongodb-rs-conf-compare",
                 config_hypothesis_id,
                 "compare rs.conf from all affected replica set members",
-                "Run read-only rs.conf() on each affected mongod member and compare version, term, members, votes, priority and settings.",
-                ["manual.rs_conf_compare", "analysis.hypotheses"],
+                "mongodb.collect.replicaset.rs_conf",
+                ["structured_record.details.replica_configs", "analysis.hypotheses"],
                 "Configuration drift is a plausible enabling cause for divergent replica set views.",
             )
         )

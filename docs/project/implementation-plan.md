@@ -33,7 +33,7 @@ superseded_by: none
 
 - 输入来源：会话级当前目标记录（唯一定义见 `docs/specs/plugin-runtime.spec.md` §4）
 - 前置条件：incident 为 `ready`，或为 `analysed`（继续分析）
-- 执行范围：MongoDB 第一批 11 个第 3 段脚本
+- 执行范围：MongoDB 第一批 12 个第 3 段脚本
 - 第 3 段输出：`structured_record`、`signal_bundle`、`collection_report`
 - 第 4 段输出：多假设、支持证据、反证条件、证据不足项、验证结果
 - 第 5 段输出：初步结论、置信度、影响范围、下一步建议、知识沉淀候选
@@ -244,7 +244,7 @@ superseded_by: none
 
 验收条件：
 
-- 当前 11 个脚本不强制重构
+- 当前 12 个脚本不强制重构
 - 新脚本有明确 helper 使用边界
 
 当前状态：
@@ -355,7 +355,7 @@ superseded_by: none
 
 验收条件：
 
-- 能稳定跑通 MongoDB MVP 11 个脚本
+- 能稳定跑通 MongoDB MVP 12 个脚本
 - 能生成一次完整远程采集 run 结果目录
 
 ### 2. Baseline fixture

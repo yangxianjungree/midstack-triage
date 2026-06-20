@@ -210,6 +210,10 @@ MongoDB 服务端命令通常需要认证信息。
   - `structured_record.details.services`
 - `mongodb.collect.nodes.state`
   - `structured_record.details.nodes`
+- `mongodb.collect.events.yaml`
+  - `structured_record.details.events`
+- `mongodb.collect.resources.metrics`
+  - `structured_record.details.resource_metrics`
 - `mongodb.collect.mongos.get_shard_map`
   - `structured_record.details.shard_map`
 - `mongodb.collect.replicaset.rs_status`
@@ -225,19 +229,20 @@ MongoDB 服务端命令通常需要认证信息。
 
 ## MVP Script Set
 
-当前 MongoDB 第一版默认执行以下 11 个采集/治理资产；Pod stdout/stderr 日志通过 Kubernetes 通用入口采集，MongoDB 兼容日志 alias 不进入默认 MVP 顺序：
+当前 MongoDB 第一版默认执行以下 12 个采集/治理资产；Pod stdout/stderr 日志通过 Kubernetes 通用入口采集，MongoDB 兼容日志 alias 不进入默认 MVP 顺序：
 
 1. `mongodb.collect.pods.state`
 2. `mongodb.collect.statefulsets.yaml`
 3. `mongodb.collect.services.yaml`
 4. `mongodb.collect.nodes.state`
 5. `mongodb.collect.events.yaml`
-6. `mongodb.collect.mongos.get_shard_map`
-7. `mongodb.collect.replicaset.rs_status`
-8. `kubernetes.collect.logs.current`
-9. `kubernetes.collect.logs.previous`
-10. `mongodb.normalize.logs.highlights`
-11. `mongodb.normalize.signals.bundle`
+6. `mongodb.collect.resources.metrics`
+7. `mongodb.collect.mongos.get_shard_map`
+8. `mongodb.collect.replicaset.rs_status`
+9. `kubernetes.collect.logs.current`
+10. `kubernetes.collect.logs.previous`
+11. `mongodb.normalize.logs.highlights`
+12. `mongodb.normalize.signals.bundle`
 
 收敛理由：
 

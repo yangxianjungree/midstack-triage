@@ -129,6 +129,8 @@ superseded_by: none
 - 已实现 `mongodb.collect.statefulsets.yaml` 的合同级脚本
 - 已实现 `mongodb.collect.services.yaml` 的合同级脚本
 - 已实现 `mongodb.collect.nodes.state` 的合同级脚本
+- 已实现 `mongodb.collect.events.yaml` 的合同级脚本
+- 已实现 `mongodb.collect.resources.metrics` 的合同级脚本
 - 已实现 `mongodb.collect.mongos.get_shard_map` 的合同级脚本
 - 已实现 `mongodb.collect.replicaset.rs_status` 的合同级脚本
 - 已实现 `mongodb.collect.logs.current` 的合同级脚本
@@ -139,20 +141,22 @@ superseded_by: none
 - 已通过真实 K8s 环境验证 `mongodb.collect.statefulsets.yaml`
 - 已通过真实 K8s 环境验证 `mongodb.collect.services.yaml`
 - 已通过真实 K8s 环境验证 `mongodb.collect.nodes.state`
+- 已通过真实 K8s 环境验证 `mongodb.collect.events.yaml`
+- 已通过真实 K8s 环境验证 `mongodb.collect.resources.metrics`
 - 已通过真实 K8s 环境验证 `mongodb.collect.mongos.get_shard_map`
 - 已通过真实 K8s 环境验证 `mongodb.collect.replicaset.rs_status`
-- 已通过真实 K8s 环境验证 `mongodb.collect.logs.current`
-- 已通过真实 K8s 环境验证 `mongodb.collect.logs.previous`
+- 已通过真实 K8s 环境验证 `kubernetes.collect.logs.current`
+- 已通过真实 K8s 环境验证 `kubernetes.collect.logs.previous`
 - 已通过真实 K8s 环境验证 `mongodb.normalize.logs.highlights`
 - 已通过真实 K8s 环境验证 `mongodb.normalize.signals.bundle`
-- 已补齐 MongoDB MVP 第一批 11 个脚本的合同级实现
-- 已通过真实 K8s 环境跑通 MongoDB MVP 第一批 11 个脚本
+- 已补齐 MongoDB MVP 第一批 12 个脚本的合同级实现
+- 已通过真实 K8s 环境跑通 MongoDB MVP 第一批 12 个脚本
 - 已补充基于 `src/execution/remote/executor.py` 的远程脚本测试执行入口
-- 已使用正式远程 smoke 工具跑通 MongoDB MVP 第一批 11 个脚本
+- 已使用正式远程 smoke 工具跑通 MongoDB MVP 第一批 12 个脚本
 - 已明确第 3 段脚本需兼容 Python 3.6 且不默认依赖 `PyYAML`
 - 已补充 `tools/validators/validate-mongodb-scripts.py`，用于校验 MongoDB 脚本 manifest 与插件运行时映射
 - 已补充 `tools/validators/validate-repo.py`，用于串联资产合同校验、fixture replay 和 score gate
-- 已通过 `validate-mongodb-scripts.py` 校验 MongoDB MVP 第一批 11 个脚本
+- 已通过 `validate-mongodb-scripts.py` 校验 MongoDB MVP 第一批 12 个脚本
 - 已补充 `core/models/script-context.schema.yaml` 和 `core/models/script-output.schema.yaml` 的轻量合同模型
 - 已补充 MongoDB 基础采集脚本 `context-file` 和 `output-file` 示例文件
 - 已补充 MongoDB `context.example.yaml` / `output.example.yaml` 的最小合同校验

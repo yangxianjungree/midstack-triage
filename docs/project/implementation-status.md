@@ -13,7 +13,7 @@ superseded_by: none
 
 ## 总体进展
 
-- MongoDB MVP 第一批 11 个第 3 段脚本已完成合同级实现，并已通过真实 K8s 环境验证
+- MongoDB MVP 第一批 12 个第 3 段脚本已完成合同级实现，并已通过真实 K8s 环境验证
 - 正式运行时代码已集中到 `src/`，按 `commands/`、`phases/`、`execution/`、`shared/` 划分
 - Claude 适配器已支持 bundled runtime 打包、安装、自检和 sandbox 本地测试
 - Cursor 适配器已支持 workspace-local runtime、命令/rule 投影、自检和 sandbox smoke
@@ -123,11 +123,11 @@ superseded_by: none
 
 ### MongoDB 第一批脚本
 
-`/plugin:analyse` 的 MongoDB MVP 已完成 11 个默认第 3 段采集/治理资产的合同级实现（清单与执行顺序见[插件运行时规范](../specs/plugin-runtime.spec.md)，能力边界见 [Analyse MVP 规范](../specs/analyse-mvp.spec.md)）。其中当前/previous Pod 日志通过共享 Kubernetes 资产采集，MongoDB `collect.logs.current/previous` 只保留兼容 alias。
+`/plugin:analyse` 的 MongoDB MVP 已完成 12 个默认第 3 段采集/治理资产的合同级实现（清单与执行顺序见[插件运行时规范](../specs/plugin-runtime.spec.md)，能力边界见 [Analyse MVP 规范](../specs/analyse-mvp.spec.md)）。其中当前/previous Pod 日志通过共享 Kubernetes 资产采集，MongoDB `collect.logs.current/previous` 只保留兼容 alias。
 
 真实环境验证状态：
 
-- 以上 11 个脚本已通过真实 K8s 环境远程采集回归
+- 以上 12 个脚本已通过真实 K8s 环境远程采集回归
 - 测试环境为 3 节点 Kubernetes 集群
 - 目标 namespace 为 `psmdb-test`
 - 验证对象包括：

@@ -89,19 +89,20 @@ superseded_by: none
 
 当前正式远程执行入口位于 `src/execution/remote/executor.py`。
 
-第一版 MongoDB 第 3 段默认执行范围固定为 11 个 MVP 资产；其中 `kubectl logs` / `kubectl logs --previous` 使用 Kubernetes 通用日志采集入口，MongoDB 领域层只负责日志解释、log sink 发现和文件日志补采：
+第一版 MongoDB 第 3 段默认执行范围固定为 12 个 MVP 资产；其中 `kubectl logs` / `kubectl logs --previous` 使用 Kubernetes 通用日志采集入口，MongoDB 领域层只负责日志解释、log sink 发现和文件日志补采：
 
 1. `mongodb.collect.pods.state`
 2. `mongodb.collect.statefulsets.yaml`
 3. `mongodb.collect.services.yaml`
 4. `mongodb.collect.nodes.state`
 5. `mongodb.collect.events.yaml`
-6. `mongodb.collect.mongos.get_shard_map`
-7. `mongodb.collect.replicaset.rs_status`
-8. `kubernetes.collect.logs.current`
-9. `kubernetes.collect.logs.previous`
-10. `mongodb.normalize.logs.highlights`
-11. `mongodb.normalize.signals.bundle`
+6. `mongodb.collect.resources.metrics`
+7. `mongodb.collect.mongos.get_shard_map`
+8. `mongodb.collect.replicaset.rs_status`
+9. `kubernetes.collect.logs.current`
+10. `kubernetes.collect.logs.previous`
+11. `mongodb.normalize.logs.highlights`
+12. `mongodb.normalize.signals.bundle`
 
 ## 4. 输入
 
@@ -285,7 +286,7 @@ superseded_by: none
 
 - 能说明第一版 analyse 的输入来源
 - 能说明前置条件不足时如何 blocked
-- 能列出 MongoDB 第一版执行的 11 个脚本
+- 能列出 MongoDB 第一版执行的 12 个脚本
 - 能说明第 3 段的三个主要输出
 - 能说明第 4 段假设结构
 - 能说明第 5 段结论结构

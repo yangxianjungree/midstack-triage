@@ -1028,7 +1028,7 @@ MongoDB 认证来源原则：
 
 第一版"已实现 / 未实现 / 已验证"能力清单属于项目状态（L3），统一维护在[实现进展](../project/implementation-status.md)，本规范不再承载。
 
-MongoDB MVP 第 3 段脚本范围（11 个）的能力边界定义见 [Analyse MVP 规范](analyse-mvp.spec.md)。
+MongoDB MVP 第 3 段脚本范围（12 个）的能力边界定义见 [Analyse MVP 规范](analyse-mvp.spec.md)。
 
 ### MongoDB MVP 脚本执行顺序
 
@@ -1044,17 +1044,19 @@ MongoDB MVP 第 3 段脚本范围（11 个）的能力边界定义见 [Analyse M
    - 再补节点状态、IP 和标签信息
 5. `mongodb.collect.events.yaml`
    - 采集 Kubernetes Events，补充对象变更与异常事件信号
-6. `mongodb.collect.mongos.get_shard_map`
+6. `mongodb.collect.resources.metrics`
+   - 采集 `kubectl top` 的节点和 Pod 资源使用快照
+7. `mongodb.collect.mongos.get_shard_map`
    - 先从 `mongos` 视角确认分片路由和 shard 拓扑
-7. `mongodb.collect.replicaset.rs_status`
+8. `mongodb.collect.replicaset.rs_status`
    - 再确认副本集成员状态、角色、选举和同步情况
-8. `kubernetes.collect.logs.current`
+9. `kubernetes.collect.logs.current`
    - 默认采当前 Pod stdout/stderr 日志
-9. `kubernetes.collect.logs.previous`
+10. `kubernetes.collect.logs.previous`
    - 对重启 Pod 补采前一轮 stdout/stderr 日志
-10. `mongodb.normalize.logs.highlights`
+11. `mongodb.normalize.logs.highlights`
    - 先对日志做摘要和降噪
-11. `mongodb.normalize.signals.bundle`
+12. `mongodb.normalize.signals.bundle`
    - 最后做对象关联、时间线归并和信号打包
 
 ### 使用原则

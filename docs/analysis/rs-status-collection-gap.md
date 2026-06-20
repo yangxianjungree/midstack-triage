@@ -193,7 +193,7 @@ These are **two different layers** in the current runtime — not interchangeabl
 
 | Layer | What it does today | rs.status effect |
 |-------|-------------------|------------------|
-| MVP batch (11 scripts) | Always runs in Phase 3 | rs.status already included |
+| MVP batch (12 scripts) | Always runs in Phase 3 | rs.status already included |
 | `skill.required_assets` | Builds `recollection_script_pool` + `skill_evidence_check.missing_or_failed` | Whitelist + Agent visibility only |
 | `directed_recollection_script_ids()` | Heuristic rules pick ≤3 scripts | **Does not** read `missing_or_failed` today |
 | `skill_pool` filter | Intersects selected scripts with pool | Without pool entry, rs.status is dropped even if a rule selects it |

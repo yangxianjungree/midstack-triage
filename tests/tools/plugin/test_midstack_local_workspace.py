@@ -15,6 +15,9 @@ from phases.phase3 import recollection_run as phase3_recollection_run  # noqa: E
 from shared.workspace import load_yaml, path_from_arg, read_current_incident, resolve_path  # noqa: E402
 
 
+PHASE4_AGENT_ELIGIBLE_FIXTURE = ROOT / "tests" / "fixtures" / "phase4" / "agent-eligible-phase4-result.yaml"
+
+
 def write_yaml(path: Path, payload) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=False), encoding="utf-8")
@@ -1285,33 +1288,7 @@ def test_reason_scope_applies_eligible_agent_conclusion_candidate(tmp_path, monk
         }
 
     def fake_phase4(_output_dir):
-        return {
-            "total_rounds": 1,
-            "agent_runtime": {"selected_type": "claude", "model": "claude-sonnet-4-6"},
-            "hypotheses": [
-                {
-                    "id": "h1",
-                    "final_text": "Replica set split-brain candidate",
-                    "status": {"status": "supported", "confidence": 0.91},
-                    "private_context": {
-                        "hypothesis_evolution": [
-                            {
-                                "evidence": ["structured_record.details.replica_members"],
-                                "conclusion_candidate": {
-                                    "statement": "Replica set rs0 has a split-brain mechanism.",
-                                    "confidence": "medium",
-                                    "deepest_supported_level": "mechanism",
-                                    "primary_cause_category": "replica_set_split_brain",
-                                    "impact_scope": "rs0 availability",
-                                    "evidence": ["structured_record.details.replica_members"],
-                                    "limitations": [],
-                                },
-                            }
-                        ]
-                    },
-                }
-            ],
-        }
+        return load_yaml(PHASE4_AGENT_ELIGIBLE_FIXTURE)
 
     monkeypatch.setattr(module, "run_remote_collection", fail_collection)
     monkeypatch.setattr(module, "run_local_collection", fail_collection)

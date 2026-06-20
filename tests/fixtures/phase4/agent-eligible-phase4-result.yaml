@@ -1,0 +1,27 @@
+total_rounds: 1
+agent_runtime:
+  selected_type: claude
+  model: claude-sonnet-4-6
+hypotheses:
+  - id: h1
+    final_text: Replica set split-brain candidate
+    status:
+      status: supported
+      confidence: 0.91
+    private_context:
+      hypothesis_evolution:
+        - round: 1
+          text: Replica set split-brain candidate
+          status: supported
+          reasoning: Current incident evidence supports a mechanism-level split-brain candidate.
+          evidence:
+            - structured_record.details.replica_members
+          conclusion_candidate:
+            statement: Replica set rs0 has a split-brain mechanism.
+            confidence: medium
+            deepest_supported_level: mechanism
+            primary_cause_category: replica_set_split_brain
+            impact_scope: rs0 availability
+            evidence:
+              - structured_record.details.replica_members
+            limitations: []

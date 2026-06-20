@@ -96,7 +96,7 @@ python3 tools/validators/validate-tool-boundaries.py
 - 脚本源文件是否存在
 - `runtime` 与文件后缀是否匹配
 - `phase` 是否与 `script_id` 对齐
-- `mvp` 脚本数量是否为 10
+- 默认 MVP 脚本集合是否为 12，且 analyse/spec/README 中的默认清单与 runtime 顺序一致
 - `script-runtime-map` 是否与 `default_packaged` 脚本对齐
 - `runtime_path` 是否为适配器运行时视图下的相对路径
 - `context.example.yaml` 是否满足最小 `context-file` 合同

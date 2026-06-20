@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import re
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -24,6 +25,15 @@ from .contracts import (  # noqa: E402
     validate_runtime_map,
 )
 from .domain_assets import validate_domain_assets, validate_fixtures  # noqa: E402
+
+
+DEFAULT_COLLECTION_DOCS = (
+    (ROOT / "docs" / "specs" / "analyse-mvp.spec.md", "第一版 MongoDB 第 3 段默认执行范围"),
+    (ROOT / "docs" / "specs" / "plugin-runtime.spec.md", "### MongoDB MVP 脚本执行顺序"),
+    (ROOT / "domains" / "mongodb" / "scripts" / "README.md", "## MVP Script Set"),
+    (ROOT / "domains" / "mongodb" / "scripts" / "README.md", "## Execution Order"),
+)
+ORDERED_SCRIPT_RE = re.compile(r"^\s*\d+\.\s+`([^`]+)`")
 
 
 def shared_kubernetes_manifest_by_id() -> dict:
@@ -58,6 +68,50 @@ def validate_default_collection_set(manifest_by_id: dict, shared_by_id: dict, er
     legacy_defaults = legacy_log_ids & default_ids
     if legacy_defaults:
         errors.append("legacy MongoDB kubectl log aliases must not be default MVP scripts: %s" % sorted(legacy_defaults))
+
+
+def default_collection_script_ids(manifest_by_id: dict, shared_by_id: dict, runtime_by_id: dict) -> list[str]:
+    combined = dict(manifest_by_id)
+    combined.update(shared_by_id)
+    result = []
+    for script_id in runtime_by_id:
+        item = combined.get(script_id)
+        if isinstance(item, dict) and item.get("mvp") is True:
+            result.append(str(script_id))
+    return result
+
+
+def documented_script_ids(path: Path, marker: str) -> list[str]:
+    text = path.read_text(encoding="utf-8")
+    start = text.find(marker)
+    if start < 0:
+        return []
+    items = []
+    for line in text[start:].splitlines()[1:]:
+        if items and line.startswith("## "):
+            break
+        match = ORDERED_SCRIPT_RE.match(line)
+        if match:
+            items.append(match.group(1))
+            continue
+        if items and line.strip() and not line.startswith(" ") and not line.startswith("\t"):
+            break
+    return items
+
+
+def validate_documented_default_collection_set(
+    expected_ids: Sequence[str],
+    errors: list[str],
+    docs: Sequence[tuple[Path, str]] = DEFAULT_COLLECTION_DOCS,
+) -> None:
+    expected = list(expected_ids)
+    for path, marker in docs:
+        actual = documented_script_ids(path, marker)
+        if actual != expected:
+            errors.append(
+                "%s default MVP script list differs from runtime order at marker %r: expected=%s actual=%s"
+                % (path, marker, expected, actual)
+            )
 
 
 def validate_compatibility_aliases(manifest_by_id: dict, shared_by_id: dict, errors: list[str]) -> None:
@@ -100,6 +154,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     validate_default_collection_set(manifest_by_id, shared_by_id, errors)
     validate_compatibility_aliases(manifest_by_id, shared_by_id, errors)
     runtime_by_id = validate_runtime_map(ROOT / args.runtime_map, manifest_by_id, errors)
+    validate_documented_default_collection_set(default_collection_script_ids(manifest_by_id, shared_by_id, runtime_by_id), errors)
     validate_context_example(ROOT / args.context_example, manifest_by_id, errors)
     validate_output_example(ROOT / args.output_example, manifest_by_id, taxonomies, errors)
     validate_remote_request(ROOT / args.remote_request, manifest_by_id, runtime_by_id, errors)

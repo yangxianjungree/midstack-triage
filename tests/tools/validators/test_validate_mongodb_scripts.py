@@ -60,6 +60,36 @@ def test_default_mongodb_collection_set_uses_shared_kubernetes_logs():
     assert "mongodb.collect.logs.previous" not in default_ids
 
 
+def test_documented_default_collection_lists_match_runtime_order():
+    from mongodb_assets import cli as module
+
+    errors = []
+    manifest_by_id = module.validate_manifest(ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml", errors)
+    shared_by_id = module.shared_kubernetes_manifest_by_id()
+    runtime_by_id = module.validate_runtime_map(ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml", manifest_by_id, errors)
+    expected_ids = module.default_collection_script_ids(manifest_by_id, shared_by_id, runtime_by_id)
+
+    module.validate_documented_default_collection_set(expected_ids, errors)
+
+    assert errors == []
+
+
+def test_documented_default_collection_lists_report_mismatch(tmp_path):
+    from mongodb_assets import cli as module
+
+    doc = tmp_path / "doc.md"
+    doc.write_text("marker\n\n1. `mongodb.collect.pods.state`\n", encoding="utf-8")
+    errors = []
+
+    module.validate_documented_default_collection_set(
+        ["mongodb.collect.pods.state", "mongodb.collect.statefulsets.yaml"],
+        errors,
+        docs=[(doc, "marker")],
+    )
+
+    assert any("default MVP script list differs from runtime order" in item for item in errors)
+
+
 def test_compatibility_aliases_must_not_be_default_collection_assets():
     from mongodb_assets import cli as module
 

@@ -74,7 +74,7 @@ superseded_by: none
 - 增加更多 MongoDB 场景样例
 - 增加脚本资产样例，验证 `scripts/` 的组织方式
 - 按已确认规则补齐 `domains/mongodb/scripts/helpers/`
-- `/plugin:analyse` 的完整 `scope` 矩阵设计与实现（当前仅支持 `full` 与 `reason`）
+- `/plugin:analyse` 的完整 `scope` 矩阵设计与实现（当前仅支持 `full`、`collect` 与 `reason`）
 - `/plugin:analyse` 的 `force_recollect` 参数设计与实现
 
 ### 5. 安全与敏感信息处理

@@ -43,6 +43,7 @@ COLLECTED_INPUT_FILES = (
     "collection_report.yaml",
 )
 ANALYSE_SCOPE_FULL = "full"
+ANALYSE_SCOPE_COLLECT = "collect"
 ANALYSE_SCOPE_REASON = "reason"
 
 
@@ -190,6 +191,30 @@ def _ensure_reason_scope_artifacts(args, output_dir: Path, input_data: Dict[str,
         _copy_collected_input_files(resolve_path(artifact_source), output_dir, preserve_existing_input=True)
         missing_files = _missing_collected_input_files(output_dir)
     return missing_files
+
+
+def _write_collect_scope_output(
+    output_root: Path,
+    incident_dir: Path | None,
+    incident_mode: bool,
+    output_dir: Path,
+    incident_id: str,
+    middleware: str,
+) -> int:
+    output = adapter_output("analyse", incident_id, middleware, "completed", "collect scope analyse completed", output_dir)
+    add_record_ref_if_exists(output, output_dir, "input", "input.yaml", "incident input context")
+    add_record_ref_if_exists(output, output_dir, "structured_record", "structured_record.yaml", "phase-3 structured evidence")
+    add_record_ref_if_exists(output, output_dir, "signal_bundle", "signal_bundle.yaml", "phase-3 governed signal bundle")
+    add_record_ref_if_exists(output, output_dir, "collection_report", "collection_report.yaml", "phase-3 collection summary")
+    add_record_ref_if_exists(output, output_dir, "collection_plan", "collection_plan.yaml", "phase-3 script layer and cost plan")
+    output["warnings"].append("collect scope stops after Phase 3; analysis.yaml and report.md are intentionally not generated.")
+    output["next_actions"] = ["run /midstack:analyse --scope reason to generate reasoning outputs from the collected artifacts"]
+    if incident_mode and incident_dir is not None:
+        update_incident_meta(incident_dir, {"status": "ready", "current_command": "analyse"})
+        write_current_incident(output_root, incident_dir)
+    write_yaml(output_dir / "adapter-output.yaml", output)
+    print(str(output_dir))
+    return 0
 
 
 def _prepare_analysis_inputs(
@@ -714,6 +739,16 @@ def run(
             write_collection_coverage,
             write_signal_governance,
             run_directed_recollection_if_needed,
+        )
+
+    if scope == ANALYSE_SCOPE_COLLECT:
+        return _write_collect_scope_output(
+            output_root,
+            incident_dir,
+            incident_mode,
+            output_dir,
+            incident_id,
+            middleware,
         )
 
     analysis_file = output_dir / "analysis.yaml"

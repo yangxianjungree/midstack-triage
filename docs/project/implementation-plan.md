@@ -297,7 +297,7 @@ superseded_by: none
 
 以下事项继续保留，但不作为近期优先级：
 
-- `/plugin:analyse --scope` 完整矩阵（当前仅支持 `full` 与 `reason`）
+- `/plugin:analyse --scope` 完整矩阵（当前仅支持 `full`、`collect` 与 `reason`）
 - `/plugin:analyse --force_recollect`
 - 自动修复和高风险处置动作
 - Claude Code、Codex、Cursor 适配器是否从 `plugins/<agent>/` 进一步拆成独立仓库

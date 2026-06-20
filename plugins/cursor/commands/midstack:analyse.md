@@ -26,6 +26,9 @@ Command boundary:
 - When using direct input sources, `--input-dir` and `--remote-run-dir` are
   treated as existing collected artifacts, while `--remote-config` triggers
   remote collection.
+- Use `--scope collect` only to run Phase 3 collection/governance and stop
+  before reasoning. It intentionally does not write `analysis.yaml` or
+  `report.md`; follow it with `--scope reason`.
 - Use `--scope reason` only to rerun Phase 4/5 from existing collected
   artifacts. It must not collect live evidence or run directed recollection.
 
@@ -59,6 +62,16 @@ export MIDSTACK_TRIAGE_WORKSPACE="/abs/path/to/workspace"
 python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/midstack-local.py" analyse \
   --incident-dir .local/incidents/<incident-id> \
   --scope reason \
+  --output-root .local/incidents
+```
+
+Collection-only run for a ready incident:
+
+```bash
+export MIDSTACK_TRIAGE_WORKSPACE="/abs/path/to/workspace"
+python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/midstack-local.py" analyse \
+  --incident-dir .local/incidents/<incident-id> \
+  --scope collect \
   --output-root .local/incidents
 ```
 

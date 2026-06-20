@@ -26,6 +26,9 @@ Command boundary:
 - When using direct input sources, `--input-dir` and `--remote-run-dir` are
   treated as existing collected artifacts, while `--remote-config` triggers
   remote collection.
+- Use `--scope collect` only to run Phase 3 collection/governance and stop
+  before reasoning. It intentionally does not write `analysis.yaml` or
+  `report.md`; follow it with `--scope reason`.
 - Use `--scope reason` only to rerun Phase 4/5 from existing collected
   artifacts. It must not collect live evidence or run directed recollection.
 
@@ -48,6 +51,9 @@ python3 "${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py" analyse \
 
 To rerun only reasoning and report materialization for an already collected
 incident, add `--scope reason` to the analyse command.
+
+To run only collection/governance for a ready incident, add `--scope collect`;
+then run analyse again with `--scope reason`.
 
 After analyse succeeds, refine `analysis.yaml` and `report.md` according to
 `agent-reasoning-task.md`, then run `finalize-analysis`.

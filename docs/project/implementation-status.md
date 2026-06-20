@@ -168,7 +168,7 @@ superseded_by: none
 
 ### `/plugin:analyse`
 
-- 完整 `scope` 矩阵（当前仅支持 `full` 与 `reason`）
+- 完整 `scope` 矩阵（当前仅支持 `full`、`collect` 与 `reason`）
 - `force_recollect` 参数
 - 复杂多记录切换命令
 - 默认启用的真实 Claude API 推理编排（当前 bundled runtime 默认 mock agent）

@@ -21,7 +21,7 @@ superseded_by: none
 - `tools/plugin/midstack-local.py` 已收敛为本地 CLI 适配层，不再承载膨胀的正式实现
 - Phase 1/2 已支持 remote/local/offline 三类 intake 场景识别；remote 仍是默认主路径，local 已可基于本机 kubectl context 进入 live collection，offline 仍以已有 artifact 消费为主
 - 第 3 段默认日志采集已收敛到共享 `kubernetes.collect.logs.current` / `kubernetes.collect.logs.previous`；MongoDB 日志 alias 仅作兼容入口
-- 第 4 段多轨推理实现已收敛到 `src/phases/phase4/multitrack/`；默认 agent runtime 为 `auto`，可在 `ANTHROPIC_API_KEY` + `anthropic` SDK 可用时尝试 Claude 推理，否则降级 mock。当前 `/midstack:analyse` 的生产 `conclusion_summary` 仍由 rules fallback + guardrails 守底，multitrack 结果会以 `agent_reasoning` 辅助草稿进入 `analysis.yaml` 和 reasoning segment，并由 `agent_conclusion_gate` 基于 `evidence_refs` 与结构化 `conclusion_candidate` 记录该草稿是否具备提升为正式结论的资格
+- 第 4 段多轨推理实现已收敛到 `src/phases/phase4/multitrack/`；默认 agent runtime 为 `auto`，可在 `ANTHROPIC_API_KEY` + `anthropic` SDK 可用时尝试 Claude 推理，否则降级 mock。当前 `/midstack:analyse` 的生产 `conclusion_summary` 默认由 rules fallback + guardrails 守底，multitrack 结果会以 `agent_reasoning` 辅助草稿进入 `analysis.yaml` 和 reasoning segment，并由 `agent_conclusion_gate` 基于 `evidence_refs` 与结构化 `conclusion_candidate` 判断是否可覆盖；eligible 时会追加 `agent_conclusion_override` segment
 - 第 4/5 段已生成 append-only 推理历史：`reasoning-manifest.yaml` 和 `reasoning/*.yaml` segment；`analysis.yaml` / `report.md` 作为最新物化视图
 - Phase 4 rules 已输出 `reasoning_timeline`、`deepening_findings`、`verification_requests`、`deep_analysis_requests`、`retrieval_context`、`experience_matches` 和 `source_boundaries`；历史经验召回仍是预留字段，当前不接入真实向量库
 - 受控验证请求已分层：一等只读 `auto_allowed` 脚本可由 analyse 编排交回 Phase 3 定向补采；二等 ad hoc 只读命令必须结构化 argv、approval required；破坏性命令会被 guardrail 标记 blocked
@@ -86,7 +86,7 @@ superseded_by: none
 - 执行第 4 段过程推理，生成 `reasoning-board.yaml` 和 `analysis.multitrack.yaml`
 - 通过 rules fallback + guardrails 生成生产 `analysis.yaml`
 - 生成 `reasoning-manifest.yaml` 和 append-only reasoning segment，记录本轮分析快照、自动补采审计和 hypothesis validation 隔离引用
-- 将 Phase 4 multitrack/Claude 辅助草稿写入 `analysis.yaml.agent_reasoning`、`report.md` 和 `reasoning/0002-agent-multitrack.yaml`，并写入 `agent_conclusion_gate` 评估结果；当前即使 gate 判定 `eligible` 也只记录资格，不覆盖 rules fallback 守底的结论字段
+- 将 Phase 4 multitrack/Claude 辅助草稿写入 `analysis.yaml.agent_reasoning`、`report.md` 和 `reasoning/0002-agent-multitrack.yaml`，并写入 `agent_conclusion_gate` 评估结果；当 gate 判定 `eligible` 时，应用结构化候选结论并追加 `reasoning/0003-agent-conclusion-override.yaml`
 - 对一等只读 `verification_requests` 执行 Phase 3 定向补采并重新物化分析；对 ad hoc 请求只做 guardrail 归一化或 blocked，不自动执行
 - 对机制已成立但 root cause 未闭合的场景可输出 plan-only `deep_analysis_requests`；analyse 会将已有证据派生物化到 `deep-analysis.yaml` / `analysis.yaml.deep_analysis_results`，当前 MongoDB split-brain 已覆盖基线扫描、代码逻辑分析、代码路径追踪和只读复现计划四类深挖结果
 - 输出第 5 段阶段性结论
@@ -173,7 +173,7 @@ superseded_by: none
 
 - `force_recollect` 参数
 - 复杂多记录切换命令
-- 真实 Claude API 推理结果覆盖生产结论的闭环（当前 auto runtime 可尝试 Claude，draft 已进入 `agent_reasoning`，`agent_conclusion_gate` 会基于证据引用和结构化候选结论评估是否具备提升资格，但 `conclusion_summary` 仍由 rules fallback + guardrails 守底）
+- 真实 Claude API 推理结果的生产质量闭环（当前 auto runtime 可尝试 Claude，draft 已进入 `agent_reasoning`，`agent_conclusion_gate` 会基于证据引用和结构化候选结论评估是否具备提升资格，eligible 时可覆盖 `conclusion_summary`；仍需更多真实场景验证和策略调优）
 - 深入层自动执行闭环：
   - 基线扫描结果自动物化
   - 代码逻辑分析结果自动回写生产结论

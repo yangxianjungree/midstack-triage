@@ -7,7 +7,7 @@ SRC_DIR = ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from phases.phase4.agent_conclusion_gate import evaluate_agent_conclusion_gate
+from phases.phase4.agent_conclusion_gate import apply_agent_conclusion_override, evaluate_agent_conclusion_gate
 
 
 def _analysis(agent_reasoning, limitations=None):
@@ -187,3 +187,65 @@ def test_gate_preserves_structured_conclusion_candidate_for_future_override():
     candidate = gate["selected_candidate"]["conclusion_summary"]
     assert candidate["statement"] == "Replica set rs0 has a split-brain mechanism."
     assert candidate["primary_cause_category"] == "replica_set_split_brain"
+
+
+def test_apply_agent_conclusion_override_updates_conclusion_when_gate_is_eligible():
+    analysis = _analysis(
+        {
+            "runtime": {"selected_type": "claude", "model": "claude-sonnet-4-6"},
+            "hypotheses": [],
+        }
+    )
+    analysis["agent_conclusion_gate"] = {
+        "decision": "eligible",
+        "override_applied": False,
+        "selected_candidate": {
+            "hypothesis_id": "h1",
+            "conclusion_summary": {
+                "statement": "Replica set rs0 has a split-brain mechanism.",
+                "confidence": "medium",
+                "deepest_supported_level": "mechanism",
+                "primary_cause_category": "replica_set_split_brain",
+                "impact_scope": "rs0 availability",
+                "evidence": ["structured_record.details.replica_members"],
+                "limitations": [],
+            },
+        },
+        "blockers": [],
+    }
+
+    changed = apply_agent_conclusion_override(analysis)
+
+    assert changed is True
+    assert analysis["conclusion_summary"]["statement"] == "Replica set rs0 has a split-brain mechanism."
+    assert analysis["conclusion_summary"]["primary_cause_category"] == "replica_set_split_brain"
+    assert analysis["agent_conclusion_gate"]["override_applied"] is True
+    assert analysis["agent_conclusion_gate"]["override_reason"] == "eligible_agent_conclusion_candidate"
+
+
+def test_apply_agent_conclusion_override_does_not_update_when_gate_is_blocked():
+    analysis = _analysis(
+        {
+            "runtime": {"selected_type": "claude", "model": "claude-sonnet-4-6"},
+            "hypotheses": [],
+        }
+    )
+    analysis["agent_conclusion_gate"] = {
+        "decision": "blocked",
+        "override_applied": False,
+        "selected_candidate": {
+            "conclusion_summary": {
+                "statement": "Should not apply",
+                "confidence": "high",
+                "primary_cause_category": "root_cause",
+                "impact_scope": "cluster",
+            },
+        },
+        "blockers": [{"code": "unresolved_critical_gap"}],
+    }
+
+    changed = apply_agent_conclusion_override(analysis)
+
+    assert changed is False
+    assert analysis["conclusion_summary"]["statement"] == "Rules fallback conclusion"
+    assert analysis["agent_conclusion_gate"]["override_applied"] is False

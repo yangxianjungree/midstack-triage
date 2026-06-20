@@ -81,6 +81,20 @@ def evaluate_agent_conclusion_gate(analysis: Dict[str, Any]) -> Dict[str, Any]:
     return _gate_result(candidate, blockers)
 
 
+def apply_agent_conclusion_override(analysis: Dict[str, Any]) -> bool:
+    gate = analysis.get("agent_conclusion_gate") if isinstance(analysis, dict) else {}
+    if not isinstance(gate, dict) or gate.get("decision") != "eligible":
+        return False
+    candidate = gate.get("selected_candidate") if isinstance(gate.get("selected_candidate"), dict) else {}
+    conclusion = candidate.get("conclusion_summary") if isinstance(candidate.get("conclusion_summary"), dict) else {}
+    if _missing_conclusion_candidate_fields(conclusion):
+        return False
+    analysis["conclusion_summary"] = _copy_conclusion_summary(conclusion)
+    gate["override_applied"] = True
+    gate["override_reason"] = "eligible_agent_conclusion_candidate"
+    return True
+
+
 def _gate_result(candidate: Dict[str, Any] | None, blockers: List[Dict[str, str]]) -> Dict[str, Any]:
     decision = "eligible" if candidate and not blockers else "blocked"
     return {
@@ -165,6 +179,13 @@ def _conclusion_candidate(item: Dict[str, Any]) -> Dict[str, Any]:
 
 def _missing_conclusion_candidate_fields(candidate: Dict[str, Any]) -> List[str]:
     return [key for key in CONCLUSION_CANDIDATE_REQUIRED_FIELDS if not str(candidate.get(key) or "").strip()]
+
+
+def _copy_conclusion_summary(conclusion: Dict[str, Any]) -> Dict[str, Any]:
+    result = dict(conclusion)
+    result["evidence"] = [item for item in _as_list(conclusion.get("evidence"))]
+    result["limitations"] = [item for item in _as_list(conclusion.get("limitations"))]
+    return result
 
 
 def _has_current_incident_evidence_ref(refs: Iterable[str]) -> bool:

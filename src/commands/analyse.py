@@ -8,7 +8,7 @@ from typing import Any, Dict
 
 from execution.modes import resolve_execution_mode
 from phases.phase4.deep_analysis import deep_analysis_summary, materialize_deep_analysis
-from phases.phase4.agent_conclusion_gate import evaluate_agent_conclusion_gate
+from phases.phase4.agent_conclusion_gate import apply_agent_conclusion_override, evaluate_agent_conclusion_gate
 from phases.phase4.rules import generate_rule_analysis, supported_middlewares
 from shared.workspace import (
     adapter_output,
@@ -530,6 +530,7 @@ def _write_completed_analysis_output(
     if agent_reasoning:
         analysis["agent_reasoning"] = agent_reasoning
         analysis["agent_conclusion_gate"] = evaluate_agent_conclusion_gate(analysis)
+        apply_agent_conclusion_override(analysis)
         analysis["updated_at"] = now_iso()
         write_yaml(analysis_file, analysis)
     deep_analysis = _write_deep_analysis(output_dir, analysis, signal_bundle)
@@ -591,6 +592,22 @@ def _write_completed_analysis_output(
                 "deep_analysis": "deep-analysis.yaml",
             },
         )
+    gate = analysis.get("agent_conclusion_gate") if isinstance(analysis.get("agent_conclusion_gate"), dict) else {}
+    if gate.get("override_applied") is True:
+        reasoning_segment_file = write_reasoning_segment(
+            output_dir,
+            "agent_conclusion_override",
+            analysis,
+            summary="eligible agent conclusion candidate applied to production analysis view",
+            depends_on=[reasoning_segment_file.stem],
+            output_refs={
+                "analysis": "analysis.yaml",
+                "report": "report.md",
+                "rules_fallback": rules_fallback_file.name,
+                "agent_reasoning_task": task_file.name,
+                "analysis_multitrack": "analysis.multitrack.yaml",
+            },
+        )
     output["record_refs"].append(
         {
             "name": "analysis_rules_fallback",
@@ -623,7 +640,11 @@ def _write_completed_analysis_output(
             output["warnings"].append("Phase 4 agent runtime selected %s: %s" % (selected_agent, fallback_reason))
         else:
             output["warnings"].append("Phase 4 agent runtime selected %s for multitrack reasoning." % selected_agent)
-    output["warnings"].append("analysis.yaml conclusion_summary is guarded by rules fallback; agent_reasoning records Phase 4 multitrack draft for the main analyse path.")
+    gate = analysis.get("agent_conclusion_gate") if isinstance(analysis.get("agent_conclusion_gate"), dict) else {}
+    if gate.get("override_applied") is True:
+        output["warnings"].append("analysis.yaml conclusion_summary was updated from an eligible agent_conclusion_gate candidate.")
+    else:
+        output["warnings"].append("analysis.yaml conclusion_summary is guarded by rules fallback; agent_reasoning records Phase 4 multitrack draft for the main analyse path.")
     output["next_actions"] = [
         "review report.md and analysis.yaml for guarded conclusion, verification requests, and agent_reasoning draft",
         "use first-class read-only verification requests to close remaining critical evidence gaps",

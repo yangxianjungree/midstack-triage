@@ -28,7 +28,7 @@ superseded_by: none
 - `collection_report.yaml`：采集覆盖面、失败项和证据缺口。
 - `analysis.rules-fallback.yaml`：rules fallback 产出的生产分析副本。
 - `analysis.multitrack.yaml`：multitrack 辅助草稿，不替代生产 `analysis.yaml`。
-- `agent_conclusion_gate`：Agent 草稿是否具备提升为正式结论的资格评估；当前只记录资格，不应用覆盖。
+- `agent_conclusion_gate`：Agent 草稿是否具备提升为正式结论的资格评估；eligible 时 analyse 会应用结构化候选结论并追加 reasoning segment，blocked 时保持 rules fallback 结论。
 - `agent-reasoning-task.md`：人工或 Agent refinement 的任务合同。
 - `retrieval_context` / `experience_matches`：未来历史经验或向量库召回字段；当前未接入真实召回时 `experience_matches` 为空。
 - `deep_analysis_requests`：深入层推理请求，描述基线扫描、代码逻辑、路径追踪或复现计划等 plan-only 工作，不代表自动执行命令。
@@ -92,7 +92,7 @@ Agent refinement 不应该做：
 - `experience_matches`、`retrieval_context`、runbook、历史经验和用户线索不能作为直接证据引用。
 - 未闭合的 `critical_gap` 会阻止提升。
 
-当前实现只写入 `decision`、`selected_candidate`、`selected_candidate.conclusion_summary`、`blockers` 和 `override_applied: false`。即使 `decision: eligible`，生产 `conclusion_summary` 仍由 rules fallback + guardrails 守底；后续如果要启用覆盖，需要单独实现“应用 override 并追加 reasoning segment”的闭环。
+当前实现写入 `decision`、`selected_candidate`、`selected_candidate.conclusion_summary`、`blockers` 和 `override_applied`。当 `decision: eligible` 时，analyse 会把 `selected_candidate.conclusion_summary` 应用到生产 `conclusion_summary`，并追加 `agent_conclusion_override` reasoning segment；当 gate blocked 时，生产结论仍由 rules fallback + guardrails 守底。
 
 ## 动态验证边界
 

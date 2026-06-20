@@ -128,6 +128,10 @@ def test_write_collection_plan_loads_mongodb_manifest(tmp_path):
     assert written["middleware"] == "mongodb"
     assert written["baseline_script_ids"] == [item["script_id"] for item in written["baseline_scripts"]]
     assert "mongodb.collect.nodes.state" in written["baseline_script_ids"]
+    assert "kubernetes.collect.logs.current" in written["baseline_script_ids"]
+    assert "kubernetes.collect.logs.previous" in written["baseline_script_ids"]
+    assert "mongodb.collect.logs.current" not in written["baseline_script_ids"]
+    assert "mongodb.collect.logs.previous" not in written["baseline_script_ids"]
     assert "mongodb.collect.logs.file_tail" in [item["script_id"] for item in written["directed_scripts"]]
     assert written["resource_budget"]["baseline_high_noise_count"] >= 1
     assert plan["generated_at"] == written["generated_at"]
@@ -138,7 +142,7 @@ def test_collection_coverage_reports_layer_gaps_from_plan_and_statuses():
         "baseline_scripts": [
             {"script_id": "mongodb.collect.nodes.state", "signal_layer": "system", "tier": "baseline"},
             {"script_id": "mongodb.collect.events.yaml", "signal_layer": "orchestration", "tier": "baseline"},
-            {"script_id": "mongodb.collect.logs.current", "signal_layer": "logs", "tier": "baseline"},
+            {"script_id": "kubernetes.collect.logs.current", "signal_layer": "logs", "tier": "baseline"},
         ],
         "directed_scripts": [
             {"script_id": "mongodb.collect.logs.file_tail", "signal_layer": "logs", "tier": "directed"},
@@ -148,7 +152,7 @@ def test_collection_coverage_reports_layer_gaps_from_plan_and_statuses():
     statuses = {
         "mongodb.collect.nodes.state": "success",
         "mongodb.collect.events.yaml": "failed",
-        "mongodb.collect.logs.current": "partial",
+        "kubernetes.collect.logs.current": "partial",
     }
 
     coverage = phase3_collection_plan.build_collection_coverage(plan, statuses)
@@ -161,7 +165,7 @@ def test_collection_coverage_reports_layer_gaps_from_plan_and_statuses():
     }
     assert coverage["layers"]["system"]["collected_scripts"] == ["mongodb.collect.nodes.state"]
     assert coverage["layers"]["orchestration"]["missing_scripts"] == ["mongodb.collect.events.yaml"]
-    assert coverage["layers"]["logs"]["collected_scripts"] == ["mongodb.collect.logs.current"]
+    assert coverage["layers"]["logs"]["collected_scripts"] == ["kubernetes.collect.logs.current"]
     assert coverage["layers"]["logs"]["directed_deferred_scripts"] == ["mongodb.collect.logs.file_tail"]
     assert coverage["layers"]["network"]["directed_deferred_scripts"] == ["mongodb.collect.dns.coredns"]
 
@@ -173,7 +177,7 @@ def test_write_collection_coverage_updates_collection_report(tmp_path):
         {
             "baseline_scripts": [
                 {"script_id": "mongodb.collect.nodes.state", "signal_layer": "system", "tier": "baseline"},
-                {"script_id": "mongodb.collect.logs.current", "signal_layer": "logs", "tier": "baseline"},
+                {"script_id": "kubernetes.collect.logs.current", "signal_layer": "logs", "tier": "baseline"},
             ],
             "directed_scripts": [
                 {"script_id": "mongodb.collect.logs.file_tail", "signal_layer": "logs", "tier": "directed"},
@@ -185,7 +189,7 @@ def test_write_collection_coverage_updates_collection_report(tmp_path):
         {
             "collection_actions": [],
             "successful_items": [{"item": "remote-executor/mongodb.collect.nodes.state"}],
-            "failed_items": [{"item": "remote-executor/mongodb.collect.logs.current"}],
+            "failed_items": [{"item": "remote-executor/kubernetes.collect.logs.current"}],
             "blank_items": [],
             "evidence_gaps": [],
         },
@@ -196,15 +200,15 @@ def test_write_collection_coverage_updates_collection_report(tmp_path):
 
     assert collection_report["collection_coverage"] == coverage
     assert collection_report["collection_coverage"]["summary"]["baseline_missing"] == 1
-    assert collection_report["collection_coverage"]["layers"]["logs"]["missing_scripts"] == ["mongodb.collect.logs.current"]
+    assert collection_report["collection_coverage"]["layers"]["logs"]["missing_scripts"] == ["kubernetes.collect.logs.current"]
     assert collection_report["evidence_gaps"] == [
         {
-            "gap": "baseline logs collection missing: mongodb.collect.logs.current",
+            "gap": "baseline logs collection missing: kubernetes.collect.logs.current",
             "gap_type": "critical_gap",
             "gap_category": "coverage_gap",
             "related_stage": "signal_collection",
             "signal_layer": "logs",
-            "missing_scripts": ["mongodb.collect.logs.current"],
+            "missing_scripts": ["kubernetes.collect.logs.current"],
             "why_important": "Missing baseline logs evidence limits runtime and root-cause validation.",
             "recommended_action": "rerun live collection or inspect remote executor output for the missing baseline scripts",
         }

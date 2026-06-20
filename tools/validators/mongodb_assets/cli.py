@@ -38,6 +38,28 @@ def shared_kubernetes_manifest_by_id() -> dict:
     }
 
 
+def validate_default_collection_set(manifest_by_id: dict, shared_by_id: dict, errors: list[str]) -> None:
+    combined = dict(manifest_by_id)
+    combined.update(shared_by_id)
+    default_ids = {
+        str(script_id)
+        for script_id, item in combined.items()
+        if isinstance(item, dict) and item.get("mvp") is True
+    }
+    expected_log_ids = {"kubernetes.collect.logs.current", "kubernetes.collect.logs.previous"}
+    legacy_log_ids = {"mongodb.collect.logs.current", "mongodb.collect.logs.previous"}
+    if len(default_ids) != 12:
+        errors.append(
+            "default MongoDB collection set must contain 12 MVP scripts across MongoDB and shared Kubernetes manifests, got %d"
+            % len(default_ids)
+        )
+    if not expected_log_ids <= default_ids:
+        errors.append("default MongoDB collection set must use shared Kubernetes log scripts: missing=%s" % sorted(expected_log_ids - default_ids))
+    legacy_defaults = legacy_log_ids & default_ids
+    if legacy_defaults:
+        errors.append("legacy MongoDB kubectl log aliases must not be default MVP scripts: %s" % sorted(legacy_defaults))
+
+
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate MongoDB script manifest and plugin runtime map.")
     parser.add_argument("--manifest", default="domains/mongodb/scripts/manifest.yaml")
@@ -56,8 +78,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     taxonomies = load_taxonomies(ROOT / "core/taxonomies", errors)
     scenarios = load_scenarios(ROOT / "scenarios", "mongodb", errors)
     manifest_by_id = validate_manifest(ROOT / args.manifest, errors)
+    shared_by_id = shared_kubernetes_manifest_by_id()
     asset_ref_manifest_by_id = dict(manifest_by_id)
-    asset_ref_manifest_by_id.update(shared_kubernetes_manifest_by_id())
+    asset_ref_manifest_by_id.update(shared_by_id)
+    validate_default_collection_set(manifest_by_id, shared_by_id, errors)
     runtime_by_id = validate_runtime_map(ROOT / args.runtime_map, manifest_by_id, errors)
     validate_context_example(ROOT / args.context_example, manifest_by_id, errors)
     validate_output_example(ROOT / args.output_example, manifest_by_id, taxonomies, errors)

@@ -8,8 +8,8 @@ scripts:
     runtime: shell
     readonly: true
     default_packaged: true
-    mvp: false
-    collection_tier: directed
+    mvp: true
+    collection_tier: baseline
     signal_layer: logs
     cost_class: medium
     noise_class: high
@@ -25,8 +25,8 @@ scripts:
     runtime: shell
     readonly: true
     default_packaged: true
-    mvp: false
-    collection_tier: directed
+    mvp: true
+    collection_tier: baseline
     signal_layer: logs
     cost_class: medium
     noise_class: high

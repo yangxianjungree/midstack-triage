@@ -167,12 +167,6 @@ def validate_manifest(manifest_path: Path, errors: List[str]) -> Dict[str, Dict[
         if item.get("phase") != expected_phase:
             fail(errors, "%s phase does not match script_id" % script_id)
 
-    mvp_count = sum(1 for item in by_id.values() if item.get("mvp") is True)
-    if mvp_count != 12:
-        fail(errors, "MongoDB MVP script count must be 12, got %d" % mvp_count)
-    baseline_count = sum(1 for item in by_id.values() if item.get("collection_tier") == "baseline")
-    if baseline_count != 12:
-        fail(errors, "MongoDB baseline collection_tier count must be 12, got %d" % baseline_count)
     return by_id
 
 

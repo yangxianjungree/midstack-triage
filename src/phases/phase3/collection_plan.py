@@ -21,6 +21,13 @@ def manifest_path_for(middleware: str) -> Path:
     return runtime_root() / "domains" / middleware / "scripts" / "manifest.yaml"
 
 
+def manifest_paths_for(middleware: str) -> List[Path]:
+    paths = [manifest_path_for(middleware)]
+    if middleware != "kubernetes":
+        paths.append(manifest_path_for("kubernetes"))
+    return paths
+
+
 def _script_plan_item(item: Dict[str, Any]) -> Dict[str, Any]:
     result = {
         "script_id": str(item.get("script_id") or ""),
@@ -48,6 +55,8 @@ def _candidate_scripts(manifest: Dict[str, Any]) -> List[Dict[str, Any]]:
         if item.get("phase") not in ("collect", "normalize"):
             continue
         if item.get("default_packaged") is not True:
+            continue
+        if item.get("compatibility_alias") is True:
             continue
         scripts.append(_script_plan_item(item))
     return scripts
@@ -83,6 +92,24 @@ def build_collection_plan(manifest: Dict[str, Any]) -> Dict[str, Any]:
     directed_scripts = [item for item in scripts if item["tier"] != "baseline"]
     return {
         "middleware": str(manifest.get("middleware") or ""),
+        "generated_at": now_iso(),
+        "baseline_script_ids": [item["script_id"] for item in baseline_scripts],
+        "directed_script_ids": [item["script_id"] for item in directed_scripts],
+        "baseline_scripts": baseline_scripts,
+        "directed_scripts": directed_scripts,
+        "layer_summary": _layer_summary(scripts),
+        "resource_budget": _resource_budget(baseline_scripts, directed_scripts),
+    }
+
+
+def build_collection_plan_from_manifests(middleware: str, manifests: List[Dict[str, Any]]) -> Dict[str, Any]:
+    scripts: List[Dict[str, Any]] = []
+    for manifest in manifests:
+        scripts.extend(_candidate_scripts(manifest))
+    baseline_scripts = [item for item in scripts if item["tier"] == "baseline"]
+    directed_scripts = [item for item in scripts if item["tier"] != "baseline"]
+    return {
+        "middleware": middleware,
         "generated_at": now_iso(),
         "baseline_script_ids": [item["script_id"] for item in baseline_scripts],
         "directed_script_ids": [item["script_id"] for item in directed_scripts],
@@ -196,11 +223,11 @@ def _merge_coverage_gaps(collection_report: Dict[str, Any], coverage: Dict[str, 
 
 
 def write_collection_plan(output_dir: Path, middleware: str = "mongodb") -> Dict[str, Any]:
-    manifest_path = manifest_path_for(middleware)
-    if not manifest_path.exists():
+    paths = [path for path in manifest_paths_for(middleware) if path.exists()]
+    if not paths:
         return {}
-    manifest = load_yaml(manifest_path)
-    plan = build_collection_plan(manifest)
+    manifests = [load_yaml(path) for path in paths]
+    plan = build_collection_plan_from_manifests(middleware, manifests)
     write_yaml(output_dir / "collection_plan.yaml", plan)
     return plan
 

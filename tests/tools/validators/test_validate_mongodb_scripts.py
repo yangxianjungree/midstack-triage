@@ -43,6 +43,23 @@ def test_runtime_map_includes_domain_neutral_kubernetes_log_assets():
     assert manifest_ids <= runtime_ids
 
 
+def test_default_mongodb_collection_set_uses_shared_kubernetes_logs():
+    mongodb_manifest = yaml.safe_load((ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml").read_text(encoding="utf-8"))
+    kubernetes_manifest = yaml.safe_load((ROOT / "domains" / "kubernetes" / "scripts" / "manifest.yaml").read_text(encoding="utf-8"))
+
+    combined = {
+        item["script_id"]: item
+        for manifest in (mongodb_manifest, kubernetes_manifest)
+        for item in manifest["scripts"]
+    }
+    default_ids = {script_id for script_id, item in combined.items() if item.get("mvp") is True}
+
+    assert len(default_ids) == 12
+    assert {"kubernetes.collect.logs.current", "kubernetes.collect.logs.previous"} <= default_ids
+    assert "mongodb.collect.logs.current" not in default_ids
+    assert "mongodb.collect.logs.previous" not in default_ids
+
+
 def test_validate_mongodb_scripts_wrapper_stays_thin():
     text = CLI_PATH.read_text(encoding="utf-8")
 

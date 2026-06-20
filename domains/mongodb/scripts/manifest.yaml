@@ -140,11 +140,13 @@ scripts:
     runtime: shell
     readonly: true
     default_packaged: true
-    mvp: true
-    collection_tier: baseline
+    mvp: false
+    collection_tier: directed
     signal_layer: logs
     cost_class: medium
     noise_class: high
+    compatibility_alias: true
+    superseded_by: kubernetes.collect.logs.current
     sample_policy:
       tail_lines: 1000
       max_targets: 8
@@ -157,11 +159,13 @@ scripts:
     runtime: shell
     readonly: true
     default_packaged: true
-    mvp: true
-    collection_tier: baseline
+    mvp: false
+    collection_tier: directed
     signal_layer: logs
     cost_class: medium
     noise_class: high
+    compatibility_alias: true
+    superseded_by: kubernetes.collect.logs.previous
     sample_policy:
       tail_lines: 1000
       max_targets: 8

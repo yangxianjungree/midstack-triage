@@ -95,6 +95,7 @@ superseded_by: none
   - 已完成的 remote run 目录
 - 可通过 `.local` 远程环境配置调度真实 MongoDB 只读采集，然后继续分析
 - 可通过 ready local incident 的 `local-config.yaml` 使用本地 transport 调度同一批 Phase 3 采集脚本
+- 支持 `--scope full`、`--scope collect`、`--scope reason` 三个正式 pipeline 切片
 
 ### MongoDB
 
@@ -168,7 +169,6 @@ superseded_by: none
 
 ### `/plugin:analyse`
 
-- 完整 `scope` 矩阵（当前仅支持 `full`、`collect` 与 `reason`）
 - `force_recollect` 参数
 - 复杂多记录切换命令
 - 默认启用的真实 Claude API 推理编排（当前 bundled runtime 默认 mock agent）

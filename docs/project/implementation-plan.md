@@ -37,7 +37,7 @@ superseded_by: none
 - 第 3 段输出：`structured_record`、`signal_bundle`、`collection_report`
 - 第 4 段输出：多假设、支持证据、反证条件、证据不足项、验证结果
 - 第 5 段输出：初步结论、置信度、影响范围、下一步建议、知识沉淀候选
-- 暂不实现：完整 `scope` 矩阵、`force_recollect`、高风险处置动作、自动修复、跨中间件联合诊断
+- 暂不实现：`force_recollect`、高风险处置动作、自动修复、跨中间件联合诊断
 
 验收条件：
 
@@ -297,7 +297,6 @@ superseded_by: none
 
 以下事项继续保留，但不作为近期优先级：
 
-- `/plugin:analyse --scope` 完整矩阵（当前仅支持 `full`、`collect` 与 `reason`）
 - `/plugin:analyse --force_recollect`
 - 自动修复和高风险处置动作
 - Claude Code、Codex、Cursor 适配器是否从 `plugins/<agent>/` 进一步拆成独立仓库

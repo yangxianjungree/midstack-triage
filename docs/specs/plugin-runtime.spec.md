@@ -212,7 +212,6 @@ superseded_by: none
 
 后续版本预留但暂不实现：
 
-- 完整 `scope` 矩阵
 - `force_recollect`
 
 ### `/plugin:review`

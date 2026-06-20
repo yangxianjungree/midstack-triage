@@ -269,7 +269,7 @@ superseded_by: none
 
 第一版 `analyse` 明确不实现：
 
-- 不实现完整 `--scope` 矩阵；当前仅支持 `full`、`collect` 和 `reason`
+- `--scope` 仅定义并实现 `full`、`collect` 和 `reason`；未定义的 scope 不作为第一版承诺
 - 不实现 `--force_recollect`
 - 不默认关联、复用或重采其他历史 incident 的证据
 - 不做自动修复
@@ -296,7 +296,6 @@ superseded_by: none
 
 后续版本再考虑：
 
-- 完整 `--scope` 矩阵
 - `--force_recollect`
 - 更多 MongoDB 场景
 - operator+CRD 完整认证适配

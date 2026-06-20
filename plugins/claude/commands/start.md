@@ -35,11 +35,12 @@ Parse `$ARGUMENTS` for:
 - `pasted_evidence`: for `offline`, pass pasted command output or screen text as raw evidence only.
 
 Default `remote` mode is the current main path and requires `--environment-ip`,
-`--username`, and `--password`. `local` is recognized by Phase 1 but returns
-blocked guidance until local collection exists. `offline` returns blocked
-guidance unless `--artifact-source` points at a complete offline evidence
-directory. `--pasted-evidence` is preserved under `logs/raw/` but does not make
-the incident ready.
+`--username`, and `--password`. `local` is for runtimes already on the fault
+cluster or control host; Phase 2 validates the local kubectl context and writes
+`local-config.yaml` when ready. `offline` returns blocked guidance unless
+`--artifact-source` points at a complete offline evidence directory.
+`--pasted-evidence` is preserved under `logs/raw/` but does not make the
+incident ready.
 
 If a previous `start` returned `blocked` and `$ARGUMENTS` appears to answer its
 follow-up questions, run `start` again with the same `--incident-id`. Fields

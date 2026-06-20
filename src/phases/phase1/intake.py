@@ -124,10 +124,10 @@ def _environment_mode_question(local_context: Dict[str, str] | None = None) -> D
 
 
 def _local_execution_mode_question(local_context: Dict[str, str]) -> Dict[str, str]:
-    question = "当前插件是否就在故障集群控制面机器上？如果是，先提供已有采集产物走 offline；否则提供 SSH 信息走 remote。"
+    question = "当前插件是否就在故障集群控制面机器上？如果是，请确认本机 kubectl context 可访问故障集群；否则提供 SSH 信息走 remote，或提供已有采集产物走 offline。"
     if local_context.get("status") == "available":
         current_context = str(local_context.get("current_context") or "")
-        question = "%s 本机检测到可用 kubectl context%s，但本地采集 executor 尚未实现。" % (
+        question = "%s 本机检测到可用 kubectl context%s；如果这就是故障集群，可改用 local 继续。" % (
             question,
             " %s" % current_context if current_context else "",
         )

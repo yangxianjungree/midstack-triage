@@ -567,6 +567,8 @@ def test_start_local_mode_blocks_when_local_context_unavailable(tmp_path, monkey
     output = load_yaml(tmp_path / ".local" / "incidents" / "local-context-missing" / "adapter-output.yaml")
     assert output["status"] == "blocked"
     assert output["blocking_items"][0]["code"] == "local_context_unavailable"
+    assert "本地采集 executor 尚未实现" not in output["follow_up_questions"][0]["question"]
+    assert "本机未检测到可用 kubectl context" in output["follow_up_questions"][0]["question"]
 
 
 def test_start_local_mode_ready_does_not_emit_follow_up_questions(tmp_path, monkeypatch):

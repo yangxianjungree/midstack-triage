@@ -278,12 +278,12 @@ def direct_root_cause_terms_present(analysis: Dict[str, Any], signal_bundle: Dic
 
 
 def apply_analysis_guardrails(analysis: Dict[str, Any], collection_report: Dict[str, Any], signal_bundle: Dict[str, Any]) -> bool:
-    conclusion = analysis.get("conclusion_summary")
-    if not isinstance(conclusion, dict):
-        return False
     changed = False
     if apply_verification_request_guardrails(analysis):
         changed = True
+    conclusion = analysis.get("conclusion_summary")
+    if not isinstance(conclusion, dict):
+        return changed
     if enforce_split_brain_enabling_cause_guardrail(analysis):
         changed = True
     direct_root_cause_supported = direct_root_cause_terms_present(analysis, signal_bundle)

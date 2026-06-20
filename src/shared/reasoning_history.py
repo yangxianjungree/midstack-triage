@@ -129,6 +129,7 @@ def write_reasoning_segment(
         "materialized_outputs": _copy_yaml_value(output_refs),
         "executed_validations": _copy_yaml_value(executed_validations or []),
         "hypothesis_validations": analysis_to_hypothesis_validations(analysis, segment_relpath, shared_refs),
+        "agent_conclusion_gate": _copy_yaml_value(_agent_conclusion_gate(analysis)),
         "conclusion_delta": _conclusion_delta(analysis),
         "analysis_snapshot": _copy_yaml_value(analysis),
     }
@@ -146,6 +147,7 @@ def write_reasoning_segment(
         supersedes=supersedes or [],
         shared_refs=shared_refs,
         output_refs=output_refs,
+        agent_conclusion_gate=segment["agent_conclusion_gate"],
     )
     return segment_path
 
@@ -206,6 +208,7 @@ def _update_manifest(
     supersedes: List[str],
     shared_refs: List[Dict[str, str]],
     output_refs: Dict[str, str],
+    agent_conclusion_gate: Dict[str, Any],
 ) -> None:
     manifest_file = reasoning_manifest_file(incident_dir)
     if manifest_file.exists():
@@ -239,6 +242,7 @@ def _update_manifest(
             "depends_on": depends_on,
             "supersedes": supersedes,
             "output_refs": output_refs,
+            "agent_conclusion_gate": _agent_conclusion_gate_summary(agent_conclusion_gate),
         }
     )
     manifest["segments"] = segments
@@ -301,6 +305,22 @@ def _conclusion_delta(analysis: Dict[str, Any]) -> Dict[str, Any]:
         return {}
     keys = ("statement", "confidence", "deepest_supported_level", "primary_cause_category", "impact_scope")
     return {key: conclusion.get(key) for key in keys if key in conclusion}
+
+
+def _agent_conclusion_gate(analysis: Dict[str, Any]) -> Dict[str, Any]:
+    gate = analysis.get("agent_conclusion_gate")
+    return gate if isinstance(gate, dict) else {}
+
+
+def _agent_conclusion_gate_summary(gate: Dict[str, Any]) -> Dict[str, Any]:
+    if not gate:
+        return {}
+    blockers = as_list(gate.get("blockers"))
+    return {
+        "decision": str(gate.get("decision") or "").strip(),
+        "override_applied": bool(gate.get("override_applied", False)),
+        "blocker_count": len([item for item in blockers if isinstance(item, dict)]),
+    }
 
 
 def _copy_yaml_value(value: Any) -> Any:

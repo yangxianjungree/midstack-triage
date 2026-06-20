@@ -52,6 +52,27 @@ def _analysis(statement: str):
     }
 
 
+def _analysis_with_agent_gate():
+    analysis = _analysis("agent draft was evaluated")
+    analysis["agent_conclusion_gate"] = {
+        "schema_version": "agent-conclusion-gate.v1",
+        "decision": "blocked",
+        "override_applied": False,
+        "selected_candidate": {
+            "hypothesis_id": "h1",
+            "statement": "Agent split-brain candidate",
+            "confidence": 0.91,
+        },
+        "blockers": [
+            {
+                "code": "unresolved_critical_gap",
+                "message": "critical evidence gaps remain unresolved",
+            }
+        ],
+    }
+    return analysis
+
+
 def _write_incident_inputs(incident_dir: Path) -> None:
     for name in ("input.yaml", "structured_record.yaml", "signal_bundle.yaml", "collection_report.yaml"):
         (incident_dir / name).parent.mkdir(parents=True, exist_ok=True)
@@ -144,3 +165,24 @@ def test_write_reasoning_segment_appends_without_modifying_previous_segment(tmp_
     ]
     assert manifest["segments"][1]["depends_on"] == ["0001-rules-fallback"]
     assert manifest["segments"][1]["supersedes"] == ["0001-rules-fallback"]
+
+
+def test_write_reasoning_segment_records_agent_conclusion_gate(tmp_path):
+    incident_dir = tmp_path / "incident"
+    _write_incident_inputs(incident_dir)
+
+    segment_path = write_reasoning_segment(
+        incident_dir,
+        "agent_multitrack",
+        _analysis_with_agent_gate(),
+        summary="agent draft evaluated",
+    )
+
+    manifest = yaml.safe_load((incident_dir / "reasoning-manifest.yaml").read_text(encoding="utf-8"))
+    segment = yaml.safe_load(segment_path.read_text(encoding="utf-8"))
+
+    assert segment["agent_conclusion_gate"]["decision"] == "blocked"
+    assert segment["agent_conclusion_gate"]["override_applied"] is False
+    assert segment["agent_conclusion_gate"]["blockers"][0]["code"] == "unresolved_critical_gap"
+    assert manifest["segments"][0]["agent_conclusion_gate"]["decision"] == "blocked"
+    assert manifest["segments"][0]["agent_conclusion_gate"]["blocker_count"] == 1

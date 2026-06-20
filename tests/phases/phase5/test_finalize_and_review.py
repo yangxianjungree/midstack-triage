@@ -20,6 +20,25 @@ def write_yaml(path: Path, payload) -> None:
     path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
 
 
+def assert_analyse_completed_user_message_table(adapter, incident_dir: Path, *, incident_id: str, statement: str, confidence: str, supported_level: str, primary_cause: str, next_step: str) -> None:
+    assert adapter["user_message"] == "\n".join(
+        [
+            "| Field | Value |",
+            "| --- | --- |",
+            "| Status | `completed` |",
+            "| Incident | `%s` |" % incident_id,
+            "| Middleware | `mongodb` |",
+            "| Conclusion | %s |" % statement,
+            "| Confidence | `%s` |" % confidence,
+            "| Supported level | `%s` |" % supported_level,
+            "| Primary cause | `%s` |" % primary_cause,
+            "| Report | `%s` |" % (incident_dir / "report.md"),
+            "| Analysis | `%s` |" % (incident_dir / "analysis.yaml"),
+            "| Next | `%s` |" % next_step,
+        ]
+    )
+
+
 def test_finalize_analysis_writes_adapter_output_and_report(tmp_path):
     incident_dir = tmp_path / "incident"
     write_yaml(
@@ -66,6 +85,16 @@ def test_finalize_analysis_writes_adapter_output_and_report(tmp_path):
     adapter = yaml.safe_load((incident_dir / "adapter-output.yaml").read_text(encoding="utf-8"))
     assert adapter["status"] == "completed"
     assert adapter["next_actions"] == ["check pod events"]
+    assert_analyse_completed_user_message_table(
+        adapter,
+        incident_dir,
+        incident_id="demo-incident",
+        statement="MongoDB pod restart loop detected",
+        confidence="medium",
+        supported_level="impact",
+        primary_cause="kubernetes-runtime",
+        next_step="check pod events",
+    )
     meta = yaml.safe_load((incident_dir / "meta.yaml").read_text(encoding="utf-8"))
     assert meta["status"] == "analysed"
 

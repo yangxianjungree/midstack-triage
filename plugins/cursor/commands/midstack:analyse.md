@@ -91,6 +91,7 @@ python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/midstack-loc
 
 Or `--incident-dir .local/incidents/<incident-id>`.
 
-Then summarize conclusion, confidence, supported level, evidence gaps, and output paths.
+After finalize succeeds, read `.local/incidents/<incident-id>/adapter-output.yaml`.
+If `status=completed`, print `user_message` from `adapter-output.yaml` verbatim. It is the fixed Markdown table for the completed analysis response; do not rewrite it as prose.
 
 For normal incident triage, do not run fixture replay. Use the current incident from `/midstack:start` or an explicit incident directory.

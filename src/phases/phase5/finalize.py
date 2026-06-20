@@ -36,11 +36,41 @@ from shared.workspace import (
 )
 
 
+def _table_value(value) -> str:
+    text = str(value or "").strip()
+    return text if text else "-"
+
+
+def _first_next_action(analysis) -> str:
+    actions = analysis_next_action_texts(analysis)
+    return actions[0] if actions else "No next action recorded"
+
+
+def completed_user_message(incident_dir: Path, input_data, analysis) -> str:
+    conclusion = analysis.get("conclusion_summary") or {}
+    return "\n".join(
+        [
+            "| Field | Value |",
+            "| --- | --- |",
+            "| Status | `completed` |",
+            "| Incident | `%s` |" % _table_value(input_data.get("incident_id") or incident_dir.name),
+            "| Middleware | `%s` |" % _table_value(input_data.get("middleware") or "mongodb"),
+            "| Conclusion | %s |" % _table_value(conclusion.get("statement")),
+            "| Confidence | `%s` |" % _table_value(conclusion.get("confidence")),
+            "| Supported level | `%s` |" % _table_value(conclusion.get("deepest_supported_level")),
+            "| Primary cause | `%s` |" % _table_value(conclusion.get("primary_cause_category")),
+            "| Report | `%s` |" % (incident_dir / "report.md"),
+            "| Analysis | `%s` |" % (incident_dir / "analysis.yaml"),
+            "| Next | `%s` |" % _first_next_action(analysis),
+        ]
+    )
+
+
 def build_finalize_adapter_output(incident_dir: Path, input_data, analysis):
     incident_id = str(input_data.get("incident_id") or incident_dir.name)
     middleware = str(input_data.get("middleware") or "mongodb")
     output = adapter_output("analyse", incident_id, middleware, "completed", analysis_summary_text(analysis), incident_dir)
-    output["user_message"] = output["summary"]
+    output["user_message"] = completed_user_message(incident_dir, input_data, analysis)
     add_record_ref_if_exists(output, incident_dir, "analysis", "analysis.yaml", "finalized analysis result")
     rules_fallback_file = find_analysis_rules_fallback_file(incident_dir)
     if rules_fallback_file is not None:

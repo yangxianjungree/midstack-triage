@@ -43,5 +43,10 @@ python3 "${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py" analyse \
   --output-root "$MIDSTACK_TRIAGE_WORKSPACE/.local/incidents"
 ```
 
-After analyse succeeds, summarize `analysis.yaml`, `report.md`, and
-`reasoning-board.yaml` when present.
+After analyse succeeds, refine `analysis.yaml` and `report.md` according to
+`agent-reasoning-task.md`, then run `finalize-analysis`.
+
+After finalize succeeds, read `.local/incidents/<incident-id>/adapter-output.yaml`.
+If `status=completed`, print `user_message` from `adapter-output.yaml` verbatim.
+It is the fixed Markdown table for the completed analysis response; do not
+rewrite it as prose.

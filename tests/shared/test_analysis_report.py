@@ -100,6 +100,54 @@ def test_write_report_includes_reasoning_timeline(tmp_path):
     assert "pod scheduling failed before rs.status collection" in content
 
 
+def test_write_report_prioritizes_diagnostic_timeline_events(tmp_path):
+    analysis = {
+        "conclusion_summary": {
+            "statement": "MongoDB replica set has split-brain symptoms",
+            "confidence": "medium",
+            "deepest_supported_level": "mechanism",
+            "primary_cause_category": "replication",
+            "impact_scope": "shard replica set",
+            "evidence": ["two members report conflicting PRIMARY views"],
+            "limitations": [],
+        },
+        "hypotheses": [],
+        "next_actions": [],
+        "knowledge_candidates": [],
+        "reasoning_timeline": {
+            "events": [
+                {
+                    "time": "2026-06-07T00:00:00+08:00",
+                    "layer": "collection",
+                    "summary": "collection action 0",
+                    "source": "collection_report.collection_actions",
+                },
+                {
+                    "time": "2026-06-07T00:00:01+08:00",
+                    "layer": "collection",
+                    "summary": "collection action 1",
+                    "source": "collection_report.collection_actions",
+                },
+                {
+                    "time": "",
+                    "layer": "diagnostic",
+                    "summary": "Replica set rs0 split-brain observed: 2 PRIMARY views and divergent voting quorum counts.",
+                    "source": "structured_record.details.replica_members",
+                    "confidence": "high",
+                },
+            ]
+        },
+    }
+
+    report = write_report(tmp_path, {"incident_id": "demo", "middleware": "mongodb"}, analysis)
+
+    content = report.read_text(encoding="utf-8")
+    timeline = content.split("## Timeline", 1)[1].split("## Mechanism Deepening", 1)[0]
+    diagnostic_index = timeline.index("Replica set rs0 split-brain observed")
+    collection_index = timeline.index("collection action 0")
+    assert diagnostic_index < collection_index
+
+
 def test_write_report_includes_deepening_findings(tmp_path):
     analysis = {
         "conclusion_summary": {

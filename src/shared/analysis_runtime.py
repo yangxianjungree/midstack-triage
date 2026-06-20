@@ -42,6 +42,15 @@ def analysis_next_action_texts(analysis: Dict[str, Any]) -> List[str]:
 def timeline_report_lines(analysis: Dict[str, Any], limit: int = 8) -> List[str]:
     timeline = analysis.get("reasoning_timeline") or {}
     events = as_list(timeline.get("events") if isinstance(timeline, dict) else [])
+    layer_priority = {"diagnostic": 0, "signal": 1, "kubernetes": 2, "analysis": 3, "collection": 4}
+    events = sorted(
+        events,
+        key=lambda item: (
+            layer_priority.get(str((item or {}).get("layer") or ""), 9) if isinstance(item, dict) else 9,
+            str((item or {}).get("time") or "") if isinstance(item, dict) else "",
+            str((item or {}).get("summary") or "") if isinstance(item, dict) else "",
+        ),
+    )
     lines: List[str] = []
     for item in events[:limit]:
         if not isinstance(item, dict):

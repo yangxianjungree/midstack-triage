@@ -218,6 +218,69 @@ class MongoDBRulesTest(unittest.TestCase):
             timeline["findings"][0]["statement"],
         )
 
+    def test_reasoning_timeline_prioritizes_split_brain_diagnostic_events(self) -> None:
+        input_data = {"scenario": "replica-inconsistency"}
+        signal_bundle = {
+            "abnormal_signals": [{"signal_id": "replica-member-recovering", "detail": "member state differs"}],
+            "log_highlights": [
+                {
+                    "pod_ref": "pod/bnmongo-mongos-0",
+                    "log_type": "current",
+                    "category": "connection",
+                    "message": "lookup kube-dns 10.96.0.10:53 connection refused",
+                }
+            ],
+        }
+        collection_report = {
+            "collection_actions": [
+                {"action_id": "mongodb-collect-pods-state", "target": "psmdb-test", "status": "success"},
+            ],
+            "evidence_gaps": [],
+        }
+        structured_record = {
+            "details": {
+                "replica_members": [
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-0",
+                        "voting_members_count": 1,
+                        "self_member": {"state_str": "PRIMARY", "config_version": 2, "config_term": 73},
+                        "members": [{"name": "mongo-0:27017", "state_str": "PRIMARY"}],
+                    },
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-1",
+                        "voting_members_count": 3,
+                        "self_member": {"state_str": "PRIMARY", "config_version": 8, "config_term": 72},
+                        "members": [
+                            {"name": "mongo-0:27017", "state_str": "(not reachable/healthy)"},
+                            {"name": "mongo-1:27017", "state_str": "PRIMARY"},
+                            {"name": "mongo-2:27017", "state_str": "SECONDARY"},
+                        ],
+                    },
+                ],
+                "network_overlay": {
+                    "pod_connectivity_checks": [
+                        {
+                            "source_pod_ref": "mongo-0",
+                            "target_ref": "pod/mongo-1",
+                            "target_port": 27017,
+                            "status": "success",
+                        }
+                    ]
+                },
+            }
+        }
+
+        result = self.mod.analyse(input_data, signal_bundle, collection_report, structured_record)
+
+        events = result["reasoning_timeline"]["events"]
+        summaries = [item["summary"] for item in events]
+        self.assertIn("Replica set rs0 split-brain observed: 2 PRIMARY views and divergent voting quorum counts.", summaries)
+        self.assertIn("Current TCP/27017 reachability succeeded after divergent replica-set views were observed.", summaries)
+        self.assertTrue(any("DNS" in summary and "connection refused" in summary for summary in summaries))
+        self.assertEqual(events[0]["layer"], "diagnostic")
+
     def test_deepening_findings_detect_replica_set_config_divergence_and_network_counter_evidence(self) -> None:
         input_data = {"scenario": "replica-inconsistency"}
         signal_bundle = {"abnormal_signals": [{"signal_id": "replica-member-recovering", "detail": "member state differs"}]}

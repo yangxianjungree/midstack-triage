@@ -117,6 +117,94 @@ def _collection_action_events(collection_report: Dict[str, Any]) -> Iterable[Dic
         }
 
 
+def _replica_member_diagnostic_events(structured_record: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+    details = (structured_record or {}).get("details") or {}
+    by_replica_set: Dict[str, List[Dict[str, Any]]] = {}
+    for item in details.get("replica_members") or []:
+        if not isinstance(item, dict):
+            continue
+        replica_set_id = _text(item.get("replica_set_id")) or "unknown"
+        by_replica_set.setdefault(replica_set_id, []).append(item)
+    for replica_set_id, members in sorted(by_replica_set.items()):
+        primary_views = 0
+        quorum_counts = set()
+        config_views = set()
+        for item in members:
+            self_member = item.get("self_member") or {}
+            if _text(self_member.get("state_str")).upper() == "PRIMARY":
+                primary_views += 1
+            quorum = item.get("voting_members_count")
+            if quorum not in (None, ""):
+                quorum_counts.add(str(quorum))
+            config_version = self_member.get("config_version")
+            config_term = self_member.get("config_term")
+            if config_version not in (None, "") or config_term not in (None, ""):
+                config_views.add("%s/%s" % (_text(config_version), _text(config_term)))
+        if primary_views >= 2 and (len(quorum_counts) > 1 or len(config_views) > 1):
+            yield {
+                "time_precision": "observed_at_collection",
+                "layer": "diagnostic",
+                "object_ref": replica_set_id,
+                "event_type": "replica-set-split-brain",
+                "summary": "Replica set %s split-brain observed: %s PRIMARY views and divergent voting quorum counts." % (replica_set_id, primary_views),
+                "source": "structured_record.details.replica_members",
+                "evidence_ref": "replica_members:%s" % replica_set_id,
+                "confidence": "high",
+            }
+
+
+def _network_diagnostic_events(structured_record: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+    details = (structured_record or {}).get("details") or {}
+    network_overlay = details.get("network_overlay") or {}
+    checks = network_overlay.get("pod_connectivity_checks") or []
+    success = [
+        item
+        for item in checks
+        if isinstance(item, dict)
+        and _text(item.get("status")).lower() == "success"
+        and str(item.get("target_port") or "") == "27017"
+    ]
+    if success:
+        yield {
+            "time_precision": "observed_at_collection",
+            "layer": "diagnostic",
+            "event_type": "current-tcp-reachability",
+            "summary": "Current TCP/27017 reachability succeeded after divergent replica-set views were observed.",
+            "source": "structured_record.details.network_overlay.pod_connectivity_checks",
+            "evidence_ref": "network_overlay.pod_connectivity_checks",
+            "confidence": "medium",
+        }
+
+
+def _log_highlight_diagnostic_events(signal_bundle: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+    for item in signal_bundle.get("log_highlights") or []:
+        if not isinstance(item, dict):
+            continue
+        text = _text(item.get("message") or item.get("detail"))
+        lowered = text.lower()
+        if "dns" not in lowered and "10.96.0.10:53" not in lowered and "lookup " not in lowered:
+            continue
+        if "connection refused" not in lowered and "timeout" not in lowered and "i/o timeout" not in lowered:
+            continue
+        yield {
+            "time": item.get("time") or item.get("timestamp") or item.get("observed_at"),
+            "time_precision": "exact" if item.get("time") or item.get("timestamp") or item.get("observed_at") else "observed_at_collection",
+            "layer": "diagnostic",
+            "object_ref": item.get("pod_ref") or item.get("object_ref"),
+            "event_type": "dns-log-highlight",
+            "summary": "DNS lookup failure observed in logs: %s" % text,
+            "source": "signal_bundle.log_highlights",
+            "evidence_ref": item.get("category") or "dns-log-highlight",
+            "confidence": "medium",
+        }
+
+
+def _diagnostic_events(signal_bundle: Dict[str, Any], structured_record: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+    yield from _replica_member_diagnostic_events(structured_record)
+    yield from _network_diagnostic_events(structured_record)
+    yield from _log_highlight_diagnostic_events(signal_bundle)
+
+
 def build_reasoning_timeline(
     signal_bundle: Dict[str, Any],
     collection_report: Dict[str, Any],
@@ -125,6 +213,7 @@ def build_reasoning_timeline(
 ) -> Dict[str, Any]:
     events: List[Dict[str, Any]] = []
     for source_events in (
+        _diagnostic_events(signal_bundle, structured_record or {}),
         _timeline_summary_events(signal_bundle),
         _signal_events(signal_bundle),
         _kubernetes_event_events(structured_record or {}),
@@ -133,7 +222,15 @@ def build_reasoning_timeline(
         for event in source_events:
             _append_event(events, event)
 
-    events.sort(key=lambda item: (item.get("time") == "", item.get("time") or "", item.get("layer") or "", item.get("summary") or ""))
+    layer_priority = {"diagnostic": 0, "signal": 1, "kubernetes": 2, "analysis": 3, "collection": 4}
+    events.sort(
+        key=lambda item: (
+            layer_priority.get(item.get("layer") or "", 9),
+            item.get("time") == "",
+            item.get("time") or "",
+            item.get("summary") or "",
+        )
+    )
     supported_hypotheses = [
         _text(item.get("hypothesis_id"))
         for item in hypotheses or []

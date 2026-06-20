@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from execution.modes import resolve_execution_mode
+from phases.phase4.deep_analysis import deep_analysis_summary, materialize_deep_analysis
 from phases.phase4.rules import generate_rule_analysis, supported_middlewares
 from shared.workspace import (
     adapter_output,
@@ -419,6 +420,13 @@ def _agent_reasoning_summary(phase4_result: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _write_deep_analysis(output_dir: Path, analysis: Dict[str, Any], signal_bundle: Dict[str, Any]) -> Dict[str, Any]:
+    structured_record = load_yaml(output_dir / "structured_record.yaml") if (output_dir / "structured_record.yaml").exists() else {}
+    deep_analysis = materialize_deep_analysis(analysis, structured_record, signal_bundle)
+    write_yaml(output_dir / "deep-analysis.yaml", deep_analysis)
+    return deep_analysis
+
+
 def _write_completed_analysis_output(
     args,
     output_root: Path,
@@ -488,6 +496,11 @@ def _write_completed_analysis_output(
         analysis["agent_reasoning"] = agent_reasoning
         analysis["updated_at"] = now_iso()
         write_yaml(analysis_file, analysis)
+    deep_analysis = _write_deep_analysis(output_dir, analysis, signal_bundle)
+    if deep_analysis.get("results"):
+        analysis["deep_analysis_results"] = deep_analysis_summary(deep_analysis)
+        analysis["updated_at"] = now_iso()
+        write_yaml(analysis_file, analysis)
     report_file = write_report(output_dir, input_data, analysis)
     task_file = write_agent_reasoning_task(
         output_dir,
@@ -526,6 +539,22 @@ def _write_completed_analysis_output(
                 "analysis_multitrack": "analysis.multitrack.yaml",
             },
         )
+    if deep_analysis.get("results"):
+        reasoning_segment_file = write_reasoning_segment(
+            output_dir,
+            "deep_analysis",
+            analysis,
+            summary="deep analysis requests materialized from current incident evidence",
+            depends_on=[reasoning_segment_file.stem],
+            output_refs={
+                "analysis": "analysis.yaml",
+                "report": "report.md",
+                "rules_fallback": rules_fallback_file.name,
+                "agent_reasoning_task": task_file.name,
+                "analysis_multitrack": "analysis.multitrack.yaml",
+                "deep_analysis": "deep-analysis.yaml",
+            },
+        )
     output["record_refs"].append(
         {
             "name": "analysis_rules_fallback",
@@ -540,6 +569,7 @@ def _write_completed_analysis_output(
             "description": "phase-4/5 Agent reasoning task and output contract",
         }
     )
+    add_record_ref_if_exists(output, output_dir, "deep_analysis", "deep-analysis.yaml", "materialized Phase 4 deep analysis results")
     add_record_ref_if_exists(output, output_dir, "reasoning_manifest", REASONING_MANIFEST_FILENAME, "append-only reasoning history manifest")
     output["record_refs"].append(
         {

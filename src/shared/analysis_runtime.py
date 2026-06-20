@@ -197,6 +197,28 @@ def agent_reasoning_report_lines(analysis: Dict[str, Any], limit: int = 6) -> Li
     return lines
 
 
+def deep_analysis_result_report_lines(analysis: Dict[str, Any], limit: int = 6) -> List[str]:
+    results = analysis.get("deep_analysis_results")
+    if not isinstance(results, dict):
+        return ["- No deep analysis results recorded."]
+    artifact = str(results.get("artifact") or "deep-analysis.yaml").strip()
+    summary = results.get("summary") if isinstance(results.get("summary"), dict) else {}
+    total = summary.get("total_requests", 0)
+    completed = summary.get("completed_requests", 0)
+    capabilities = ",".join(str(item) for item in as_list(summary.get("capabilities")))
+    lines = ["- `%s` total=%s completed=%s capabilities=%s" % (artifact, total, completed, capabilities)]
+    for item in as_list(results.get("highlights"))[:limit]:
+        if not isinstance(item, dict):
+            continue
+        request_id = str(item.get("request_id") or "").strip()
+        capability = str(item.get("capability") or "").strip()
+        status = str(item.get("status") or "").strip()
+        summary_text = str(item.get("summary") or "").strip()
+        if request_id and summary_text:
+            lines.append("- `%s` `%s` `%s`: %s" % (status, capability, request_id, summary_text))
+    return lines
+
+
 def analysis_rules_fallback_candidates(output_dir: Path) -> List[Path]:
     return [
         output_dir / ANALYSIS_RULES_FALLBACK_FILENAME,
@@ -428,6 +450,8 @@ def write_report(output_dir: Path, input_data: Dict[str, Any], analysis: Dict[st
     lines.extend(deep_analysis_request_report_lines(analysis))
     lines.extend(["", "## Agent Reasoning Draft", ""])
     lines.extend(agent_reasoning_report_lines(analysis))
+    lines.extend(["", "## Deep Analysis Results", ""])
+    lines.extend(deep_analysis_result_report_lines(analysis))
     lines.extend(["", "## Evidence Gaps", ""])
     gaps = as_list(conclusion.get("limitations"))
     if gaps:

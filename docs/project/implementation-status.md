@@ -88,7 +88,7 @@ superseded_by: none
 - 生成 `reasoning-manifest.yaml` 和 append-only reasoning segment，记录本轮分析快照、自动补采审计和 hypothesis validation 隔离引用
 - 将 Phase 4 multitrack/Claude 辅助草稿写入 `analysis.yaml.agent_reasoning`、`report.md` 和 `reasoning/0002-agent-multitrack.yaml`，但不覆盖 rules fallback 守底的结论字段
 - 对一等只读 `verification_requests` 执行 Phase 3 定向补采并重新物化分析；对 ad hoc 请求只做 guardrail 归一化或 blocked，不自动执行
-- 对机制已成立但 root cause 未闭合的场景可输出 plan-only `deep_analysis_requests`，当前 MongoDB split-brain 已覆盖基线扫描、代码逻辑分析、代码路径追踪和只读复现计划四类深挖请求
+- 对机制已成立但 root cause 未闭合的场景可输出 plan-only `deep_analysis_requests`；analyse 会将已有证据派生物化到 `deep-analysis.yaml` / `analysis.yaml.deep_analysis_results`，当前 MongoDB split-brain 已覆盖基线扫描、代码逻辑分析、代码路径追踪和只读复现计划四类深挖结果
 - 输出第 5 段阶段性结论
 - 输出知识沉淀候选
 - 可直接消费：

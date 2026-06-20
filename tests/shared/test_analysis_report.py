@@ -584,3 +584,47 @@ def test_write_report_includes_agent_reasoning_summary(tmp_path):
     assert "## Agent Reasoning Draft" in content
     assert "`claude` `claude-sonnet-4-6` `analysis.multitrack.yaml`" in content
     assert "`supported` `0.84` h1: Replica set split-brain is plausible." in content
+
+
+def test_write_report_includes_deep_analysis_results(tmp_path):
+    analysis = {
+        "conclusion_summary": {
+            "statement": "MongoDB replica set has split-brain symptoms",
+            "confidence": "medium",
+            "deepest_supported_level": "mechanism",
+            "primary_cause_category": "replication",
+            "impact_scope": "shard replica set",
+            "evidence": ["two members report conflicting PRIMARY views"],
+            "limitations": [],
+        },
+        "hypotheses": [],
+        "next_actions": [],
+        "knowledge_candidates": [],
+        "reasoning_timeline": {"events": []},
+        "deepening_findings": [],
+        "verification_requests": [],
+        "deep_analysis_requests": [],
+        "deep_analysis_results": {
+            "artifact": "deep-analysis.yaml",
+            "summary": {
+                "total_requests": 2,
+                "completed_requests": 2,
+                "capabilities": ["baseline_scan", "code_path_tracing"],
+            },
+            "highlights": [
+                {
+                    "request_id": "dar-mongodb-rs-baseline-scan",
+                    "capability": "baseline_scan",
+                    "status": "completed",
+                    "summary": "Replica set rs0 has divergent member and quorum views.",
+                }
+            ],
+        },
+    }
+
+    report = write_report(tmp_path, {"incident_id": "demo", "middleware": "mongodb"}, analysis)
+
+    content = report.read_text(encoding="utf-8")
+    assert "## Deep Analysis Results" in content
+    assert "`deep-analysis.yaml` total=2 completed=2 capabilities=baseline_scan,code_path_tracing" in content
+    assert "`completed` `baseline_scan` `dar-mongodb-rs-baseline-scan`: Replica set rs0 has divergent member and quorum views." in content

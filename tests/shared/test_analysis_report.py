@@ -705,3 +705,40 @@ def test_write_report_includes_deep_analysis_results(tmp_path):
     assert "replica_sets=rs0 violations=multiple_primary_views,quorum_view_divergence" in content
     assert "supports=replica_set_config_divergence refutes=sustained_network_partition" in content
     assert "missing_edge `planned` `vr-mongodb-rs-conf-compare`: compare rs.conf from all affected members" in content
+
+
+def test_write_report_includes_reasoning_history_refs(tmp_path):
+    (tmp_path / "reasoning").mkdir()
+    (tmp_path / "reasoning-manifest.yaml").write_text(
+        "current_head: reasoning/0002-agent-refinement.yaml\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "reasoning" / "0002-agent-refinement.yaml").write_text(
+        "segment_id: 0002-agent-refinement\n",
+        encoding="utf-8",
+    )
+    analysis = {
+        "conclusion_summary": {
+            "statement": "MongoDB replica set has split-brain symptoms",
+            "confidence": "medium",
+            "deepest_supported_level": "mechanism",
+            "primary_cause_category": "replication",
+            "impact_scope": "shard replica set",
+            "evidence": ["two members report conflicting PRIMARY views"],
+            "limitations": [],
+        },
+        "hypotheses": [],
+        "next_actions": [],
+        "knowledge_candidates": [],
+        "reasoning_timeline": {"events": []},
+        "deepening_findings": [],
+        "verification_requests": [],
+        "deep_analysis_requests": [],
+    }
+
+    report = write_report(tmp_path, {"incident_id": "demo", "middleware": "mongodb"}, analysis)
+
+    content = report.read_text(encoding="utf-8")
+    assert "## Reasoning History" in content
+    assert "`reasoning-manifest.yaml`" in content
+    assert "`reasoning/0002-agent-refinement.yaml`" in content

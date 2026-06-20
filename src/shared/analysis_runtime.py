@@ -333,6 +333,21 @@ def deep_analysis_result_report_lines(analysis: Dict[str, Any], limit: int = 6) 
     return lines
 
 
+def reasoning_history_report_lines(output_dir: Path) -> List[str]:
+    manifest_file = output_dir / "reasoning-manifest.yaml"
+    if not manifest_file.exists():
+        return ["- No append-only reasoning history recorded."]
+    lines = ["- Manifest: `reasoning-manifest.yaml`"]
+    try:
+        manifest = load_yaml(manifest_file)
+    except Exception:
+        return lines
+    current_head = str(manifest.get("current_head") or "").strip() if isinstance(manifest, dict) else ""
+    if current_head:
+        lines.append("- Current segment: `%s`" % current_head)
+    return lines
+
+
 def analysis_rules_fallback_candidates(output_dir: Path) -> List[Path]:
     return [
         output_dir / ANALYSIS_RULES_FALLBACK_FILENAME,
@@ -568,6 +583,8 @@ def write_report(output_dir: Path, input_data: Dict[str, Any], analysis: Dict[st
     lines.extend(agent_conclusion_gate_report_lines(analysis))
     lines.extend(["", "## Deep Analysis Results", ""])
     lines.extend(deep_analysis_result_report_lines(analysis))
+    lines.extend(["", "## Reasoning History", ""])
+    lines.extend(reasoning_history_report_lines(output_dir))
     lines.extend(["", "## Evidence Gaps", ""])
     gaps = as_list(conclusion.get("limitations"))
     if gaps:

@@ -197,6 +197,30 @@ def agent_reasoning_report_lines(analysis: Dict[str, Any], limit: int = 6) -> Li
     return lines
 
 
+def agent_conclusion_gate_report_lines(analysis: Dict[str, Any], limit: int = 6) -> List[str]:
+    gate = analysis.get("agent_conclusion_gate")
+    if not isinstance(gate, dict):
+        return ["- No agent conclusion gate evaluation recorded."]
+    decision = str(gate.get("decision") or "unknown").strip()
+    override_applied = gate.get("override_applied", False)
+    lines = ["- Decision: `%s` override_applied=`%s`" % (decision, override_applied)]
+    candidate = gate.get("selected_candidate") if isinstance(gate.get("selected_candidate"), dict) else {}
+    statement = str(candidate.get("statement") or "").strip()
+    if statement:
+        hypothesis_id = str(candidate.get("hypothesis_id") or "candidate").strip()
+        confidence = str(candidate.get("confidence") if candidate.get("confidence") is not None else "unknown").strip()
+        lines.append("- Candidate `%s` confidence=`%s`: %s" % (hypothesis_id, confidence, statement))
+    for item in as_list(gate.get("blockers"))[:limit]:
+        if not isinstance(item, dict):
+            continue
+        code = str(item.get("code") or "blocker").strip()
+        message = str(item.get("message") or "").strip()
+        lines.append("- Blocker `%s` %s" % (code, message))
+    if len(as_list(gate.get("blockers"))) > limit:
+        lines.append("- ... %s more blocker(s) omitted from report; see `analysis.yaml`." % (len(as_list(gate.get("blockers"))) - limit))
+    return lines
+
+
 def deep_analysis_result_report_lines(analysis: Dict[str, Any], limit: int = 6) -> List[str]:
     results = analysis.get("deep_analysis_results")
     if not isinstance(results, dict):
@@ -450,6 +474,8 @@ def write_report(output_dir: Path, input_data: Dict[str, Any], analysis: Dict[st
     lines.extend(deep_analysis_request_report_lines(analysis))
     lines.extend(["", "## Agent Reasoning Draft", ""])
     lines.extend(agent_reasoning_report_lines(analysis))
+    lines.extend(["", "## Agent Conclusion Gate", ""])
+    lines.extend(agent_conclusion_gate_report_lines(analysis))
     lines.extend(["", "## Deep Analysis Results", ""])
     lines.extend(deep_analysis_result_report_lines(analysis))
     lines.extend(["", "## Evidence Gaps", ""])

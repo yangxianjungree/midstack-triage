@@ -586,6 +586,50 @@ def test_write_report_includes_agent_reasoning_summary(tmp_path):
     assert "`supported` `0.84` h1: Replica set split-brain is plausible." in content
 
 
+def test_write_report_includes_agent_conclusion_gate(tmp_path):
+    analysis = {
+        "conclusion_summary": {
+            "statement": "MongoDB replica set has split-brain symptoms",
+            "confidence": "medium",
+            "deepest_supported_level": "mechanism",
+            "primary_cause_category": "replication",
+            "impact_scope": "shard replica set",
+            "evidence": ["two members report conflicting PRIMARY views"],
+            "limitations": [],
+        },
+        "hypotheses": [],
+        "next_actions": [],
+        "knowledge_candidates": [],
+        "reasoning_timeline": {"events": []},
+        "deepening_findings": [],
+        "verification_requests": [],
+        "deep_analysis_requests": [],
+        "agent_conclusion_gate": {
+            "decision": "blocked",
+            "override_applied": False,
+            "selected_candidate": {
+                "hypothesis_id": "h1",
+                "statement": "Replica set split-brain is plausible.",
+                "confidence": 0.84,
+            },
+            "blockers": [
+                {
+                    "code": "unresolved_critical_gap",
+                    "message": "critical evidence gaps remain unresolved",
+                }
+            ],
+        },
+    }
+
+    report = write_report(tmp_path, {"incident_id": "demo", "middleware": "mongodb"}, analysis)
+
+    content = report.read_text(encoding="utf-8")
+    assert "## Agent Conclusion Gate" in content
+    assert "- Decision: `blocked` override_applied=`False`" in content
+    assert "`h1` confidence=`0.84`: Replica set split-brain is plausible." in content
+    assert "`unresolved_critical_gap` critical evidence gaps remain unresolved" in content
+
+
 def test_write_report_includes_deep_analysis_results(tmp_path):
     analysis = {
         "conclusion_summary": {

@@ -8,6 +8,7 @@ from typing import Any, Dict
 
 from execution.modes import resolve_execution_mode
 from phases.phase4.deep_analysis import deep_analysis_summary, materialize_deep_analysis
+from phases.phase4.agent_conclusion_gate import evaluate_agent_conclusion_gate
 from phases.phase4.rules import generate_rule_analysis, supported_middlewares
 from shared.workspace import (
     adapter_output,
@@ -406,6 +407,7 @@ def _agent_reasoning_summary(phase4_result: Dict[str, Any]) -> Dict[str, Any]:
                 "statement": str(item.get("final_text") or ""),
                 "status": str(status.get("status") or ""),
                 "confidence": status.get("confidence", 0),
+                "evidence_refs": _agent_hypothesis_evidence_refs(item),
             }
         )
     if not hypotheses:
@@ -418,6 +420,27 @@ def _agent_reasoning_summary(phase4_result: Dict[str, Any]) -> Dict[str, Any]:
         "hypotheses": hypotheses,
         "boundary": "Agent draft is recorded for the main analyse path but does not override rules fallback conclusion_summary.",
     }
+
+
+def _agent_hypothesis_evidence_refs(hypothesis: Dict[str, Any]) -> list[str]:
+    refs: list[str] = []
+    private_context = hypothesis.get("private_context") if isinstance(hypothesis.get("private_context"), dict) else {}
+    for version in private_context.get("hypothesis_evolution") or []:
+        if not isinstance(version, dict):
+            continue
+        for value in version.get("evidence") or []:
+            source = str(value or "").strip()
+            if source:
+                refs.append(source)
+    causal_chain = private_context.get("causal_chain") if isinstance(private_context.get("causal_chain"), dict) else {}
+    for node in causal_chain.get("nodes") or []:
+        if not isinstance(node, dict):
+            continue
+        for value in node.get("evidence") or []:
+            source = str(value or "").strip()
+            if source:
+                refs.append(source)
+    return refs
 
 
 def _write_deep_analysis(output_dir: Path, analysis: Dict[str, Any], signal_bundle: Dict[str, Any]) -> Dict[str, Any]:
@@ -494,6 +517,7 @@ def _write_completed_analysis_output(
     agent_reasoning = _agent_reasoning_summary(phase4_result)
     if agent_reasoning:
         analysis["agent_reasoning"] = agent_reasoning
+        analysis["agent_conclusion_gate"] = evaluate_agent_conclusion_gate(analysis)
         analysis["updated_at"] = now_iso()
         write_yaml(analysis_file, analysis)
     deep_analysis = _write_deep_analysis(output_dir, analysis, signal_bundle)

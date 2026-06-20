@@ -28,6 +28,7 @@ superseded_by: none
 - `collection_report.yaml`：采集覆盖面、失败项和证据缺口。
 - `analysis.rules-fallback.yaml`：rules fallback 产出的生产分析副本。
 - `analysis.multitrack.yaml`：multitrack 辅助草稿，不替代生产 `analysis.yaml`。
+- `agent_conclusion_gate`：Agent 草稿是否具备提升为正式结论的资格评估；当前只记录资格，不应用覆盖。
 - `agent-reasoning-task.md`：人工或 Agent refinement 的任务合同。
 - `retrieval_context` / `experience_matches`：未来历史经验或向量库召回字段；当前未接入真实召回时 `experience_matches` 为空。
 - `deep_analysis_requests`：深入层推理请求，描述基线扫描、代码逻辑、路径追踪或复现计划等 plan-only 工作，不代表自动执行命令。
@@ -40,8 +41,9 @@ superseded_by: none
 4. 时间线构建器把用户线索、异常信号、Kubernetes events 和采集动作整理进 `reasoning_timeline`。
 5. Phase 4 根据证据缺口和待验证假设生成 `verification_requests`；命令编排层会把一等只读且 `auto_allowed` 的脚本请求交回 Phase 3 定向补采，然后重新生成生产 `analysis.yaml`。
 6. 当机制证据已经成立但 enabling/root cause 未闭合时，Phase 4 可以生成 `deep_analysis_requests`，要求 Agent 或后续开发工作继续做基线扫描、代码逻辑分析、代码路径追踪或只读复现计划。
-7. Agent refinement 读取上述产物，补充或修正 `analysis.yaml` 与 `report.md`。
-8. 第 5 段把可靠结论、证据缺口、只读下一步和可沉淀知识写回结果与 `knowledge_candidates`。
+7. analyse 主链路把 multitrack/Claude 草稿摘要写入 `agent_reasoning`，并通过 `agent_conclusion_gate` 评估它是否满足提升资格。
+8. Agent refinement 读取上述产物，补充或修正 `analysis.yaml` 与 `report.md`。
+9. 第 5 段把可靠结论、证据缺口、只读下一步和可沉淀知识写回结果与 `knowledge_candidates`。
 
 ## 推理历史与共享隔离
 
@@ -76,6 +78,20 @@ Agent refinement 不应该做：
 - 在当前证据不足时强行给出 root cause。
 - 重复建议已经采集、已验证或已被反证的动作。
 - 绕过 execution guardrail 自行执行会改变环境状态的命令。
+
+## Agent 结论门禁
+
+`agent_conclusion_gate` 是 Agent 草稿和正式结论之间的显式边界。它解决两个问题：第一，Claude 或 multitrack 可能提出更好的候选结论；第二，这个候选不能在没有证据桥的情况下覆盖 rules fallback。
+
+当前门禁条件是保守的：
+
+- runtime 必须是真实 `claude`，mock 草稿只能作为辅助信息。
+- 候选 hypothesis 必须是 `supported`，置信度达到门槛。
+- 候选必须引用当前 incident 证据，例如 `structured_record`、`signal_bundle`、`collection_report`、`deepening_findings`、`deep_analysis_results` 或 `verification_requests`。
+- `experience_matches`、`retrieval_context`、runbook、历史经验和用户线索不能作为直接证据引用。
+- 未闭合的 `critical_gap` 会阻止提升。
+
+当前实现只写入 `decision`、`selected_candidate`、`blockers` 和 `override_applied: false`。即使 `decision: eligible`，生产 `conclusion_summary` 仍由 rules fallback + guardrails 守底；后续如果要启用覆盖，需要单独实现“应用 override 并追加 reasoning segment”的闭环。
 
 ## 动态验证边界
 

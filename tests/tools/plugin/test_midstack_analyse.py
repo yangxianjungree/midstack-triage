@@ -60,6 +60,8 @@ class MidstackAnalyseTest(unittest.TestCase):
             manifest = yaml.safe_load((output_dir / "reasoning-manifest.yaml").read_text(encoding="utf-8"))
             self.assertEqual(analysis["agent_reasoning"]["artifact"], "analysis.multitrack.yaml")
             self.assertTrue(analysis["agent_reasoning"]["hypotheses"])
+            self.assertEqual(analysis["agent_conclusion_gate"]["decision"], "blocked")
+            self.assertFalse(analysis["agent_conclusion_gate"]["override_applied"])
             self.assertEqual(deep_analysis["summary"]["total_requests"], 0)
             self.assertNotIn("deep_analysis_results", analysis)
             self.assertEqual([item["source"] for item in manifest["segments"]], ["rules_fallback", "agent_multitrack"])

@@ -202,7 +202,42 @@ def _prepare_phase3_context(
     return input_data, skill_runtime
 
 
+def _record_verification_recollection_gap(output_dir: Path, exc: Exception) -> None:
+    collection_report = load_yaml(output_dir / "collection_report.yaml")
+    collection_report.setdefault("evidence_gaps", []).append(
+        {
+            "gap": "verification recollection failed: %s" % exc,
+            "gap_type": "critical_gap",
+            "related_stage": "verification_recollection",
+            "why_important": "A first-class read-only verification request could not be collected automatically.",
+            "recommended_action": "inspect directed-recollection logs and rerun the read-only playbook manually",
+        }
+    )
+    collection_report["updated_at"] = now_iso()
+    write_yaml(output_dir / "collection_report.yaml", collection_report)
+
+
+def _run_auto_allowed_verification_recollection(
+    args,
+    output_dir: Path,
+    middleware: str,
+    analysis_file: Path,
+    run_directed_recollection_if_needed,
+) -> bool:
+    try:
+        recollected = run_directed_recollection_if_needed(args, output_dir)
+    except Exception as exc:
+        _record_verification_recollection_gap(output_dir, exc)
+        return False
+    if not recollected:
+        return False
+    analysis = generate_rule_analysis(middleware, output_dir)
+    write_yaml(analysis_file, analysis)
+    return True
+
+
 def _write_completed_analysis_output(
+    args,
     output_root: Path,
     incident_dir: Path | None,
     incident_mode: bool,
@@ -215,6 +250,7 @@ def _write_completed_analysis_output(
     analysis_file: Path,
     normalize_collection_report_gaps,
     run_phase4_analysis,
+    run_directed_recollection_if_needed,
 ) -> int:
     try:
         phase4_result = run_phase4_analysis(output_dir)
@@ -231,6 +267,13 @@ def _write_completed_analysis_output(
         write_yaml(output_dir / "adapter-output.yaml", output)
         print("ERROR: %s" % exc, file=sys.stderr)
         return 1
+    _run_auto_allowed_verification_recollection(
+        args=args,
+        output_dir=output_dir,
+        middleware=middleware,
+        analysis_file=analysis_file,
+        run_directed_recollection_if_needed=run_directed_recollection_if_needed,
+    )
 
     output = adapter_output("analyse", incident_id, middleware, "completed", "local analyse completed", output_dir)
     output["record_refs"].append({"name": "analysis", "path": str(analysis_file), "description": "generated analysis result"})
@@ -591,6 +634,7 @@ def run(
         print("ERROR: %s" % summary, file=sys.stderr)
         return 1
     return _write_completed_analysis_output(
+        args,
         output_root,
         incident_dir,
         incident_mode,
@@ -603,4 +647,5 @@ def run(
         analysis_file,
         normalize_collection_report_gaps,
         run_phase4_analysis,
+        run_directed_recollection_if_needed,
     )

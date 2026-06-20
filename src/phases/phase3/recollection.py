@@ -243,7 +243,41 @@ def directed_recollection_script_ids(output_dir: Path, skill_pool: Optional[set[
     signal_bundle = load_yaml(output_dir / "signal_bundle.yaml")
     collection_report = load_yaml(output_dir / "collection_report.yaml")
     selected = select_directed_recollection_script_ids(structured_record, signal_bundle, collection_report)
+    selected.extend(auto_allowed_verification_script_ids(output_dir))
+    selected = dedupe_script_ids(selected)
     filtered, skill_pool_miss = filter_recollection_scripts_by_skill_pool(selected, skill_pool)
     if skill_pool_miss:
         record_recollection_skill_pool_miss(output_dir)
     return filtered
+
+
+def auto_allowed_verification_script_ids(output_dir: Path) -> List[str]:
+    analysis_file = output_dir / "analysis.yaml"
+    if not analysis_file.exists():
+        return []
+    analysis = load_yaml(analysis_file)
+    selected: List[str] = []
+    for item in analysis.get("verification_requests") or []:
+        if not isinstance(item, dict):
+            continue
+        asset = item.get("asset") or {}
+        if (
+            item.get("asset_tier") == "first_class"
+            and item.get("execution_policy") == "auto_allowed"
+            and item.get("risk_level") == "read-only"
+            and asset.get("type") == "script"
+            and asset.get("id")
+        ):
+            selected.append(str(asset["id"]))
+    return selected
+
+
+def dedupe_script_ids(script_ids: List[str]) -> List[str]:
+    selected: List[str] = []
+    seen = set()
+    for script_id in script_ids:
+        if script_id in seen:
+            continue
+        seen.add(script_id)
+        selected.append(script_id)
+    return selected

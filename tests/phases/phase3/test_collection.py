@@ -770,6 +770,60 @@ def test_directed_recollection_uses_execution_mode_to_select_local_runner(tmp_pa
     assert phase3_recollection.SCRIPT_DNS_COREDNS in calls[0][2]
 
 
+def test_directed_recollection_runs_auto_allowed_first_class_verification_requests(tmp_path, monkeypatch):
+    output_dir = tmp_path / "incident"
+    write_yaml(output_dir / "structured_record.yaml", {"details": {}})
+    write_yaml(output_dir / "signal_bundle.yaml", {"abnormal_signals": []})
+    write_yaml(output_dir / "collection_report.yaml", {"collection_actions": [], "evidence_gaps": []})
+    write_yaml(
+        output_dir / "analysis.yaml",
+        {
+            "verification_requests": [
+                {
+                    "request_id": "vr-mongodb-election-logs",
+                    "asset_tier": "first_class",
+                    "execution_policy": "auto_allowed",
+                    "risk_level": "read-only",
+                    "asset": {"type": "script", "id": "mongodb.collect.logs.previous"},
+                },
+                {
+                    "request_id": "vr-mongodb-rs-conf-compare",
+                    "asset_tier": "ad_hoc_readonly",
+                    "execution_policy": "approval_required",
+                    "risk_level": "read-only",
+                    "asset": {"type": "ad_hoc_command", "id": "vr-mongodb-rs-conf-compare"},
+                },
+            ]
+        },
+    )
+    remote_run_dir = tmp_path / "remote-run"
+    remote_run_dir.mkdir()
+    calls = []
+
+    def fake_remote(args, trace_dir, script_ids):
+        calls.append((args.remote_config, trace_dir, script_ids))
+        return remote_run_dir
+
+    monkeypatch.setattr(phase3_recollection_run, "run_remote_collection", fake_remote)
+    monkeypatch.setattr(phase3_recollection_run, "merge_remote_run_outputs", lambda *_args, **_kwargs: None)
+
+    args = SimpleNamespace(
+        execution_mode="remote",
+        remote_config=str(tmp_path / "remote.yaml"),
+        local_config="",
+    )
+
+    assert phase3_recollection_run.run_directed_recollection_if_needed(args, output_dir) is True
+
+    assert calls == [
+        (
+            str(tmp_path / "remote.yaml"),
+            output_dir / "directed-recollection",
+            ["mongodb.collect.logs.previous"],
+        )
+    ]
+
+
 def test_directed_recollection_offline_mode_does_not_execute_collection(tmp_path, monkeypatch):
     output_dir = tmp_path / "incident"
     write_yaml(output_dir / "structured_record.yaml", {"details": {"raw_logs": []}})

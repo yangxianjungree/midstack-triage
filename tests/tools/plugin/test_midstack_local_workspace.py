@@ -11,6 +11,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from commands import plugin_cli as module  # noqa: E402
+from phases.phase3 import recollection_run as phase3_recollection_run  # noqa: E402
 from shared.workspace import load_yaml, path_from_arg, read_current_incident, resolve_path  # noqa: E402
 
 
@@ -935,3 +936,154 @@ def test_local_analyse_incident_uses_local_collection(tmp_path, monkeypatch):
             "severity": "",
         }
     ]
+
+
+def test_remote_analyse_runs_auto_allowed_verification_requests_after_rules(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+    incident_dir = tmp_path / ".local" / "incidents" / "mongodb-remote-ready"
+    incident_dir.mkdir(parents=True)
+    write_yaml(
+        incident_dir / "input.yaml",
+        {
+            "incident_id": "mongodb-remote-ready",
+            "middleware": "mongodb",
+            "namespace": "psmdb-test",
+            "cluster_id": "",
+            "environment_mode": "remote",
+            "execution_mode": "remote",
+            "customer_clue": "MongoDB split brain",
+            "scenario": "unknown",
+        },
+    )
+    write_yaml(
+        incident_dir / "meta.yaml",
+        {
+            "incident_id": "mongodb-remote-ready",
+            "middleware": "mongodb",
+            "status": "ready",
+            "current_command": "start",
+        },
+    )
+    write_yaml(incident_dir / "remote-config.yaml", {"access": {"primary_ip": "192.168.154.251"}})
+    baseline_run_dir = tmp_path / ".local" / "remote-runs" / "baseline-run"
+    directed_run_dir = tmp_path / ".local" / "remote-runs" / "verification-run"
+    for run_dir in (baseline_run_dir, directed_run_dir):
+        run_dir.mkdir(parents=True)
+        write_yaml(
+            run_dir / "remote-executor-run.yaml",
+            {
+                "incident_id": run_dir.name,
+                "middleware": "mongodb",
+                "status": "success",
+                "namespace": "psmdb-test",
+                "selected_ip": "192.168.154.251",
+                "error": {"code": "", "message": ""},
+                "script_results": [],
+            },
+        )
+    directed_script_dir = directed_run_dir / "mongodb.collect.logs.previous"
+    directed_script_dir.mkdir()
+    write_yaml(
+        directed_script_dir / "remote-executor-result.yaml",
+        {
+            "script_id": "mongodb.collect.logs.previous",
+            "status": "success",
+            "process": {"exit_code": 0},
+        },
+    )
+    write_yaml(
+        directed_script_dir / "output.yaml",
+        {
+            "script_id": "mongodb.collect.logs.previous",
+            "status": "success",
+            "summary": "previous logs collected",
+            "collection_report_patch": {
+                "successful_items": [
+                    {
+                        "item": "remote-executor/mongodb.collect.logs.previous",
+                        "source": "kubectl logs --previous",
+                    }
+                ]
+            },
+        },
+    )
+    calls = []
+
+    def fake_remote_collection(args, output_dir, script_ids=None):
+        calls.append((output_dir.name, script_ids))
+        return directed_run_dir if script_ids else baseline_run_dir
+
+    def fake_build_incident(_remote_run_dir, output_dir, args, preserve_existing_input=False):
+        write_yaml(output_dir / "structured_record.yaml", {"details": {}})
+        write_yaml(output_dir / "signal_bundle.yaml", {"abnormal_signals": []})
+        write_yaml(
+            output_dir / "collection_report.yaml",
+            {
+                "collection_actions": [],
+                "successful_items": [],
+                "failed_items": [],
+                "blank_items": [],
+                "evidence_gaps": [],
+            },
+        )
+
+    def fake_generate_rule_analysis(middleware, output_dir):
+        collection_report = load_yaml(output_dir / "collection_report.yaml")
+        recollected = any(
+            item.get("item") == "remote-executor/mongodb.collect.logs.previous"
+            for item in collection_report.get("successful_items") or []
+        )
+        return {
+            "hypotheses": [],
+            "conclusion_summary": {
+                "statement": "verified logs collected" if recollected else "logs still missing",
+                "confidence": "medium",
+                "impact_scope": "",
+                "primary_cause_category": "unknown",
+                "evidence": [],
+                "limitations": [],
+                "deepest_supported_level": "mechanism",
+            },
+            "next_actions": [],
+            "verification_requests": [
+                {
+                    "request_id": "vr-mongodb-election-logs",
+                    "asset_tier": "first_class",
+                    "execution_policy": "auto_allowed",
+                    "risk_level": "read-only",
+                    "asset": {"type": "script", "id": "mongodb.collect.logs.previous"},
+                    "status": "planned",
+                }
+            ],
+        }
+
+    monkeypatch.setattr(module, "run_remote_collection", fake_remote_collection)
+    monkeypatch.setattr(phase3_recollection_run, "run_remote_collection", fake_remote_collection)
+    monkeypatch.setattr(module, "build_incident_from_remote_run", fake_build_incident)
+    monkeypatch.setattr(module.analyse_command, "generate_rule_analysis", fake_generate_rule_analysis)
+
+    args = SimpleNamespace(
+        input_dir=None,
+        remote_run_dir=None,
+        remote_config=None,
+        incident_dir=str(incident_dir),
+        output_dir=None,
+        output_root=".local/incidents",
+        scenario=None,
+        customer_clue=None,
+        remote_output_dir=".local/remote-runs",
+        remote_namespace="",
+        object_inventory="",
+        execution_mode="remote",
+    )
+
+    assert module.command_analyse(args) == 0
+
+    assert calls == [
+        ("mongodb-remote-ready", None),
+        ("directed-recollection", ["mongodb.collect.logs.previous"]),
+    ]
+    analysis = load_yaml(incident_dir / "analysis.yaml")
+    assert analysis["conclusion_summary"]["statement"] == "verified logs collected"
+    adapter = load_yaml(incident_dir / "adapter-output.yaml")
+    assert adapter["status"] == "completed"

@@ -17,6 +17,7 @@ START_COMMAND_FIRST_HOP_TOKENS = [
     "midstack-local.py",
     "Do not call repository source-tree `tools/plugin/midstack-local.py`",
     "runtime implementation details",
+    "No fallback manual triage",
 ]
 
 
@@ -35,6 +36,7 @@ ANALYSE_COMMAND_CONTRACT_TOKENS = [
     "print `user_message` from `adapter-output.yaml` verbatim",
     "fixed Markdown table for the completed analysis response",
     "Do not print passwords or tokens",
+    "No fallback manual triage",
 ]
 
 

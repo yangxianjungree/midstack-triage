@@ -10,6 +10,12 @@ First hop: run the installed Midstack runtime wrapper below after parsing
 `$ARGUMENTS`. Do not implement triage directly in the slash command before the
 runtime command returns.
 
+No fallback manual triage: if the runtime command fails because Python,
+dependencies, shell, permissions, timeout, or any other execution error occurs,
+stop and report the runtime failure. Do not try to continue by running `kubectl`,
+`mongosh`, `mongo`, `ssh`, `sshpass`, `scp`, or other diagnostic commands from
+the slash-command layer.
+
 Command boundary:
 
 - Do not claim the incident was started until the Bash command returns and

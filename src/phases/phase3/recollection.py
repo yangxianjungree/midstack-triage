@@ -12,6 +12,7 @@ from .report_gaps import record_recollection_skill_pool_miss
 SCRIPT_LOG_SINK_DISCOVER = "mongodb.collect.logs.discover_sink"
 SCRIPT_LOG_FILE_TAIL = "mongodb.collect.logs.file_tail"
 SCRIPT_LOG_NODE_FILE_TAIL = "mongodb.collect.logs.node_file_tail"
+SCRIPT_LOG_HIGHLIGHTS = "mongodb.normalize.logs.highlights"
 SCRIPT_DNS_COREDNS = "mongodb.collect.dns.coredns"
 SCRIPT_NETWORK_OVERLAY = "mongodb.collect.network.overlay"
 SCRIPT_PODS_DESCRIBE = "mongodb.collect.pods.describe"
@@ -256,6 +257,9 @@ def auto_allowed_verification_script_ids(output_dir: Path) -> List[str]:
     if not analysis_file.exists():
         return []
     analysis = load_yaml(analysis_file)
+    input_file = output_dir / "input.yaml"
+    input_data = load_yaml(input_file) if input_file.exists() else {}
+    middleware = str(input_data.get("middleware") or "mongodb")
     selected: List[str] = []
     for item in analysis.get("verification_requests") or []:
         if not isinstance(item, dict):
@@ -268,7 +272,10 @@ def auto_allowed_verification_script_ids(output_dir: Path) -> List[str]:
             and asset.get("type") == "script"
             and asset.get("id")
         ):
-            selected.append(str(asset["id"]))
+            script_id = str(asset["id"])
+            selected.append(script_id)
+            if middleware == "mongodb" and ".collect.logs." in script_id:
+                selected.append(SCRIPT_LOG_HIGHLIGHTS)
     return selected
 
 

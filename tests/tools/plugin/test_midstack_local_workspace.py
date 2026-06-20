@@ -1081,7 +1081,7 @@ def test_remote_analyse_runs_auto_allowed_verification_requests_after_rules(tmp_
 
     assert calls == [
         ("mongodb-remote-ready", None),
-        ("directed-recollection", ["kubernetes.collect.logs.previous"]),
+        ("directed-recollection", ["kubernetes.collect.logs.previous", "mongodb.normalize.logs.highlights"]),
     ]
     analysis = load_yaml(incident_dir / "analysis.yaml")
     assert analysis["conclusion_summary"]["statement"] == "verified logs collected"

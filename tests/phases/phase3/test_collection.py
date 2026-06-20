@@ -819,9 +819,36 @@ def test_directed_recollection_runs_auto_allowed_first_class_verification_reques
         (
             str(tmp_path / "remote.yaml"),
             output_dir / "directed-recollection",
-            ["kubernetes.collect.logs.previous", "mongodb.collect.replicaset.rs_conf"],
+            [
+                "kubernetes.collect.logs.previous",
+                "mongodb.normalize.logs.highlights",
+                "mongodb.collect.replicaset.rs_conf",
+            ],
         )
     ]
+
+
+def test_auto_allowed_log_verification_requests_include_domain_log_normalizer(tmp_path):
+    output_dir = tmp_path / "incident"
+    write_yaml(output_dir / "input.yaml", {"middleware": "mongodb"})
+    write_yaml(
+        output_dir / "analysis.yaml",
+        {
+            "verification_requests": [
+                {
+                    "request_id": "vr-mongodb-election-logs",
+                    "asset_tier": "first_class",
+                    "execution_policy": "auto_allowed",
+                    "risk_level": "read-only",
+                    "asset": {"type": "script", "id": "kubernetes.collect.logs.previous"},
+                }
+            ]
+        },
+    )
+
+    selected = phase3_recollection.auto_allowed_verification_script_ids(output_dir)
+
+    assert selected == ["kubernetes.collect.logs.previous", "mongodb.normalize.logs.highlights"]
 
 
 def test_directed_recollection_offline_mode_does_not_execute_collection(tmp_path, monkeypatch):

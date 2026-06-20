@@ -254,9 +254,8 @@ MongoDB 服务端命令通常需要认证信息。
 
 当前暂不放入第一批的能力包括：
 
-- 事件采集
-- 指标采集
-- 节点系统日志
+- 完整节点系统日志采集
+- 完整指标体系和外部监控系统接入
 - 更复杂的高级分析脚本
 
 ## Implementation Status
@@ -269,6 +268,8 @@ MongoDB 服务端命令通常需要认证信息。
 | `mongodb.collect.statefulsets.yaml` | implemented | 已支持合同解析、StatefulSet 编排采集、artifact 输出和 blocked 输出 |
 | `mongodb.collect.services.yaml` | implemented | 已支持合同解析、Service/NodePort 编排采集、artifact 输出和 blocked 输出 |
 | `mongodb.collect.nodes.state` | implemented | 已支持合同解析、Node 状态采集、从 Pod 反推节点、artifact 输出和 blocked 输出 |
+| `mongodb.collect.events.yaml` | implemented | 已支持 Kubernetes Events 采集、warning 事件结构化和 blocked 输出 |
+| `mongodb.collect.resources.metrics` | implemented | 已支持 `kubectl top` 节点/Pod 资源快照采集和 metrics API 不可用时的 partial 输出 |
 | `mongodb.collect.mongos.get_shard_map` | implemented | 已支持 mongos Pod 自动识别、Bitnami Pod 内认证、shard map 采集、artifact 输出和 blocked 输出 |
 | `mongodb.collect.replicaset.rs_status` | implemented | 已支持 mongod Pod 自动识别、Bitnami Pod 内认证、rs.status 采集、artifact 输出和 blocked/partial 输出 |
 | `kubernetes.collect.logs.current` | implemented | 已支持 Pod stdout/stderr 当前日志采集、artifact 输出和 blocked/partial 输出 |
@@ -289,12 +290,14 @@ MongoDB 服务端命令通常需要认证信息。
 2. `mongodb.collect.statefulsets.yaml`
 3. `mongodb.collect.services.yaml`
 4. `mongodb.collect.nodes.state`
-5. `mongodb.collect.mongos.get_shard_map`
-6. `mongodb.collect.replicaset.rs_status`
-7. `kubernetes.collect.logs.current`
-8. `kubernetes.collect.logs.previous`
-9. `mongodb.normalize.logs.highlights`
-10. `mongodb.normalize.signals.bundle`
+5. `mongodb.collect.events.yaml`
+6. `mongodb.collect.resources.metrics`
+7. `mongodb.collect.mongos.get_shard_map`
+8. `mongodb.collect.replicaset.rs_status`
+9. `kubernetes.collect.logs.current`
+10. `kubernetes.collect.logs.previous`
+11. `mongodb.normalize.logs.highlights`
+12. `mongodb.normalize.signals.bundle`
 
 ## 命名规则
 

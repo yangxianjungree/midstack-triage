@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 READONLY_ARGV_PREFIXES = (
@@ -12,6 +12,49 @@ READONLY_ARGV_PREFIXES = (
     ("kubectl", "top"),
     ("mongosh",),
     ("mongo",),
+)
+
+BLOCKED_KUBECTL_SUBCOMMANDS = {
+    "annotate",
+    "apply",
+    "attach",
+    "autoscale",
+    "cordon",
+    "cp",
+    "create",
+    "debug",
+    "delete",
+    "drain",
+    "edit",
+    "exec",
+    "label",
+    "patch",
+    "replace",
+    "rollout",
+    "scale",
+    "set",
+    "taint",
+    "uncordon",
+}
+
+BLOCKED_MONGO_EVAL_TERMS = (
+    "rs.reconfig",
+    "replsetreconfig",
+    ".drop(",
+    ".dropdatabase(",
+    ".dropindex(",
+    ".createcollection(",
+    ".createindex(",
+    ".insertone(",
+    ".insertmany(",
+    ".updateone(",
+    ".updatemany(",
+    ".replaceone(",
+    ".deleteone(",
+    ".deletemany(",
+    ".remove(",
+    ".shutdownserver(",
+    "shutdownserver",
 )
 
 
@@ -68,7 +111,11 @@ def _guard_verification_request(item: Dict[str, Any]) -> bool:
 def _guard_ad_hoc_readonly_request(item: Dict[str, Any], asset: Dict[str, Any]) -> bool:
     changed = False
     argv = asset.get("argv")
-    if not _is_string_list(argv) or not _argv_has_readonly_prefix(argv):
+    if not _is_string_list(argv):
+        changed = _mark_blocked(item, "ad hoc command must be structured argv with an allowed read-only prefix") or changed
+    elif mutation_reason := _argv_mutation_reason(argv):
+        changed = _mark_blocked(item, mutation_reason) or changed
+    elif not _argv_has_readonly_prefix(argv):
         changed = _mark_blocked(item, "ad hoc command must be structured argv with an allowed read-only prefix") or changed
     else:
         if item.get("asset_tier") != "ad_hoc_readonly":
@@ -113,3 +160,18 @@ def _argv_has_readonly_prefix(argv: List[str]) -> bool:
         if normalized[: len(prefix)] == prefix:
             return True
     return False
+
+
+def _argv_mutation_reason(argv: List[str]) -> Optional[str]:
+    normalized = [item.strip().lower() for item in argv if item.strip()]
+    if not normalized:
+        return None
+    executable = normalized[0]
+    if executable == "kubectl" and len(normalized) > 1 and normalized[1] in BLOCKED_KUBECTL_SUBCOMMANDS:
+        return "kubectl %s is not allowed for ad hoc read-only verification" % normalized[1]
+    if executable in {"mongo", "mongosh"}:
+        text = " ".join(normalized)
+        for term in BLOCKED_MONGO_EVAL_TERMS:
+            if term in text:
+                return "mongo shell mutation term `%s` is not allowed for ad hoc read-only verification" % term
+    return None

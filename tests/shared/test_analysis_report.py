@@ -121,6 +121,58 @@ def test_analysis_guardrails_normalize_ad_hoc_readonly_commands():
     assert request["status"] == "planned"
 
 
+def test_verification_request_guardrail_blocks_mutating_ad_hoc_kubectl_command():
+    analysis = {
+        "verification_requests": [
+            {
+                "request_id": "vr-delete",
+                "asset_tier": "ad_hoc_readonly",
+                "asset": {"type": "ad_hoc_command", "id": "vr-delete", "argv": ["kubectl", "delete", "pod", "mongo-0"]},
+                "risk_level": "read-only",
+                "execution_policy": "approval_required",
+                "status": "planned",
+            }
+        ]
+    }
+
+    changed = apply_verification_request_guardrails(analysis)
+
+    request = analysis["verification_requests"][0]
+    assert changed is True
+    assert request["asset_tier"] == "blocked"
+    assert request["execution_policy"] == "blocked"
+    assert request["status"] == "blocked"
+    assert "not allowed" in request["guardrail_reason"]
+
+
+def test_verification_request_guardrail_blocks_mutating_ad_hoc_mongosh_eval():
+    analysis = {
+        "verification_requests": [
+            {
+                "request_id": "vr-reconfig",
+                "asset_tier": "ad_hoc_readonly",
+                "asset": {
+                    "type": "ad_hoc_command",
+                    "id": "vr-reconfig",
+                    "argv": ["mongosh", "--eval", "rs.reconfig(cfg, {force: true})"],
+                },
+                "risk_level": "read-only",
+                "execution_policy": "approval_required",
+                "status": "planned",
+            }
+        ]
+    }
+
+    changed = apply_verification_request_guardrails(analysis)
+
+    request = analysis["verification_requests"][0]
+    assert changed is True
+    assert request["asset_tier"] == "blocked"
+    assert request["execution_policy"] == "blocked"
+    assert request["status"] == "blocked"
+    assert "not allowed" in request["guardrail_reason"]
+
+
 def test_write_report_includes_reasoning_timeline(tmp_path):
     analysis = {
         "conclusion_summary": {

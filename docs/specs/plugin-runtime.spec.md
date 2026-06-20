@@ -318,13 +318,14 @@ superseded_by: none
 
 - `mongodb.collect.pods.state`
 - `mongodb.collect.replicaset.rs_status`
-- `mongodb.collect.logs.current`
+- `kubernetes.collect.logs.current`
 - `mongodb.normalize.logs.highlights`
 - `mongodb.normalize.signals.bundle`
 
 使用原则：
 
 - `script_id` 是稳定标识，不直接等同于源码路径
+- 平台/编排层共享资产可以使用拥有者域前缀，例如 MongoDB 默认采集计划中的 `kubernetes.collect.logs.current`
 - 插件运行时应优先按 `script_id` 查找运行时视图中的脚本
 - 文件名、运行时相对路径可以变化，但 `script_id` 应尽量保持稳定
 
@@ -1043,10 +1044,10 @@ MongoDB MVP 第 3 段脚本范围（11 个）的能力边界定义见 [Analyse M
    - 先从 `mongos` 视角确认分片路由和 shard 拓扑
 7. `mongodb.collect.replicaset.rs_status`
    - 再确认副本集成员状态、角色、选举和同步情况
-8. `mongodb.collect.logs.current`
-   - 默认采当前日志
-9. `mongodb.collect.logs.previous`
-   - 对重启 Pod 补采前一轮日志
+8. `kubernetes.collect.logs.current`
+   - 默认采当前 Pod stdout/stderr 日志
+9. `kubernetes.collect.logs.previous`
+   - 对重启 Pod 补采前一轮 stdout/stderr 日志
 10. `mongodb.normalize.logs.highlights`
    - 先对日志做摘要和降噪
 11. `mongodb.normalize.signals.bundle`

@@ -89,7 +89,7 @@ superseded_by: none
 
 当前正式远程执行入口位于 `src/execution/remote/executor.py`。
 
-第一版 MongoDB 第 3 段执行范围固定为 11 个 MVP 脚本：
+第一版 MongoDB 第 3 段默认执行范围固定为 11 个 MVP 资产；其中 `kubectl logs` / `kubectl logs --previous` 使用 Kubernetes 通用日志采集入口，MongoDB 领域层只负责日志解释、log sink 发现和文件日志补采：
 
 1. `mongodb.collect.pods.state`
 2. `mongodb.collect.statefulsets.yaml`
@@ -98,8 +98,8 @@ superseded_by: none
 5. `mongodb.collect.events.yaml`
 6. `mongodb.collect.mongos.get_shard_map`
 7. `mongodb.collect.replicaset.rs_status`
-8. `mongodb.collect.logs.current`
-9. `mongodb.collect.logs.previous`
+8. `kubernetes.collect.logs.current`
+9. `kubernetes.collect.logs.previous`
 10. `mongodb.normalize.logs.highlights`
 11. `mongodb.normalize.signals.bundle`
 

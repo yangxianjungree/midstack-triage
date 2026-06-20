@@ -214,9 +214,9 @@ MongoDB 服务端命令通常需要认证信息。
   - `structured_record.details.shard_map`
 - `mongodb.collect.replicaset.rs_status`
   - `structured_record.details.replica_members`
-- `mongodb.collect.logs.current`
+- `kubernetes.collect.logs.current`
   - `structured_record.details.raw_logs`
-- `mongodb.collect.logs.previous`
+- `kubernetes.collect.logs.previous`
   - `structured_record.details.raw_logs`
 - `mongodb.normalize.logs.highlights`
   - `structured_record.details.processed_logs`
@@ -225,7 +225,7 @@ MongoDB 服务端命令通常需要认证信息。
 
 ## MVP Script Set
 
-当前 MongoDB 第一版已实现以下 11 个脚本：
+当前 MongoDB 第一版默认执行以下 11 个采集/治理资产；Pod stdout/stderr 日志通过 Kubernetes 通用入口采集，MongoDB 兼容日志 alias 不进入默认 MVP 顺序：
 
 1. `mongodb.collect.pods.state`
 2. `mongodb.collect.statefulsets.yaml`
@@ -234,8 +234,8 @@ MongoDB 服务端命令通常需要认证信息。
 5. `mongodb.collect.events.yaml`
 6. `mongodb.collect.mongos.get_shard_map`
 7. `mongodb.collect.replicaset.rs_status`
-8. `mongodb.collect.logs.current`
-9. `mongodb.collect.logs.previous`
+8. `kubernetes.collect.logs.current`
+9. `kubernetes.collect.logs.previous`
 10. `mongodb.normalize.logs.highlights`
 11. `mongodb.normalize.signals.bundle`
 
@@ -244,7 +244,7 @@ MongoDB 服务端命令通常需要认证信息。
 - 覆盖第 2 段和第 3 段所需的最小对象盘点
 - 覆盖 MongoDB 分片集群 / 副本集基础 topology 判断
 - 覆盖 `mongos` 视角的 shard map 采集
-- 覆盖 Kubernetes Events、当前日志和重启前日志
+- 覆盖 Kubernetes Events、当前 Pod stdout/stderr 日志和重启前日志
 - 覆盖第一轮日志降噪和信号打包
 
 当前暂不放入第一批的能力包括：
@@ -266,8 +266,13 @@ MongoDB 服务端命令通常需要认证信息。
 | `mongodb.collect.nodes.state` | implemented | 已支持合同解析、Node 状态采集、从 Pod 反推节点、artifact 输出和 blocked 输出 |
 | `mongodb.collect.mongos.get_shard_map` | implemented | 已支持 mongos Pod 自动识别、Bitnami Pod 内认证、shard map 采集、artifact 输出和 blocked 输出 |
 | `mongodb.collect.replicaset.rs_status` | implemented | 已支持 mongod Pod 自动识别、Bitnami Pod 内认证、rs.status 采集、artifact 输出和 blocked/partial 输出 |
-| `mongodb.collect.logs.current` | implemented | 已支持 MongoDB Pod 自动识别、当前日志采集、artifact 输出和 blocked/partial 输出 |
-| `mongodb.collect.logs.previous` | implemented | 已复用日志采集主逻辑，支持 previous 日志采集、artifact 输出和 blocked/partial 输出 |
+| `kubernetes.collect.logs.current` | implemented | 已支持 Pod stdout/stderr 当前日志采集、artifact 输出和 blocked/partial 输出 |
+| `kubernetes.collect.logs.previous` | implemented | 已复用日志采集主逻辑，支持 previous 日志采集、artifact 输出和 blocked/partial 输出 |
+| `mongodb.collect.logs.current` | compatibility alias | 兼容入口，已由 `kubernetes.collect.logs.current` 取代，不进入默认 MVP/baseline 顺序 |
+| `mongodb.collect.logs.previous` | compatibility alias | 兼容入口，已由 `kubernetes.collect.logs.previous` 取代，不进入默认 MVP/baseline 顺序 |
+| `mongodb.collect.logs.discover_sink` | implemented | MongoDB 领域定向能力：当 `kubectl logs` 不足时发现应用日志 sink |
+| `mongodb.collect.logs.file_tail` | implemented | MongoDB 领域定向能力：从已发现的文件型 log sink 补采文件日志 |
+| `mongodb.collect.logs.node_file_tail` | implemented | MongoDB 领域定向能力：在明确启用节点访问时从节点侧 Pod volume 补采文件日志 |
 | `mongodb.normalize.logs.highlights` | implemented | 已支持 current/previous 日志 artifact 扫描、ANSI 清理、关键日志提取、processed artifact 和 signal patch 输出 |
 | `mongodb.normalize.signals.bundle` | implemented | 已支持标准脚本 output 合并、inventory/topology/log signals 汇总、signal bundle artifact 和 signal patch 输出 |
 
@@ -281,8 +286,8 @@ MongoDB 服务端命令通常需要认证信息。
 4. `mongodb.collect.nodes.state`
 5. `mongodb.collect.mongos.get_shard_map`
 6. `mongodb.collect.replicaset.rs_status`
-7. `mongodb.collect.logs.current`
-8. `mongodb.collect.logs.previous`
+7. `kubernetes.collect.logs.current`
+8. `kubernetes.collect.logs.previous`
 9. `mongodb.normalize.logs.highlights`
 10. `mongodb.normalize.signals.bundle`
 

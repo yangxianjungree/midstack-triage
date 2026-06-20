@@ -148,6 +148,39 @@ def test_write_report_prioritizes_diagnostic_timeline_events(tmp_path):
     assert diagnostic_index < collection_index
 
 
+def test_write_report_labels_log_local_timeline_time(tmp_path):
+    analysis = {
+        "conclusion_summary": {
+            "statement": "MongoDB logs include startup events",
+            "confidence": "medium",
+            "deepest_supported_level": "mechanism",
+            "primary_cause_category": "replication",
+            "impact_scope": "replica set",
+            "evidence": [],
+            "limitations": [],
+        },
+        "hypotheses": [],
+        "next_actions": [],
+        "knowledge_candidates": [],
+        "reasoning_timeline": {
+            "events": [
+                {
+                    "time": "01:32:32.22",
+                    "time_precision": "log_local_time",
+                    "layer": "diagnostic",
+                    "summary": "MongoDB log highlight on bnmongo-shard0-data-0: Setting node as primary",
+                    "source": "signal_bundle.log_highlights",
+                }
+            ]
+        },
+    }
+
+    report = write_report(tmp_path, {"incident_id": "demo", "middleware": "mongodb"}, analysis)
+
+    content = report.read_text(encoding="utf-8")
+    assert "`01:32:32.22` `(log-local)` `diagnostic`" in content
+
+
 def test_write_report_includes_deepening_findings(tmp_path):
     analysis = {
         "conclusion_summary": {

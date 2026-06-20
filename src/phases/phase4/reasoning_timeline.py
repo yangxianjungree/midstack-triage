@@ -2,11 +2,38 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, Iterable, List
 
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def _log_local_time(message: str) -> str:
+    match = re.search(r"(?:^|\bmongodb\s+|\s)(\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?)\b", message or "")
+    return match.group(1) if match else ""
+
+
+def _event_time_from_log_highlight(item: Dict[str, Any], message: str) -> Dict[str, str]:
+    exact_time = _text(item.get("time") or item.get("timestamp") or item.get("observed_at"))
+    if exact_time:
+        return {"time": exact_time, "time_precision": "exact"}
+    local_time = _log_local_time(message)
+    if local_time:
+        return {"time": local_time, "time_precision": "log_local_time"}
+    return {"time": "", "time_precision": "observed_at_collection"}
+
+
+def _event_type_priority(event_type: str) -> int:
+    priorities = {
+        "replica-set-split-brain": 0,
+        "current-tcp-reachability": 1,
+        "dns-log-highlight": 2,
+    }
+    if str(event_type or "").startswith("log-highlight-"):
+        return 3
+    return priorities.get(str(event_type or ""), 9)
 
 
 def _append_event(events: List[Dict[str, Any]], event: Dict[str, Any]) -> None:
@@ -182,19 +209,44 @@ def _log_highlight_diagnostic_events(signal_bundle: Dict[str, Any]) -> Iterable[
             continue
         text = _text(item.get("message") or item.get("detail"))
         lowered = text.lower()
-        if "dns" not in lowered and "10.96.0.10:53" not in lowered and "lookup " not in lowered:
+        category = _text(item.get("category") or "log")
+        material = category in ("election", "connection", "timeout", "fatal", "storage", "error", "resource") or any(
+            token in lowered
+            for token in (
+                "cannot resolve host",
+                "hostunreachable",
+                "connection refused",
+                "setting node as primary",
+                "setting node as secondary",
+                "primary node ready",
+                "wiredtiger",
+                "segmentation fault",
+                "unclean shutdown",
+                "i/o timeout",
+                "timed out",
+            )
+        )
+        if not material:
             continue
-        if "connection refused" not in lowered and "timeout" not in lowered and "i/o timeout" not in lowered:
-            continue
+        time_fields = _event_time_from_log_highlight(item, text)
+        dns_failure = (
+            ("dns" in lowered or "10.96.0.10:53" in lowered or "lookup " in lowered)
+            and ("connection refused" in lowered or "timeout" in lowered or "i/o timeout" in lowered)
+        )
+        event_type = "dns-log-highlight" if dns_failure else "log-highlight-%s" % category
+        if dns_failure:
+            summary = "DNS lookup failure observed in logs: %s" % text
+        else:
+            summary = "MongoDB log highlight on %s: %s" % (_text(item.get("pod_ref") or item.get("object_ref")) or "unknown", text)
         yield {
-            "time": item.get("time") or item.get("timestamp") or item.get("observed_at"),
-            "time_precision": "exact" if item.get("time") or item.get("timestamp") or item.get("observed_at") else "observed_at_collection",
+            "time": time_fields["time"],
+            "time_precision": time_fields["time_precision"],
             "layer": "diagnostic",
             "object_ref": item.get("pod_ref") or item.get("object_ref"),
-            "event_type": "dns-log-highlight",
-            "summary": "DNS lookup failure observed in logs: %s" % text,
+            "event_type": event_type,
+            "summary": summary,
             "source": "signal_bundle.log_highlights",
-            "evidence_ref": item.get("category") or "dns-log-highlight",
+            "evidence_ref": item.get("category") or event_type,
             "confidence": "medium",
         }
 
@@ -226,6 +278,7 @@ def build_reasoning_timeline(
     events.sort(
         key=lambda item: (
             layer_priority.get(item.get("layer") or "", 9),
+            _event_type_priority(item.get("event_type") or ""),
             item.get("time") == "",
             item.get("time") or "",
             item.get("summary") or "",

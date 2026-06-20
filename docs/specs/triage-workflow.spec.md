@@ -575,6 +575,7 @@ domains/mongodb/scripts/
 `analysis.yaml` 顶层应包含 `reasoning_timeline`，用于把 Phase 3 的 `timeline_summary`、异常信号、Kubernetes events 和采集动作整理成可审计的推理时间线。
 
 - `events` 按时间优先、未知时间靠后排序，事件需保留 `source`。
+- 日志行只包含 `HH:MM:SS` 等本地时刻片段时，可记录 `time_precision: log_local_time`，但不得伪造成跨天/跨时区可比较的绝对时间。
 - `findings` 只表达时间顺序观察以及它关联的假设，不得把历史经验或用户线索当作当前因果证据。
 - `report.md` 应展示关键时间线，帮助读者看到“什么时间发生了什么关键事项”。
 - 如果时间线缺失，应显式说明缺失，而不是伪造时间。

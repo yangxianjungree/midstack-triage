@@ -59,10 +59,14 @@ def timeline_report_lines(analysis: Dict[str, Any], limit: int = 8) -> List[str]
         if not summary:
             continue
         time = str(item.get("time") or "time unknown").strip()
+        time_precision = str(item.get("time_precision") or "").strip()
+        time_label = ""
+        if time_precision == "log_local_time":
+            time_label = " `(log-local)`"
         layer = str(item.get("layer") or "unknown").strip()
         source = str(item.get("source") or "").strip()
         suffix = " source=%s" % source if source else ""
-        lines.append("- `%s` `%s` %s%s" % (time, layer, summary, suffix))
+        lines.append("- `%s`%s `%s` %s%s" % (time, time_label, layer, summary, suffix))
     if not lines:
         return ["- No timeline events recorded."]
     if len(events) > limit:

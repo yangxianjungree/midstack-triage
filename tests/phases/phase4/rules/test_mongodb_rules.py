@@ -281,6 +281,36 @@ class MongoDBRulesTest(unittest.TestCase):
         self.assertTrue(any("DNS" in summary and "connection refused" in summary for summary in summaries))
         self.assertEqual(events[0]["layer"], "diagnostic")
 
+    def test_reasoning_timeline_preserves_log_local_time_without_exact_timestamp(self) -> None:
+        input_data = {"scenario": "replica-inconsistency"}
+        signal_bundle = {
+            "log_highlights": [
+                {
+                    "pod_ref": "bnmongo-shard0-data-0",
+                    "log_type": "current",
+                    "category": "election",
+                    "message": " 01:32:32.22 INFO  ==> Setting node as primary",
+                },
+                {
+                    "pod_ref": "bnmongo-mongos-0",
+                    "log_type": "current",
+                    "category": "connection",
+                    "message": "mongodb 13:15:40.16 INFO  ==> cannot resolve host on 10.96.0.10:53: connection refused",
+                },
+            ]
+        }
+        collection_report = {"collection_actions": [], "evidence_gaps": []}
+
+        result = self.mod.analyse(input_data, signal_bundle, collection_report, {})
+
+        events = result["reasoning_timeline"]["events"]
+        election_event = next(item for item in events if item["event_type"] == "log-highlight-election")
+        dns_event = next(item for item in events if item["event_type"] == "dns-log-highlight")
+        self.assertEqual(election_event["time"], "01:32:32.22")
+        self.assertEqual(election_event["time_precision"], "log_local_time")
+        self.assertEqual(dns_event["time"], "13:15:40.16")
+        self.assertEqual(dns_event["time_precision"], "log_local_time")
+
     def test_deepening_findings_detect_replica_set_config_divergence_and_network_counter_evidence(self) -> None:
         input_data = {"scenario": "replica-inconsistency"}
         signal_bundle = {"abnormal_signals": [{"signal_id": "replica-member-recovering", "detail": "member state differs"}]}

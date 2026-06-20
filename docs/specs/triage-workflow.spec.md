@@ -572,12 +572,13 @@ domains/mongodb/scripts/
 
 ### `verification_requests` 字段
 
-`analysis.yaml` 顶层可包含 `verification_requests`，用于记录 Phase 4 推理后仍需补采或验证的证据请求。该字段只表达计划，不表示已经执行。
+`analysis.yaml` 顶层可包含 `verification_requests`，用于记录 Phase 4 推理后仍需补采或验证的证据请求。该字段表达当前请求队列，不是完整执行日志；一等只读且 `auto_allowed` 的脚本请求可由命令编排层自动交回 Phase 3 定向补采。
 
-- 仓库内声明为只读的脚本或结构化命令是一等资产，允许标记为 `asset_tier: first_class` 与 `execution_policy: auto_allowed`。
+- 仓库内声明为只读的脚本或结构化命令是一等资产，允许标记为 `asset_tier: first_class` 与 `execution_policy: auto_allowed`；`analyse` 编排会在 rules fallback 产出后自动执行这类脚本补采，并基于新证据重新生成 `analysis.yaml`。
 - 临时只读命令是二等资产，必须先经过只读 guardrail 后才能进入执行路径。
 - 会改变 Kubernetes、数据库、文件系统、进程或网络状态的动作必须标记为 `execution_policy: blocked`，不得自动执行。
 - 历史经验、runbook 和知识资产可以启发 `verification_requests`，但不能绕过当前故障证据和风险分级。
+- 如果自动补采后证据仍不足，请求可以继续以 `status: planned` 保留；执行过程应通过 `reasoning-manifest.yaml`、`reasoning/*.yaml`、`collection_report.yaml` 和 recollection 输出审计。
 
 ### `reasoning_timeline` 字段
 

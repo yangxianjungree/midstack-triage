@@ -206,8 +206,8 @@ updated_at:
 
 - 假设、结论、知识沉淀、review 四类内容并存但不混写
 - 验证动作（`validation_actions`）嵌套在各假设内，挂回对应假设，不设顶层列表
-- `verification_requests` 是 Phase 4 产出的待验证请求队列，不表示已经执行；仓库内只读脚本/命令是一等资产，可标记为 `auto_allowed`，临时只读命令必须先经过 guardrail，破坏性动作必须 `blocked`
-- `report.md` 应展示关键 `verification_requests`，让用户能区分一等只读资产、二等临时只读请求和 blocked 动作；展示不代表已经执行
+- `verification_requests` 是 Phase 4 产出的当前待验证请求队列，不是完整执行日志；仓库内只读脚本/命令是一等资产，可标记为 `auto_allowed` 并由 `analyse` 编排回到 Phase 3 自动补采，临时只读命令必须先经过 guardrail，破坏性动作必须 `blocked`
+- `report.md` 应展示关键 `verification_requests`，让用户能区分一等只读资产、二等临时只读请求和 blocked 动作；展示不等同于完整执行历史，执行审计看 `reasoning-manifest.yaml`、`reasoning/*.yaml`、`collection_report.yaml` 和 recollection 输出
 - `reasoning_timeline` 汇总当前证据中的关键时间顺序，用于报告可信度和假设关联；时间线本身不单独证明因果
 - `deepening_findings` 记录领域不变量冲突、反证和机制深化观察；它必须引用当前证据，不得引入未采集事实
 - `retrieval_context` 只作为未来历史经验/向量召回的查询上下文，不表达当前结论

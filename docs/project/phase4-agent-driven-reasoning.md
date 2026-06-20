@@ -1,6 +1,6 @@
 ---
 status: draft
-last_updated: 2026-06-19
+last_updated: 2026-06-20
 supersedes: none
 superseded_by: none
 ---
@@ -37,7 +37,7 @@ superseded_by: none
 2. rules fallback 生成保守的基线假设、结论、证据缺口和下一步动作。
 3. 领域不变量检查把已采证据继续深化成 `deepening_findings`，例如 MongoDB replica set 多视角配置、成员和 quorum 是否一致。
 4. 时间线构建器把用户线索、异常信号、Kubernetes events 和采集动作整理进 `reasoning_timeline`。
-5. Phase 4 根据证据缺口和待验证假设生成 `verification_requests`，但当前只表达计划，不默认动态执行。
+5. Phase 4 根据证据缺口和待验证假设生成 `verification_requests`；命令编排层会把一等只读且 `auto_allowed` 的脚本请求交回 Phase 3 定向补采，然后重新生成生产 `analysis.yaml`。
 6. Agent refinement 读取上述产物，补充或修正 `analysis.yaml` 与 `report.md`。
 7. 第 5 段把可靠结论、证据缺口、只读下一步和可沉淀知识写回结果与 `knowledge_candidates`。
 
@@ -76,13 +76,15 @@ Agent refinement 不应该做：
 
 ## 动态验证边界
 
-Phase 4 可以提出验证请求，但验证请求分层处理：
+Phase 4 可以提出验证请求，但验证请求分层处理。`verification_requests` 是当前仍需要验证或补采的请求队列，不是完整执行日志；执行历史和每轮推理快照由 `reasoning-manifest.yaml` 与 `reasoning/*.yaml` 承载。
 
 | 层级 | 例子 | 策略 |
 | --- | --- | --- |
-| 一等只读资产 | `domains/*/scripts/manifest.yaml` 中声明为 `readonly: true` 的脚本或结构化 command | 可进入 `verification_requests`，允许标记 `execution_policy: auto_allowed` |
+| 一等只读资产 | `domains/*/scripts/manifest.yaml` 中声明为 `readonly: true` 的脚本或结构化 command | 可进入 `verification_requests`，允许标记 `execution_policy: auto_allowed`；在 `analyse` 编排中会自动进入 Phase 3 定向补采 |
 | 二等临时只读命令 | 临时 `kubectl get`、`mongosh` 只读查询、日志 tail | 必须先经过只读 guardrail，默认先记录为 planned |
 | 改变环境的动作 | `rs.reconfig()`、删除 Pod、重启进程、修改 YAML、写文件 | 必须 `blocked`，不得由 Phase 4 自动执行 |
+
+自动补采不是 Phase 4 直接执行命令，而是控制面在 rules fallback 产出后调用 Phase 3 recollection 复用既有执行面。补采完成后 rules fallback 会基于更新后的证据重新物化 `analysis.yaml` 和 `report.md`。如果请求仍缺证据，它可以继续以 `planned` 形式保留；因此 `status: planned` 不能单独理解成“从未尝试过”。
 
 开发新能力时，优先把稳定的只读验证沉淀为一等资产，而不是让 Agent 长期依赖自由拼接命令。
 

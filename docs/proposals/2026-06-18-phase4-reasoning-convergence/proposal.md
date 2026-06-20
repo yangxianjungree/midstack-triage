@@ -455,7 +455,7 @@ def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> N
 目标：
 
 - Phase 4 可以在推理后提出需要补采或验证的证据请求。
-- 当前只生成 `verification_requests`，不执行动态脚本或命令。
+- Phase 4 生成 `verification_requests`；实现已演进为允许命令编排层自动执行一等只读 `auto_allowed` 脚本请求，二等临时命令仍只记录计划并等待 guardrail。
 - 为后续动态验证预留一等资产、二等只读命令和禁止动作的治理边界。
 
 验收：
@@ -464,7 +464,7 @@ def write_multitrack_analysis(incident_dir: Path, analysis: Dict[str, Any]) -> N
 - MongoDB 在缺失 rs.status 或关键 previous logs 时请求仓库内只读脚本。
 - Pulsar queue backlog 在缺失 broker topic stats 时请求仓库内只读脚本。
 - 一等只读资产标记为 `asset_tier: first_class`、`risk_level: read-only`、`execution_policy: auto_allowed`、`status: planned`。
-- 文档明确 `verification_requests` 是计划，不代表已经执行；临时只读命令需 guardrail，破坏性动作 blocked。
+- 文档明确 `verification_requests` 是当前请求队列，不是完整执行日志；一等只读 `auto_allowed` 脚本可自动补采，临时只读命令需 guardrail，破坏性动作 blocked。
 
 任务：
 

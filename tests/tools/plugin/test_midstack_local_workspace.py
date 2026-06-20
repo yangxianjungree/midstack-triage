@@ -87,6 +87,49 @@ def test_analyse_parser_accepts_collect_scope():
     assert args.scope == "collect"
 
 
+def test_analyse_parser_accepts_incident_id_alias():
+    args = module.build_parser().parse_args(["analyse", "--incident-id", "mongodb-demo"])
+    module.normalize_analyse_incident_args(args)
+
+    assert args.incident_dir == ".local/incidents/mongodb-demo"
+
+
+def test_analyse_parser_accepts_positional_incident_ref():
+    args = module.build_parser().parse_args(["analyse", "mongodb-demo", "--output-root", ".local/cases"])
+    module.normalize_analyse_incident_args(args)
+
+    assert args.incident_dir == ".local/cases/mongodb-demo"
+
+
+def test_analyse_parser_accepts_positional_incident_path():
+    args = module.build_parser().parse_args(["analyse", ".local/incidents/mongodb-demo"])
+    module.normalize_analyse_incident_args(args)
+
+    assert args.incident_dir == ".local/incidents/mongodb-demo"
+
+
+def test_analyse_positional_incident_ref_rejects_other_input_source():
+    args = module.build_parser().parse_args(["analyse", "mongodb-demo", "--input-dir", "fixture"])
+
+    try:
+        module.normalize_analyse_incident_args(args)
+    except SystemExit as exc:
+        assert "cannot be combined" in str(exc)
+    else:
+        raise AssertionError("positional incident ref must not combine with another input source")
+
+
+def test_analyse_rejects_incident_id_alias_with_positional_incident_ref():
+    args = module.build_parser().parse_args(["analyse", "--incident-id", "mongodb-demo", "other-demo"])
+
+    try:
+        module.normalize_analyse_incident_args(args)
+    except SystemExit as exc:
+        assert "cannot be combined" in str(exc)
+    else:
+        raise AssertionError("--incident-id must not combine with positional incident ref")
+
+
 def test_start_ready_output_points_to_midstack_analyse(tmp_path, monkeypatch):
     monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
 

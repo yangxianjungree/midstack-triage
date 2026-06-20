@@ -40,7 +40,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py" analyse \
   --output-root "$MIDSTACK_TRIAGE_WORKSPACE/.local/incidents"
 ```
 
-If `$ARGUMENTS` contains an incident id or path, pass `--incident-dir`:
+If `$ARGUMENTS` contains an incident id or path, prefer `--incident-dir`:
 
 ```bash
 export MIDSTACK_TRIAGE_WORKSPACE="$(python3 "${CLAUDE_PLUGIN_ROOT}/runtime/bin/resolve-workspace.py")"
@@ -48,6 +48,11 @@ python3 "${CLAUDE_PLUGIN_ROOT}/runtime/bin/midstack-local.py" analyse \
   --incident-dir "$MIDSTACK_TRIAGE_WORKSPACE/.local/incidents/<incident-id>" \
   --output-root "$MIDSTACK_TRIAGE_WORKSPACE/.local/incidents"
 ```
+
+The runtime also accepts `analyse --incident-id <incident-id>` and
+`analyse <incident-id-or-path>` as compatibility aliases. Do not combine those
+aliases with another input source such as `--input-dir`, `--remote-run-dir`,
+`--remote-config`, or `--incident-dir`.
 
 To rerun only reasoning and report materialization for an already collected
 incident, add `--scope reason` to the analyse command.

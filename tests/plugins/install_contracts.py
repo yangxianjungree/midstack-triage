@@ -178,6 +178,7 @@ def assert_cli_command_options_documented(
             "--environment-mode",
         },
         "analyse": {
+            "--incident-id",
             "--incident-dir",
             "--output-root",
             "--remote-run-dir",

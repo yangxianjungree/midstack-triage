@@ -35,6 +35,9 @@ Command boundary:
 If the user just ran `/midstack:start` and does not provide an incident directory, run `analyse` without `--incident-dir` (uses `.local/incidents/.current-incident`).
 
 If the user provides an incident directory, pass `--incident-dir <path>` relative to the workspace or absolute.
+If the user provides only an incident id, prefer `--incident-dir .local/incidents/<incident-id>`.
+The runtime also accepts `analyse --incident-id <incident-id>` and `analyse <incident-id-or-path>` as compatibility aliases.
+Do not combine those aliases with another input source such as `--input-dir`, `--remote-run-dir`, `--remote-config`, or `--incident-dir`.
 
 ## Run analyse
 

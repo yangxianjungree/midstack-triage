@@ -205,6 +205,7 @@ def test_claude_command_docs_track_cli_arguments():
                 "--output-root",
             },
             "analyse": {
+                "--incident-id",
                 "--incident-dir",
                 "--output-root",
                 "--scope",

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 from execution.modes import execution_mode_names
 from commands import analyse as analyse_command
@@ -38,6 +39,7 @@ def command_finalize_analysis(args: argparse.Namespace) -> int:
 def command_analyse(args: argparse.Namespace) -> int:
     from phases.phase4.reasoning import run_phase4_analysis
 
+    normalize_analyse_incident_args(args)
     return analyse_command.run(
         args,
         run_remote_collection=run_remote_collection,
@@ -59,6 +61,26 @@ def command_analyse(args: argparse.Namespace) -> int:
 
 def command_review(args: argparse.Namespace) -> int:
     return review_command.run(args)
+
+
+def _incident_ref_to_dir(value: str, output_root: str) -> str:
+    ref = value.strip()
+    path = Path(ref)
+    if path.is_absolute() or len(path.parts) > 1:
+        return ref
+    return str(Path(output_root) / ref)
+
+
+def normalize_analyse_incident_args(args: argparse.Namespace) -> None:
+    incident_id = (getattr(args, "incident_id", "") or "").strip()
+    positional_ref = (getattr(args, "incident_ref", "") or "").strip()
+    if incident_id and positional_ref:
+        raise SystemExit("analyse incident id/path cannot be combined with another input source")
+    incident_ref = incident_id or positional_ref
+    if incident_ref and any(getattr(args, name, "") for name in ("input_dir", "remote_run_dir", "remote_config", "incident_dir")):
+        raise SystemExit("analyse incident id/path cannot be combined with another input source")
+    if incident_ref and not args.incident_dir:
+        args.incident_dir = _incident_ref_to_dir(incident_ref, args.output_root)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -92,6 +114,8 @@ def build_parser() -> argparse.ArgumentParser:
     input_source.add_argument("--remote-run-dir")
     input_source.add_argument("--remote-config", help="Run MongoDB remote collection first, then analyse the generated remote run directory.")
     input_source.add_argument("--incident-dir", help="Run analyse from a started incident directory containing remote-config.yaml.")
+    input_source.add_argument("--incident-id", help="Alias for --incident-dir .local/incidents/<incident-id>.")
+    analyse.add_argument("incident_ref", nargs="?", help="Incident id or incident directory path. Alias for --incident-dir.")
     analyse.add_argument("--output-dir")
     analyse.add_argument("--output-root", default=".local/incidents")
     analyse.add_argument("--scenario", help="Override or supply scenario when analysing a remote run.")

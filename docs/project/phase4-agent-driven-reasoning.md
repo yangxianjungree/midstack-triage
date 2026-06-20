@@ -90,6 +90,7 @@ Agent refinement 不应该做：
 - 候选必须通过 `agent_reasoning.hypotheses[].evidence_refs` 引用当前 incident 证据，例如 `structured_record`、`signal_bundle`、`collection_report`、`deepening_findings`、`deep_analysis_results` 或 `verification_requests`。
 - 候选必须提供 `agent_reasoning.hypotheses[].conclusion_candidate`，字段对齐正式 `conclusion_summary` 的核心形状：`statement`、`confidence`、`impact_scope`、`primary_cause_category`，并可包含 `deepest_supported_level`、`evidence`、`limitations`。
 - `agent_reasoning.hypotheses[].conclusion_candidate.evidence` 和外层 `evidence_refs` 使用同一套证据边界；不能在正式结论候选里绕过 gate 引用历史经验或用户线索。
+- `conclusion_candidate.evidence` 必须非空；`confidence` 只能是 `low`、`medium` 或 `high`；`deepest_supported_level` 如存在，只能是 `phenomenon`、`impact`、`mechanism` 或 `root_cause`。
 - `deep_analysis_results.*` 只有在 `deep-analysis.yaml` 已物化并写入 `analysis.yaml.deep_analysis_results` 后才能作为提升证据；物化前引用会被 gate 阻塞，物化后 analyse 会重新评估 gate。
 - `experience_matches`、`retrieval_context`、runbook、历史经验和用户线索不能作为直接证据引用。
 - 未闭合的 `critical_gap` 会阻止提升。

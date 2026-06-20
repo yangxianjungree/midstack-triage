@@ -29,6 +29,8 @@ CONCLUSION_CANDIDATE_REQUIRED_FIELDS = (
     "impact_scope",
     "primary_cause_category",
 )
+ALLOWED_CONCLUSION_CONFIDENCE = {"low", "medium", "high"}
+ALLOWED_SUPPORTED_LEVELS = {"phenomenon", "impact", "mechanism", "root_cause"}
 
 
 def evaluate_agent_conclusion_gate(analysis: Dict[str, Any]) -> Dict[str, Any]:
@@ -80,6 +82,11 @@ def evaluate_agent_conclusion_gate(analysis: Dict[str, Any]) -> Dict[str, Any]:
                 "agent conclusion candidate missing required field(s): %s" % ",".join(missing_candidate_fields),
             )
         )
+    if candidate["conclusion_summary"] and not _as_list(candidate["conclusion_summary"].get("evidence")):
+        blockers.append(_blocker("conclusion_candidate_missing_evidence", "agent conclusion candidate has no direct evidence refs"))
+    invalid_candidate_fields = _invalid_conclusion_candidate_fields(candidate["conclusion_summary"])
+    for code, message in invalid_candidate_fields:
+        blockers.append(_blocker(code, message))
 
     return _gate_result(candidate, blockers)
 
@@ -190,6 +197,27 @@ def _candidate_evidence_refs(candidate: Dict[str, Any]) -> List[str]:
 
 def _missing_conclusion_candidate_fields(candidate: Dict[str, Any]) -> List[str]:
     return [key for key in CONCLUSION_CANDIDATE_REQUIRED_FIELDS if not str(candidate.get(key) or "").strip()]
+
+
+def _invalid_conclusion_candidate_fields(candidate: Dict[str, Any]) -> List[tuple[str, str]]:
+    invalid: List[tuple[str, str]] = []
+    confidence = str(candidate.get("confidence") or "").strip()
+    if confidence and confidence not in ALLOWED_CONCLUSION_CONFIDENCE:
+        invalid.append(
+            (
+                "conclusion_candidate_invalid_confidence",
+                "agent conclusion candidate confidence `%s` is not one of low, medium, high" % confidence,
+            )
+        )
+    level = str(candidate.get("deepest_supported_level") or "").strip()
+    if level and level not in ALLOWED_SUPPORTED_LEVELS:
+        invalid.append(
+            (
+                "conclusion_candidate_invalid_supported_level",
+                "agent conclusion candidate deepest_supported_level `%s` is not a supported level" % level,
+            )
+        )
+    return invalid
 
 
 def _copy_conclusion_summary(conclusion: Dict[str, Any]) -> Dict[str, Any]:

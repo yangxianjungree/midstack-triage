@@ -104,7 +104,8 @@ class ClaudeAgent:
     "findings": [{{"type": "...", "content": "...", "evidence": [], "affects": []}}, ...]
 }}
 
-evidence_refs只能引用当前incident证据路径，例如structured_record、signal_bundle、collection_report、deepening_findings、deep_analysis_results或verification_requests；不要引用历史经验、runbook或用户线索作为直接证据。"""
+evidence_refs只能引用当前incident证据路径，例如structured_record、signal_bundle、collection_report、deepening_findings、deep_analysis_results或verification_requests；不要引用历史经验、runbook或用户线索作为直接证据。
+conclusion_candidate.evidence也必须引用当前incident证据路径，confidence只能是low/medium/high，deepest_supported_level只能是phenomenon/impact/mechanism/root_cause。"""
 
         messages = [{"role": "user", "content": prompt}]
         max_iterations = 5
@@ -178,7 +179,7 @@ evidence_refs只能引用当前incident证据路径，例如structured_record、
 - confidence: 0.0-1.0
 - reasoning: 推理过程（1-2句话）
 - evidence_refs: 当前incident证据路径列表，只能引用structured_record、signal_bundle、collection_report、deepening_findings、deep_analysis_results或verification_requests
-- conclusion_candidate: 如果当前假设可作为正式结论候选，填入statement、confidence、deepest_supported_level、primary_cause_category、impact_scope、evidence、limitations；证据不足时可为空对象
+- conclusion_candidate: 如果当前假设可作为正式结论候选，填入statement、confidence、deepest_supported_level、primary_cause_category、impact_scope、evidence、limitations；evidence必须引用当前incident证据路径；confidence只能是low/medium/high；deepest_supported_level只能是phenomenon/impact/mechanism/root_cause；证据不足时可为空对象
 - validation_actions: [{{"action": "验证动作描述"}}] (如需要)
 - findings: [{{"type": "support|refutation|gap", "content": "发现内容", "evidence": [], "affects": []}}]
 

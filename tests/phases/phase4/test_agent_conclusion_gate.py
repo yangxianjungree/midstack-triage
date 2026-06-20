@@ -151,6 +151,68 @@ def test_gate_blocks_supported_candidate_without_structured_conclusion_candidate
     assert any(item["code"] == "conclusion_candidate_incomplete" for item in gate["blockers"])
 
 
+def test_gate_blocks_conclusion_candidate_without_own_evidence():
+    gate = evaluate_agent_conclusion_gate(
+        _analysis(
+            {
+                "runtime": {"selected_type": "claude", "model": "claude-sonnet-4-6"},
+                "hypotheses": [
+                    {
+                        "id": "h1",
+                        "statement": "Agent candidate",
+                        "status": "supported",
+                        "confidence": 0.91,
+                        "evidence_refs": ["structured_record.details.replica_members"],
+                        "conclusion_candidate": {
+                            "statement": "Replica set rs0 has a split-brain mechanism.",
+                            "confidence": "medium",
+                            "deepest_supported_level": "mechanism",
+                            "primary_cause_category": "replica_set_split_brain",
+                            "impact_scope": "rs0 availability",
+                            "limitations": [],
+                        },
+                    }
+                ],
+            }
+        )
+    )
+
+    assert gate["decision"] == "blocked"
+    assert any(item["code"] == "conclusion_candidate_missing_evidence" for item in gate["blockers"])
+
+
+def test_gate_blocks_conclusion_candidate_with_invalid_enum_values():
+    gate = evaluate_agent_conclusion_gate(
+        _analysis(
+            {
+                "runtime": {"selected_type": "claude", "model": "claude-sonnet-4-6"},
+                "hypotheses": [
+                    {
+                        "id": "h1",
+                        "statement": "Agent candidate",
+                        "status": "supported",
+                        "confidence": 0.91,
+                        "evidence_refs": ["structured_record.details.replica_members"],
+                        "conclusion_candidate": {
+                            "statement": "Replica set rs0 has a split-brain mechanism.",
+                            "confidence": "certain",
+                            "deepest_supported_level": "root",
+                            "primary_cause_category": "replica_set_split_brain",
+                            "impact_scope": "rs0 availability",
+                            "evidence": ["structured_record.details.replica_members"],
+                            "limitations": [],
+                        },
+                    }
+                ],
+            }
+        )
+    )
+
+    assert gate["decision"] == "blocked"
+    assert any(item["code"] == "conclusion_candidate_invalid_confidence" for item in gate["blockers"])
+    assert any(item["code"] == "conclusion_candidate_invalid_supported_level" for item in gate["blockers"])
+
+
 def test_gate_marks_high_confidence_claude_candidate_eligible_with_current_evidence_refs():
     gate = evaluate_agent_conclusion_gate(
         _analysis(

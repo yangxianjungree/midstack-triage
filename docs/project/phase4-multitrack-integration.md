@@ -70,7 +70,7 @@ superseded_by: none
 
 - `analysis.yaml.conclusion_summary` 的生产者是 `src/phases/phase4/rules/<middleware>.py` rules fallback + guardrails。
 - `analysis.multitrack.yaml` 是 multitrack renderer 产出的辅助诊断草稿；其摘要会以 `analysis.yaml.agent_reasoning` 进入主分析视图，但不替代 `conclusion_summary`。
-- `analysis.yaml.agent_conclusion_gate` 是 Agent 草稿提升资格评估；它检查 runtime、候选状态/置信度、`agent_reasoning.hypotheses[].evidence_refs` 与 `conclusion_candidate.evidence` 中的当前 incident 证据引用、`agent_reasoning.hypotheses[].conclusion_candidate` 结构化结论候选、hypothesis-only source 边界、`deep_analysis_results` 物化状态和 unresolved critical gap。eligible 时会应用候选结论并追加 `agent_conclusion_override` segment；blocked 时只记录 `decision`、候选结论与 blockers。
+- `analysis.yaml.agent_conclusion_gate` 是 Agent 草稿提升资格评估；它检查 runtime、候选状态/置信度、`agent_reasoning.hypotheses[].evidence_refs` 与 `conclusion_candidate.evidence` 中的当前 incident 证据引用、`agent_reasoning.hypotheses[].conclusion_candidate` 结构化结论候选和值域、hypothesis-only source 边界、`deep_analysis_results` 物化状态和 unresolved critical gap。eligible 时会应用候选结论并追加 `agent_conclusion_override` segment；blocked 时只记录 `decision`、候选结论与 blockers。
 - `agent-reasoning-task.md` 是后续人工或 Agent refinement 合同；当前默认 Phase 4 multitrack 会以 `auto` agent runtime 尝试 Claude API 推理，无法满足 API key / SDK 条件时自动降级到 mock，并在 `reasoning-board.yaml` 与 `analysis.multitrack.yaml` 记录 agent runtime。
 - `reasoning-manifest.yaml` 是推理历史索引；`reasoning/*.yaml` 是 append-only segment，用于保留 rules fallback 和 Agent refinement 的过程快照。
 - rules fallback 与 multitrack 辅助草稿都保留 `retrieval_context`、`experience_matches`、`source_boundaries` 顶层字段；共享契约 helper 位于 `src/phases/phase4/analysis_contract.py`。

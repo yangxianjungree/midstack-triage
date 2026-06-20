@@ -70,6 +70,37 @@ def test_gate_blocks_candidate_without_current_incident_evidence_refs():
     assert any(item["code"] == "missing_current_evidence_refs" for item in gate["blockers"])
 
 
+def test_gate_blocks_hypothesis_only_refs_inside_conclusion_candidate_evidence():
+    gate = evaluate_agent_conclusion_gate(
+        _analysis(
+            {
+                "runtime": {"selected_type": "claude", "model": "claude-sonnet-4-6"},
+                "hypotheses": [
+                    {
+                        "id": "h1",
+                        "statement": "Agent candidate",
+                        "status": "supported",
+                        "confidence": 0.91,
+                        "evidence_refs": ["structured_record.details.replica_members"],
+                        "conclusion_candidate": {
+                            "statement": "Replica set rs0 has a split-brain mechanism.",
+                            "confidence": "medium",
+                            "deepest_supported_level": "mechanism",
+                            "primary_cause_category": "replica_set_split_brain",
+                            "impact_scope": "rs0 availability",
+                            "evidence": ["experience_matches.mongodb_split_brain"],
+                            "limitations": [],
+                        },
+                    }
+                ],
+            }
+        )
+    )
+
+    assert gate["decision"] == "blocked"
+    assert any(item["code"] == "hypothesis_only_source_used_as_evidence" for item in gate["blockers"])
+
+
 def test_gate_blocks_unresolved_critical_gap():
     gate = evaluate_agent_conclusion_gate(
         _analysis(

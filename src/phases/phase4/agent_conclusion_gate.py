@@ -63,11 +63,12 @@ def evaluate_agent_conclusion_gate(analysis: Dict[str, Any]) -> Dict[str, Any]:
         )
     if not candidate["statement"]:
         blockers.append(_blocker("candidate_statement_empty", "selected agent candidate statement is empty"))
-    if _uses_hypothesis_only_refs(candidate["evidence_refs"]):
+    evidence_refs = _candidate_evidence_refs(candidate)
+    if _uses_hypothesis_only_refs(evidence_refs):
         blockers.append(_blocker("hypothesis_only_source_used_as_evidence", "agent candidate cites hypothesis-only sources as evidence"))
-    if not _has_current_incident_evidence_ref(candidate["evidence_refs"]):
+    if not _has_current_incident_evidence_ref(evidence_refs):
         blockers.append(_blocker("missing_current_evidence_refs", "agent candidate has no current-incident evidence references"))
-    if _references_deep_analysis_results(candidate["evidence_refs"]) and not isinstance(analysis.get("deep_analysis_results"), dict):
+    if _references_deep_analysis_results(evidence_refs) and not isinstance(analysis.get("deep_analysis_results"), dict):
         blockers.append(_blocker("deep_analysis_results_not_materialized", "agent candidate cites deep_analysis_results before they are materialized"))
     if _has_unresolved_critical_gap(analysis):
         blockers.append(_blocker("unresolved_critical_gap", "critical evidence gaps remain unresolved"))
@@ -177,6 +178,14 @@ def _conclusion_candidate(item: Dict[str, Any]) -> Dict[str, Any]:
         if values:
             result[key] = values
     return result
+
+
+def _candidate_evidence_refs(candidate: Dict[str, Any]) -> List[str]:
+    refs = [str(value).strip() for value in _as_list(candidate.get("evidence_refs")) if str(value).strip()]
+    conclusion = candidate.get("conclusion_summary")
+    if isinstance(conclusion, dict):
+        refs.extend(str(value).strip() for value in _as_list(conclusion.get("evidence")) if str(value).strip())
+    return _unique(refs)
 
 
 def _missing_conclusion_candidate_fields(candidate: Dict[str, Any]) -> List[str]:

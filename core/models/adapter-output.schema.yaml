@@ -73,6 +73,7 @@ optional:
   - quality_review
   - conclusion
   - knowledge_candidates
+  - reasoning_outputs
 
 principles:
   - Adapter output is a summary envelope, not the full incident record.

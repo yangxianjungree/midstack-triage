@@ -1416,3 +1416,124 @@ def test_collect_scope_stops_after_phase3_without_reasoning_outputs(tmp_path, mo
     assert not (incident_dir / "report.md").exists()
     meta = load_yaml(incident_dir / "meta.yaml")
     assert meta["status"] == "ready"
+
+
+def test_collect_scope_marks_existing_reasoning_outputs_stale(tmp_path, monkeypatch):
+    monkeypatch.setenv("MIDSTACK_TRIAGE_WORKSPACE", str(tmp_path))
+    incident_dir = tmp_path / ".local" / "incidents" / "mongodb-collect-stale"
+    incident_dir.mkdir(parents=True)
+    write_yaml(
+        incident_dir / "input.yaml",
+        {
+            "incident_id": "mongodb-collect-stale",
+            "middleware": "mongodb",
+            "namespace": "psmdb-test",
+            "cluster_id": "",
+            "environment_mode": "local",
+            "execution_mode": "local",
+            "customer_clue": "MongoDB pod is not ready.",
+            "scenario": "unknown",
+        },
+    )
+    write_yaml(
+        incident_dir / "meta.yaml",
+        {
+            "incident_id": "mongodb-collect-stale",
+            "middleware": "mongodb",
+            "status": "analysed",
+            "current_command": "analyse",
+        },
+    )
+    write_yaml(
+        incident_dir / "local-config.yaml",
+        {"access": {"execution_mode": "local", "current_context": "prod-cluster"}},
+    )
+    write_yaml(incident_dir / "analysis.yaml", {"conclusion_summary": {"statement": "old conclusion"}})
+    (incident_dir / "report.md").write_text("# old report\n", encoding="utf-8")
+    remote_run_dir = tmp_path / ".local" / "remote-runs" / "mongodb-collect-stale-run"
+    script_dir = remote_run_dir / "mongodb.collect.pods.state"
+    script_dir.mkdir(parents=True)
+    write_yaml(
+        remote_run_dir / "remote-executor-run.yaml",
+        {
+            "incident_id": "mongodb-collect-stale-run",
+            "middleware": "mongodb",
+            "status": "success",
+            "namespace": "psmdb-test",
+            "selected_ip": "local",
+            "error": {"code": "", "message": ""},
+            "script_results": [],
+        },
+    )
+    write_yaml(
+        script_dir / "remote-executor-result.yaml",
+        {"script_id": "mongodb.collect.pods.state", "status": "success", "process": {"exit_code": 0}},
+    )
+    write_yaml(
+        script_dir / "output.yaml",
+        {
+            "script_id": "mongodb.collect.pods.state",
+            "status": "success",
+            "summary": "pods collected",
+            "structured_record_patch": {"details": {"pods": [{"name": "mongo-0"}]}},
+            "signal_bundle_patch": {"abnormal_signals": []},
+            "collection_report_patch": {"successful_items": [{"item": "pods/state", "source": "kubectl"}]},
+        },
+    )
+
+    def fake_local_collection(_args, _output_dir, script_ids=None):
+        assert script_ids is None
+        return remote_run_dir
+
+    def fail_phase4(*_args, **_kwargs):
+        raise AssertionError("collect scope must not run Phase 4")
+
+    monkeypatch.setattr(module, "run_local_collection", fake_local_collection)
+
+    args = SimpleNamespace(
+        input_dir=None,
+        remote_run_dir=None,
+        remote_config=None,
+        incident_dir=str(incident_dir),
+        output_dir=None,
+        output_root=".local/incidents",
+        scenario=None,
+        customer_clue=None,
+        remote_output_dir=".local/remote-runs",
+        remote_namespace="",
+        object_inventory="",
+        execution_mode="",
+        scope="collect",
+    )
+
+    assert module.analyse_command.run(
+        args,
+        run_remote_collection=module.run_remote_collection,
+        run_local_collection=module.run_local_collection,
+        load_remote_executor_run_result=module.load_remote_executor_run_result,
+        build_incident_from_remote_run=module.build_incident_from_remote_run,
+        apply_scenario_routing_if_needed=module.apply_scenario_routing_if_needed,
+        write_collection_plan=module.write_collection_plan,
+        write_collection_coverage=module.write_collection_coverage,
+        write_signal_governance=module.write_signal_governance,
+        enrich_skill_runtime_context=module.enrich_skill_runtime_context,
+        run_directed_recollection_if_needed=module.run_directed_recollection_if_needed,
+        remote_executor_required_user_action=module.remote_executor_required_user_action,
+        remote_executor_next_actions=module.remote_executor_next_actions,
+        normalize_collection_report_gaps=module.normalize_collection_report_gaps,
+        run_phase4_analysis=fail_phase4,
+    ) == 0
+
+    adapter = load_yaml(incident_dir / "adapter-output.yaml")
+    assert adapter["reasoning_outputs"] == {
+        "status": "stale",
+        "analysis": "analysis.yaml",
+        "report": "report.md",
+        "required_user_action": "run /midstack:analyse --scope reason to refresh reasoning outputs",
+    }
+    assert "existing analysis.yaml/report.md are stale after collect scope" in adapter["warnings"]
+    assert (incident_dir / "analysis.yaml").exists()
+    assert (incident_dir / "report.md").exists()
+    meta = load_yaml(incident_dir / "meta.yaml")
+    assert meta["status"] == "ready"
+    assert meta["reasoning_outputs"]["status"] == "stale"

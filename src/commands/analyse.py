@@ -208,9 +208,23 @@ def _write_collect_scope_output(
     add_record_ref_if_exists(output, output_dir, "collection_report", "collection_report.yaml", "phase-3 collection summary")
     add_record_ref_if_exists(output, output_dir, "collection_plan", "collection_plan.yaml", "phase-3 script layer and cost plan")
     output["warnings"].append("collect scope stops after Phase 3; analysis.yaml and report.md are intentionally not generated.")
+    existing_reasoning_outputs = [filename for filename in ("analysis.yaml", "report.md") if (output_dir / filename).exists()]
+    reasoning_outputs = {}
+    if existing_reasoning_outputs:
+        reasoning_outputs = {
+            "status": "stale",
+            "analysis": "analysis.yaml" if (output_dir / "analysis.yaml").exists() else "",
+            "report": "report.md" if (output_dir / "report.md").exists() else "",
+            "required_user_action": "run /midstack:analyse --scope reason to refresh reasoning outputs",
+        }
+        output["reasoning_outputs"] = reasoning_outputs
+        output["warnings"].append("existing analysis.yaml/report.md are stale after collect scope")
     output["next_actions"] = ["run /midstack:analyse --scope reason to generate reasoning outputs from the collected artifacts"]
     if incident_mode and incident_dir is not None:
-        update_incident_meta(incident_dir, {"status": "ready", "current_command": "analyse"})
+        updates = {"status": "ready", "current_command": "analyse"}
+        if reasoning_outputs:
+            updates["reasoning_outputs"] = reasoning_outputs
+        update_incident_meta(incident_dir, updates)
         write_current_incident(output_root, incident_dir)
     write_yaml(output_dir / "adapter-output.yaml", output)
     print(str(output_dir))

@@ -339,6 +339,22 @@ def test_write_report_includes_verification_requests(tmp_path):
                 "reason": "Historical heartbeat evidence is needed.",
                 "status": "planned",
             },
+            {
+                "request_id": "vr-ad-hoc-events",
+                "hypothesis_id": "H5",
+                "purpose": "inspect namespace events",
+                "asset_tier": "ad_hoc_readonly",
+                "asset": {
+                    "type": "ad_hoc_command",
+                    "id": "vr-ad-hoc-events",
+                    "argv": ["kubectl", "get", "events", "-n", "psmdb-test"],
+                },
+                "risk_level": "read-only",
+                "execution_policy": "approval_required",
+                "reason": "Events may explain the transient issue.",
+                "status": "planned",
+                "guardrail_reason": "requires human approval before execution",
+            },
         ],
     }
 
@@ -351,3 +367,7 @@ def test_write_report_includes_verification_requests(tmp_path):
     assert "Configuration drift is a plausible enabling cause." in content
     assert "`planned` `read-only` `auto_allowed` `first_class` `vr-mongodb-election-logs` H4" in content
     assert "asset=script/kubernetes.collect.logs.previous" in content
+    assert "`planned` `read-only` `approval_required` `ad_hoc_readonly` `vr-ad-hoc-events` H5" in content
+    assert "asset=ad_hoc_command/vr-ad-hoc-events" in content
+    assert "argv=kubectl get events -n psmdb-test" in content
+    assert "guardrail=requires human approval before execution" in content

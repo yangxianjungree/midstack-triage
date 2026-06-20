@@ -119,7 +119,13 @@ def verification_request_report_lines(analysis: Dict[str, Any], limit: int = 8) 
         asset = item.get("asset") or {}
         asset_type = str(asset.get("type") or "unknown").strip() if isinstance(asset, dict) else "unknown"
         asset_id = str(asset.get("id") or "unknown").strip() if isinstance(asset, dict) else "unknown"
+        argv = asset.get("argv") if isinstance(asset, dict) else []
+        guardrail_reason = str(item.get("guardrail_reason") or "").strip()
         suffixes = ["asset=%s/%s" % (asset_type, asset_id)]
+        if isinstance(argv, list) and argv:
+            suffixes.append("argv=%s" % " ".join(str(part) for part in argv))
+        if guardrail_reason:
+            suffixes.append("guardrail=%s" % guardrail_reason)
         if reason:
             suffixes.append("reason=%s" % reason)
         suffix = " %s" % " ".join(suffixes)

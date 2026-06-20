@@ -180,11 +180,17 @@ def verification_request_report_lines(analysis: Dict[str, Any], limit: int = 8) 
         asset_id = str(asset.get("id") or "unknown").strip() if isinstance(asset, dict) else "unknown"
         argv = asset.get("argv") if isinstance(asset, dict) else []
         guardrail_reason = str(item.get("guardrail_reason") or "").strip()
+        output_ref = str(item.get("output_ref") or "").strip()
+        result = str(item.get("result") or "").strip()
         suffixes = ["asset=%s/%s" % (asset_type, asset_id)]
         if isinstance(argv, list) and argv:
             suffixes.append("argv=%s" % " ".join(str(part) for part in argv))
         if guardrail_reason:
             suffixes.append("guardrail=%s" % guardrail_reason)
+        if output_ref:
+            suffixes.append("output_ref=%s" % output_ref)
+        if result:
+            suffixes.append("result=%s" % result)
         if reason:
             suffixes.append("reason=%s" % reason)
         suffix = " %s" % " ".join(suffixes)

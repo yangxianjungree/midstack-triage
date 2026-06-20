@@ -477,6 +477,92 @@ class MongoDBRulesTest(unittest.TestCase):
         self.assertEqual(requests["vr-mongodb-election-logs"]["execution_policy"], "auto_allowed")
         self.assertEqual(requests["vr-mongodb-election-logs"]["hypothesis_id"], "H4")
 
+    def test_split_brain_uses_collected_rs_conf_as_validation_evidence(self) -> None:
+        input_data = {"scenario": "replica-inconsistency"}
+        signal_bundle = {"abnormal_signals": [{"signal_id": "replica-member-recovering", "detail": "member state differs"}]}
+        collection_report = {"evidence_gaps": []}
+        structured_record = {
+            "details": {
+                "replica_members": [
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-0",
+                        "voting_members_count": 1,
+                        "self_member": {"state_str": "PRIMARY", "config_version": 2, "config_term": 73},
+                        "members": [
+                            {"name": "mongo-0:27017", "state_str": "PRIMARY", "config_version": 2, "config_term": 73}
+                        ],
+                    },
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-1",
+                        "voting_members_count": 3,
+                        "self_member": {"state_str": "PRIMARY", "config_version": 8, "config_term": 72},
+                        "members": [
+                            {"name": "mongo-0:27017", "state_str": "(not reachable/healthy)"},
+                            {"name": "mongo-1:27017", "state_str": "PRIMARY", "config_version": 8, "config_term": 72},
+                            {"name": "mongo-2:27017", "state_str": "SECONDARY", "config_version": 8, "config_term": 72},
+                        ],
+                    },
+                ],
+                "replica_configs": [
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-0",
+                        "source_method": "rs.conf",
+                        "version": 2,
+                        "term": 73,
+                        "members": [{"host": "mongo-0:27017", "votes": 1, "priority": 1}],
+                    },
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-1",
+                        "source_method": "rs.conf",
+                        "version": 8,
+                        "term": 72,
+                        "members": [
+                            {"host": "mongo-0:27017", "votes": 1, "priority": 1},
+                            {"host": "mongo-1:27017", "votes": 1, "priority": 1},
+                            {"host": "mongo-2:27017", "votes": 1, "priority": 1},
+                        ],
+                    },
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-2",
+                        "source_method": "rs.conf",
+                        "version": 8,
+                        "term": 72,
+                        "members": [
+                            {"host": "mongo-0:27017", "votes": 1, "priority": 1},
+                            {"host": "mongo-1:27017", "votes": 1, "priority": 1},
+                            {"host": "mongo-2:27017", "votes": 1, "priority": 1},
+                        ],
+                    },
+                ],
+            }
+        }
+
+        result = self.mod.analyse(input_data, signal_bundle, collection_report, structured_record)
+
+        hypotheses = {item["hypothesis_id"]: item for item in result["hypotheses"]}
+        config_hypothesis = next(
+            item for item in hypotheses.values() if "configuration or member metadata drift" in item["statement"]
+        )
+        self.assertEqual(config_hypothesis["status"], "supported")
+        self.assertEqual(config_hypothesis["validation_result"], "supported")
+        self.assertFalse(
+            any("rs.conf() comparison across all affected members is not available" in gap["gap"] for gap in config_hypothesis["evidence_gaps"])
+        )
+        evidence_text = "\n".join(item["detail"] for item in config_hypothesis["supporting_evidence"])
+        self.assertIn("mongo-0 version=2 term=73 members=1", evidence_text)
+        self.assertIn("mongo-1 version=8 term=72 members=3", evidence_text)
+        requests = {item["request_id"]: item for item in result["verification_requests"]}
+        self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["status"], "completed")
+        self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["output_ref"], "structured_record.details.replica_configs")
+        next_action_text = "\n".join(item["action"] for item in result["next_actions"])
+        self.assertNotIn("Compare rs.conf()", next_action_text)
+        self.assertIn("heartbeat/election/reconfig", next_action_text)
+
     def test_split_brain_deepening_promotes_rules_conclusion_to_mechanism(self) -> None:
         input_data = {"scenario": "replica-inconsistency"}
         signal_bundle = {"abnormal_signals": [{"signal_id": "replica-member-recovering", "detail": "member state differs"}]}

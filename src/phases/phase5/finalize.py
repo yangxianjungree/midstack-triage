@@ -46,24 +46,42 @@ def _first_next_action(analysis) -> str:
     return actions[0] if actions else "No next action recorded"
 
 
+def _first_completed_verification(analysis) -> str:
+    for item in analysis.get("verification_requests") or []:
+        if not isinstance(item, dict) or item.get("status") != "completed":
+            continue
+        request_id = str(item.get("request_id") or "verification").strip()
+        result = str(item.get("result") or item.get("output_ref") or "").strip()
+        if result:
+            return "`%s` %s" % (request_id, result)
+        return "`%s` completed" % request_id
+    return ""
+
+
 def completed_user_message(incident_dir: Path, input_data, analysis) -> str:
     conclusion = analysis.get("conclusion_summary") or {}
-    return "\n".join(
+    rows = [
+        "| Field | Value |",
+        "| --- | --- |",
+        "| Status | `completed` |",
+        "| Incident | `%s` |" % _table_value(input_data.get("incident_id") or incident_dir.name),
+        "| Middleware | `%s` |" % _table_value(input_data.get("middleware") or "mongodb"),
+        "| Conclusion | %s |" % _table_value(conclusion.get("statement")),
+        "| Confidence | `%s` |" % _table_value(conclusion.get("confidence")),
+        "| Supported level | `%s` |" % _table_value(conclusion.get("deepest_supported_level")),
+        "| Primary cause | `%s` |" % _table_value(conclusion.get("primary_cause_category")),
+    ]
+    verification = _first_completed_verification(analysis)
+    if verification:
+        rows.append("| Verification | %s |" % verification)
+    rows.extend(
         [
-            "| Field | Value |",
-            "| --- | --- |",
-            "| Status | `completed` |",
-            "| Incident | `%s` |" % _table_value(input_data.get("incident_id") or incident_dir.name),
-            "| Middleware | `%s` |" % _table_value(input_data.get("middleware") or "mongodb"),
-            "| Conclusion | %s |" % _table_value(conclusion.get("statement")),
-            "| Confidence | `%s` |" % _table_value(conclusion.get("confidence")),
-            "| Supported level | `%s` |" % _table_value(conclusion.get("deepest_supported_level")),
-            "| Primary cause | `%s` |" % _table_value(conclusion.get("primary_cause_category")),
             "| Report | `%s` |" % (incident_dir / "report.md"),
             "| Analysis | `%s` |" % (incident_dir / "analysis.yaml"),
             "| Next | `%s` |" % _first_next_action(analysis),
         ]
     )
+    return "\n".join(rows)
 
 
 def build_finalize_adapter_output(incident_dir: Path, input_data, analysis):

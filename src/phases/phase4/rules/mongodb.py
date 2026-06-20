@@ -275,7 +275,73 @@ def verification_requests_for_gaps(
     return dedupe_verification_requests(requests)
 
 
-def split_brain_enabling_hypotheses(findings: List[Dict[str, Any]], existing_count: int) -> List[Dict[str, Any]]:
+def replica_configs_from_record(structured_record: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
+        item
+        for item in ((structured_record.get("details") or {}).get("replica_configs") or [])
+        if isinstance(item, dict)
+    ]
+
+
+def _replica_config_member_names(record: Dict[str, Any]) -> List[str]:
+    names: List[str] = []
+    for member in record.get("members") or []:
+        if not isinstance(member, dict):
+            continue
+        name = str(member.get("host") or member.get("name") or "").strip()
+        if name:
+            names.append(name)
+    return sorted(names)
+
+
+def rs_conf_validation_summary(replica_configs: List[Dict[str, Any]]) -> Dict[str, Any]:
+    records = [item for item in replica_configs if str(item.get("source_method") or "") == "rs.conf"]
+    if not records:
+        return {}
+    groups: Dict[str, List[Dict[str, Any]]] = {}
+    for item in records:
+        replica_set_id = str(item.get("replica_set_id") or "").strip()
+        if not replica_set_id:
+            continue
+        groups.setdefault(replica_set_id, []).append(item)
+    per_group_details: Dict[str, List[str]] = {}
+    divergent_sets: List[str] = []
+    for replica_set_id, items in sorted(groups.items()):
+        versions = {(item.get("version"), item.get("term")) for item in items}
+        member_views = {tuple(_replica_config_member_names(item)) for item in items}
+        if len(versions) > 1 or len(member_views) > 1:
+            divergent_sets.append(replica_set_id)
+        group_details: List[str] = []
+        for item in sorted(items, key=lambda value: str(value.get("source_pod_ref") or "")):
+            group_details.append(
+                "%s version=%s term=%s members=%s"
+                % (
+                    str(item.get("source_pod_ref") or "unknown"),
+                    item.get("version"),
+                    item.get("term"),
+                    len(_replica_config_member_names(item)),
+                )
+            )
+        per_group_details[replica_set_id] = group_details
+    details = []
+    selected_sets = divergent_sets or sorted(groups)
+    for replica_set_id in selected_sets:
+        details.extend(per_group_details.get(replica_set_id) or [])
+    if not details:
+        return {}
+    return {
+        "status": "divergent" if divergent_sets else "consistent",
+        "replica_sets": sorted(groups),
+        "divergent_replica_sets": divergent_sets,
+        "details": details,
+    }
+
+
+def split_brain_enabling_hypotheses(
+    findings: List[Dict[str, Any]],
+    existing_count: int,
+    rs_conf_summary: Dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
     finding_ids = {str(item.get("finding_id") or "") for item in findings if isinstance(item, dict)}
     if "mongodb.replica_set.enabling_cause_candidates" not in finding_ids:
         return []
@@ -310,25 +376,48 @@ def split_brain_enabling_hypotheses(findings: List[Dict[str, Any]], existing_cou
         history_gaps = []
         history_status = "supported"
         history_validation_result = "Supported by current incident MongoDB heartbeat/election/reconfig log highlights."
+    rs_conf_summary = rs_conf_summary or {}
+    rs_conf_details = rs_conf_summary.get("details") if isinstance(rs_conf_summary.get("details"), list) else []
+    config_evidence = evidence
+    config_gaps = [
+        {
+            "gap": "rs.conf() comparison across all affected members is not available",
+            "gap_type": "critical_gap",
+            "related_stage": "reasoning",
+            "why_important": "Without rs.conf() from every member, config drift cannot be confirmed or ruled out.",
+        }
+    ]
+    config_status = "insufficient"
+    config_validation_result = "Needed to confirm version, members, votes, priority and settings divergence."
+    config_action_status = "planned"
+    if rs_conf_summary:
+        config_evidence = [
+            {
+                "source": "structured_record.details.replica_configs",
+                "detail": "rs.conf comparison collected: %s" % "; ".join(str(item) for item in rs_conf_details),
+            }
+        ]
+        config_gaps = []
+        config_action_status = "completed"
+        if rs_conf_summary.get("status") == "divergent":
+            config_status = "supported"
+            config_validation_result = "Supported by collected rs.conf version/term/member divergence."
+        else:
+            config_status = "refuted"
+            config_validation_result = "Collected rs.conf views are consistent, weakening config drift as the enabling cause."
+
     hypotheses = [
         hypothesis_with_actions(
             "H%s" % (existing_count + 1),
             "Replica set configuration or member metadata drift created divergent decision views.",
-            evidence,
-            [
-                {
-                    "gap": "rs.conf() comparison across all affected members is not available",
-                    "gap_type": "critical_gap",
-                    "related_stage": "reasoning",
-                    "why_important": "Without rs.conf() from every member, config drift cannot be confirmed or ruled out.",
-                }
-            ],
-            "insufficient",
+            config_evidence,
+            config_gaps,
+            config_status,
             [
                 {
                     "action": "Compare read-only rs.conf() output from all affected members.",
-                    "status": "planned",
-                    "result": "Needed to confirm version, members, votes, priority and settings divergence.",
+                    "status": config_action_status,
+                    "result": config_validation_result,
                     "risk_level": "read-only",
                 }
             ],
@@ -366,7 +455,11 @@ def split_brain_enabling_hypotheses(findings: List[Dict[str, Any]], existing_cou
     return hypotheses
 
 
-def verification_requests_from_deepening_findings(findings: List[Dict[str, Any]], hypotheses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def verification_requests_from_deepening_findings(
+    findings: List[Dict[str, Any]],
+    hypotheses: List[Dict[str, Any]],
+    rs_conf_summary: Dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
     finding_ids = {str(item.get("finding_id") or "") for item in findings if isinstance(item, dict)}
     if "mongodb.replica_set.enabling_cause_candidates" not in finding_ids:
         return []
@@ -380,16 +473,22 @@ def verification_requests_from_deepening_findings(findings: List[Dict[str, Any]]
             history_hypothesis_id = str(item.get("hypothesis_id") or "")
     requests: List[Dict[str, Any]] = []
     if config_hypothesis_id:
-        requests.append(
-            first_class_script_request(
-                "vr-mongodb-rs-conf-compare",
-                config_hypothesis_id,
-                "compare rs.conf from all affected replica set members",
-                "mongodb.collect.replicaset.rs_conf",
-                ["structured_record.details.replica_configs", "analysis.hypotheses"],
-                "Configuration drift is a plausible enabling cause for divergent replica set views.",
-            )
+        request = first_class_script_request(
+            "vr-mongodb-rs-conf-compare",
+            config_hypothesis_id,
+            "compare rs.conf from all affected replica set members",
+            "mongodb.collect.replicaset.rs_conf",
+            ["structured_record.details.replica_configs", "analysis.hypotheses"],
+            "Configuration drift is a plausible enabling cause for divergent replica set views.",
         )
+        if rs_conf_summary:
+            request["status"] = "completed"
+            request["output_ref"] = "structured_record.details.replica_configs"
+            request["result"] = "rs.conf comparison %s: %s" % (
+                rs_conf_summary.get("status"),
+                "; ".join(str(item) for item in (rs_conf_summary.get("details") or [])),
+            )
+        requests.append(request)
     if history_hypothesis_id:
         requests.append(
             first_class_script_request(
@@ -482,7 +581,11 @@ def deep_analysis_requests_from_deepening_findings(findings: List[Dict[str, Any]
     )
 
 
-def next_actions_from_deepening_findings(scenario: str, findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def next_actions_from_deepening_findings(
+    scenario: str,
+    findings: List[Dict[str, Any]],
+    rs_conf_summary: Dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
     if scenario != "replica-inconsistency":
         return []
     finding_ids = {str(item.get("finding_id") or "") for item in findings if isinstance(item, dict)}
@@ -496,18 +599,22 @@ def next_actions_from_deepening_findings(scenario: str, findings: List[Dict[str,
     )
     if not has_config_or_quorum_divergence:
         return []
-    actions = [
-        {
-            "action": "Compare rs.conf() from every shard member and record config version, term, members, votes, priority, and settings before any reconfiguration.",
-            "risk_level": "read-only",
-            "requires_confirmation": False,
-        },
+    actions = []
+    if not rs_conf_summary:
+        actions.append(
+            {
+                "action": "Compare rs.conf() from every shard member and record config version, term, members, votes, priority, and settings before any reconfiguration.",
+                "risk_level": "read-only",
+                "requires_confirmation": False,
+            }
+        )
+    actions.append(
         {
             "action": "Collect MongoDB heartbeat/election/reconfig log lines from all affected members for the incident window and previous restart window.",
             "risk_level": "read-only",
             "requires_confirmation": False,
-        },
-    ]
+        }
+    )
     if "mongodb.network.current_tcp_reachability" in finding_ids:
         actions.append(
             {
@@ -1347,8 +1454,9 @@ def analyse(
 
     conclusion = apply_conclusion_ceiling(conclusion, evidence, gaps, ids)
     deepening_findings = build_mongodb_deepening_findings(structured_record, signal_bundle)
+    rs_conf_summary = rs_conf_validation_summary(replica_configs_from_record(structured_record))
     promote_split_brain_conclusion_from_deepening(conclusion, deepening_findings)
-    hypotheses.extend(split_brain_enabling_hypotheses(deepening_findings, len(hypotheses)))
+    hypotheses.extend(split_brain_enabling_hypotheses(deepening_findings, len(hypotheses), rs_conf_summary))
     verification_requests = verification_requests_for_gaps(
         scenario,
         ids,
@@ -1357,10 +1465,10 @@ def analyse(
         hypotheses,
     )
     verification_requests = dedupe_verification_requests(
-        verification_requests + verification_requests_from_deepening_findings(deepening_findings, hypotheses)
+        verification_requests + verification_requests_from_deepening_findings(deepening_findings, hypotheses, rs_conf_summary)
     )
     deep_analysis_requests = deep_analysis_requests_from_deepening_findings(deepening_findings, hypotheses)
-    deepening_next_actions = next_actions_from_deepening_findings(scenario, deepening_findings)
+    deepening_next_actions = next_actions_from_deepening_findings(scenario, deepening_findings, rs_conf_summary)
     if deepening_next_actions:
         next_actions = deepening_next_actions
     reasoning_timeline = build_reasoning_timeline(signal_bundle, collection_report, structured_record, hypotheses)

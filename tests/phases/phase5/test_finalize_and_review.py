@@ -99,6 +99,56 @@ def test_finalize_analysis_writes_adapter_output_and_report(tmp_path):
     assert meta["status"] == "analysed"
 
 
+def test_finalize_analysis_user_message_includes_completed_verification(tmp_path):
+    incident_dir = tmp_path / "incident"
+    write_yaml(
+        incident_dir / "input.yaml",
+        {
+            "incident_id": "demo-incident",
+            "middleware": "mongodb",
+            "namespace": "psmdb-test",
+        },
+    )
+    write_yaml(
+        incident_dir / "analysis.yaml",
+        {
+            "conclusion_summary": {
+                "statement": "MongoDB replica set split-brain confirmed",
+                "confidence": "medium",
+                "deepest_supported_level": "mechanism",
+                "primary_cause_category": "replica_set_split_brain",
+            },
+            "hypotheses": [],
+            "next_actions": [{"action": "collect heartbeat logs"}],
+            "verification_requests": [
+                {
+                    "request_id": "vr-mongodb-rs-conf-compare",
+                    "status": "completed",
+                    "result": "rs.conf comparison divergent: mongo-0 version=2 term=73 members=1; mongo-1 version=8 term=72 members=3",
+                }
+            ],
+        },
+    )
+    (incident_dir / "report.md").write_text("# draft\n", encoding="utf-8")
+    write_yaml(incident_dir / "collection_report.yaml", {"evidence_gaps": []})
+    write_yaml(incident_dir / "signal_bundle.yaml", {"abnormal_signals": []})
+    write_yaml(
+        incident_dir / "meta.yaml",
+        {
+            "incident_id": "demo-incident",
+            "middleware": "mongodb",
+            "status": "analysing",
+            "current_command": "analyse",
+        },
+    )
+
+    rc = finalize_analysis(SimpleNamespace(output_root=str(tmp_path), incident_dir=str(incident_dir)), lambda report: None)
+
+    assert rc == 0
+    adapter = yaml.safe_load((incident_dir / "adapter-output.yaml").read_text(encoding="utf-8"))
+    assert "| Verification | `vr-mongodb-rs-conf-compare` rs.conf comparison divergent: mongo-0 version=2 term=73 members=1; mongo-1 version=8 term=72 members=3 |" in adapter["user_message"]
+
+
 def test_finalize_analysis_completed_output_includes_expected_refs(tmp_path):
     incident_dir = tmp_path / "incident"
     write_yaml(

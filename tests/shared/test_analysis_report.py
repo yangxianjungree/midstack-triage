@@ -453,7 +453,9 @@ def test_write_report_includes_verification_requests(tmp_path):
                 "risk_level": "read-only",
                 "execution_policy": "auto_allowed",
                 "reason": "Configuration drift is a plausible enabling cause.",
-                "status": "planned",
+                "status": "completed",
+                "output_ref": "structured_record.details.replica_configs",
+                "result": "rs.conf comparison divergent: mongo-0 version=2 term=73 members=1; mongo-1 version=8 term=72 members=3",
             },
             {
                 "request_id": "vr-mongodb-election-logs",
@@ -492,8 +494,10 @@ def test_write_report_includes_verification_requests(tmp_path):
 
     content = report.read_text(encoding="utf-8")
     assert "## Verification Requests" in content
-    assert "`planned` `read-only` `auto_allowed` `first_class` `vr-mongodb-rs-conf-compare` H3" in content
+    assert "`completed` `read-only` `auto_allowed` `first_class` `vr-mongodb-rs-conf-compare` H3" in content
     assert "asset=script/mongodb.collect.replicaset.rs_conf" in content
+    assert "output_ref=structured_record.details.replica_configs" in content
+    assert "rs.conf comparison divergent: mongo-0 version=2 term=73 members=1; mongo-1 version=8 term=72 members=3" in content
     assert "Configuration drift is a plausible enabling cause." in content
     assert "`planned` `read-only` `auto_allowed` `first_class` `vr-mongodb-election-logs` H4" in content
     assert "asset=script/kubernetes.collect.logs.previous" in content

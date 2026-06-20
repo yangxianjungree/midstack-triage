@@ -669,6 +669,23 @@ def test_write_report_includes_deep_analysis_results(tmp_path):
                     "capability": "baseline_scan",
                     "status": "completed",
                     "summary": "Replica set rs0 has divergent member and quorum views.",
+                    "replica_sets": ["rs0"],
+                    "violations": ["multiple_primary_views", "quorum_view_divergence"],
+                },
+                {
+                    "request_id": "dar-mongodb-rs-code-path",
+                    "capability": "code_path_tracing",
+                    "status": "completed",
+                    "summary": "Traced evidence path with one missing validation edge.",
+                    "supports": ["replica_set_config_divergence"],
+                    "refutes": ["sustained_network_partition"],
+                    "missing_path_edges": [
+                        {
+                            "request_id": "vr-mongodb-rs-conf-compare",
+                            "purpose": "compare rs.conf from all affected members",
+                            "status": "planned",
+                        }
+                    ],
                 }
             ],
         },
@@ -680,3 +697,6 @@ def test_write_report_includes_deep_analysis_results(tmp_path):
     assert "## Deep Analysis Results" in content
     assert "`deep-analysis.yaml` total=2 completed=2 capabilities=baseline_scan,code_path_tracing" in content
     assert "`completed` `baseline_scan` `dar-mongodb-rs-baseline-scan`: Replica set rs0 has divergent member and quorum views." in content
+    assert "replica_sets=rs0 violations=multiple_primary_views,quorum_view_divergence" in content
+    assert "supports=replica_set_config_divergence refutes=sustained_network_partition" in content
+    assert "missing_edge `planned` `vr-mongodb-rs-conf-compare`: compare rs.conf from all affected members" in content

@@ -251,6 +251,22 @@ def deep_analysis_result_report_lines(analysis: Dict[str, Any], limit: int = 6) 
         summary_text = str(item.get("summary") or "").strip()
         if request_id and summary_text:
             lines.append("- `%s` `%s` `%s`: %s" % (status, capability, request_id, summary_text))
+        replica_sets = ",".join(str(value) for value in as_list(item.get("replica_sets")) if str(value).strip())
+        violations = ",".join(str(value) for value in as_list(item.get("violations")) if str(value).strip())
+        if replica_sets or violations:
+            lines.append("  - replica_sets=%s violations=%s" % (replica_sets or "none", violations or "none"))
+        supports = ",".join(str(value) for value in as_list(item.get("supports")) if str(value).strip())
+        refutes = ",".join(str(value) for value in as_list(item.get("refutes")) if str(value).strip())
+        if supports or refutes:
+            lines.append("  - supports=%s refutes=%s" % (supports or "none", refutes or "none"))
+        for edge in as_list(item.get("missing_path_edges"))[:3]:
+            if not isinstance(edge, dict):
+                continue
+            edge_status = str(edge.get("status") or "").strip()
+            edge_id = str(edge.get("request_id") or "").strip()
+            purpose = str(edge.get("purpose") or "").strip()
+            if edge_id or purpose:
+                lines.append("  - missing_edge `%s` `%s`: %s" % (edge_status or "planned", edge_id or "unknown", purpose))
     return lines
 
 

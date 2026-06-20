@@ -422,9 +422,8 @@ tests/fixtures/active/mongodb/<case_id>/
 - 已补充 remote run / incident 到 fixture 的冻结工具
 - 已补充最小 MongoDB 本地 analyse runner
 - replay 已支持生成 analysis 输出并对比 expected/actual 一级归因
-- 本地 CLI analyse 已支持消费已完成的远程采集结果目录
-- 本地 CLI analyse 已支持通过远程执行入口调度真实只读采集
-- 完整插件 analyse runner 尚未实现正式 remote executor 调度
+- 运行时 analyse 已支持消费已完成的远程采集结果目录
+- 运行时 analyse 已支持从 `/start` 生成的 incident `remote-config.yaml` 或显式 `--remote-config` 调度 remote executor 真实只读采集
 
 ### 4. Score comparison
 

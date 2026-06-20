@@ -519,6 +519,54 @@ def next_actions_from_deepening_findings(scenario: str, findings: List[Dict[str,
     return actions
 
 
+def promote_split_brain_conclusion_from_deepening(conclusion: Dict[str, Any], findings: List[Dict[str, Any]]) -> None:
+    finding_ids = {str(item.get("finding_id") or "") for item in findings if isinstance(item, dict)}
+    split_brain_finding_ids = {
+        "mongodb.replica_set.config_divergence",
+        "mongodb.replica_set.membership_divergence",
+        "mongodb.replica_set.quorum_divergence",
+    }
+    if not (finding_ids & split_brain_finding_ids):
+        return
+    statements = [
+        str(item.get("statement") or "").strip()
+        for item in findings
+        if isinstance(item, dict) and str(item.get("finding_id") or "") in split_brain_finding_ids
+    ]
+    replica_set = "replica set"
+    for statement in statements:
+        marker = "Replica set "
+        if statement.startswith(marker) and " has " in statement:
+            replica_set = statement[len(marker) : statement.index(" has ")]
+            break
+    conclusion["statement"] = (
+        "MongoDB replica set %s has a split-brain mechanism: multiple PRIMARY or divergent config/member/quorum views are present."
+        % replica_set
+    )
+    conclusion["confidence"] = "medium"
+    conclusion["primary_cause_category"] = "replica_set_split_brain"
+    conclusion["deepest_supported_level"] = "mechanism"
+    conclusion["impact_scope"] = conclusion.get("impact_scope") or "replica set consistency"
+    evidence = list(conclusion.get("evidence") or [])
+    for statement in statements:
+        if statement and statement not in evidence:
+            evidence.append(statement)
+    if not any("structured_record.details.replica_members" in item for item in evidence):
+        evidence.append("structured_record.details.replica_members shows divergent replica-set member views.")
+    conclusion["evidence"] = evidence
+    limitations = list(conclusion.get("limitations") or [])
+    if not any(isinstance(item, dict) and item.get("gap") == "split-brain enabling cause remains unproven" for item in limitations):
+        limitations.append(
+            {
+                "gap": "split-brain enabling cause remains unproven",
+                "gap_type": "critical_gap",
+                "related_stage": "reasoning",
+                "why_important": "Current evidence confirms the split-brain mechanism, but not whether it was triggered by historical network partition, reconfig drift, or MongoDB heartbeat/auth/process-layer failure.",
+            }
+        )
+    conclusion["limitations"] = limitations
+
+
 def hypothesis(hid: str, statement: str, evidence: List[Dict[str, str]], gaps: List[Dict[str, Any]], status: str) -> Dict[str, Any]:
     return {
         "hypothesis_id": hid,
@@ -1299,6 +1347,7 @@ def analyse(
 
     conclusion = apply_conclusion_ceiling(conclusion, evidence, gaps, ids)
     deepening_findings = build_mongodb_deepening_findings(structured_record, signal_bundle)
+    promote_split_brain_conclusion_from_deepening(conclusion, deepening_findings)
     hypotheses.extend(split_brain_enabling_hypotheses(deepening_findings, len(hypotheses)))
     verification_requests = verification_requests_for_gaps(
         scenario,

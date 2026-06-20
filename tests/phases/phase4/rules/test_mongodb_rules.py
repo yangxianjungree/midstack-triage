@@ -477,6 +477,59 @@ class MongoDBRulesTest(unittest.TestCase):
         self.assertEqual(requests["vr-mongodb-election-logs"]["execution_policy"], "auto_allowed")
         self.assertEqual(requests["vr-mongodb-election-logs"]["hypothesis_id"], "H4")
 
+    def test_split_brain_deepening_promotes_rules_conclusion_to_mechanism(self) -> None:
+        input_data = {"scenario": "replica-inconsistency"}
+        signal_bundle = {"abnormal_signals": [{"signal_id": "replica-member-recovering", "detail": "member state differs"}]}
+        collection_report = {"evidence_gaps": []}
+        structured_record = {
+            "details": {
+                "replica_members": [
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-0",
+                        "voting_members_count": 1,
+                        "self_member": {"state_str": "PRIMARY", "config_version": 2, "config_term": 73},
+                        "members": [
+                            {"name": "mongo-0:27017", "state_str": "PRIMARY", "config_version": 2, "config_term": 73}
+                        ],
+                    },
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-1",
+                        "voting_members_count": 3,
+                        "self_member": {"state_str": "PRIMARY", "config_version": 8, "config_term": 72},
+                        "members": [
+                            {"name": "mongo-0:27017", "state_str": "(not reachable/healthy)"},
+                            {"name": "mongo-1:27017", "state_str": "PRIMARY", "config_version": 8, "config_term": 72},
+                            {"name": "mongo-2:27017", "state_str": "SECONDARY", "config_version": 8, "config_term": 72},
+                        ],
+                    },
+                    {
+                        "replica_set_id": "rs0",
+                        "source_pod_ref": "mongo-2",
+                        "voting_members_count": 3,
+                        "self_member": {"state_str": "SECONDARY", "config_version": 8, "config_term": 72},
+                        "members": [
+                            {"name": "mongo-0:27017", "state_str": "(not reachable/healthy)"},
+                            {"name": "mongo-1:27017", "state_str": "PRIMARY", "config_version": 8, "config_term": 72},
+                            {"name": "mongo-2:27017", "state_str": "SECONDARY", "config_version": 8, "config_term": 72},
+                        ],
+                    },
+                ]
+            }
+        }
+
+        result = self.mod.analyse(input_data, signal_bundle, collection_report, structured_record)
+
+        conclusion = result["conclusion_summary"]
+        self.assertEqual(conclusion["confidence"], "medium")
+        self.assertEqual(conclusion["deepest_supported_level"], "mechanism")
+        self.assertEqual(conclusion["primary_cause_category"], "replica_set_split_brain")
+        self.assertIn("rs0", conclusion["statement"])
+        self.assertIn("split-brain", conclusion["statement"])
+        self.assertIn("multiple PRIMARY", conclusion["statement"])
+        self.assertTrue(any("structured_record.details.replica_members" in item for item in conclusion["evidence"]))
+
     def test_split_brain_history_logs_support_enabling_cause_hypothesis(self) -> None:
         input_data = {"scenario": "replica-inconsistency"}
         signal_bundle = {

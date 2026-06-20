@@ -104,13 +104,14 @@ python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/midstack-loc
   deep analysis, not as permission to run live commands.
 - Read `reasoning-manifest.yaml` and the current `reasoning/*.yaml` segment when present before refining conclusions.
 - Do not edit or delete existing `reasoning/*.yaml` files.
+- Treat runtime-generated `analysis.yaml` and `report.md` as authoritative.
+- Do not edit `analysis.yaml` or `report.md` after analyse in the default path.
 - Inspect `signal_bundle.log_highlights`, `structured_record.details.dns_checks`, `structured_record.details.pod_terminations`, and any `file_tail` log evidence.
 - Treat `analysis.rules-fallback.yaml` as fallback only.
-- Update `analysis.yaml` and `report.md` with Agent-led multi-hypothesis reasoning, gap classification, source-boundary handling, DNS/file-log validation, and conclusion-depth limits.
 - Classify gaps as `expected_gap` or `critical_gap`.
 - Use `deepest_supported_level` when useful: `phenomenon`, `impact`, `mechanism`, or `root_cause`.
 - Treat DNS probe `blocked` as an evidence gap; DNS probe `failed` is mechanism evidence only with DNS-layer error text.
-- After refinement, run finalize; finalize-analysis appends the new reasoning segment when the latest analysis view changed.
+- Run finalize after reading the artifacts; finalize-analysis appends the new reasoning segment when the latest analysis view changed.
 
 Finalize:
 

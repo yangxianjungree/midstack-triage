@@ -20,8 +20,9 @@ When the user asks to triage MongoDB or middleware incidents in this workspace:
   when present, and `reasoning-manifest.yaml` plus the current
   `reasoning/*.yaml` segment when present; do not edit or delete existing
   `reasoning/*.yaml` files.
-- Update only the latest `analysis.yaml` and `report.md` views, then run
-  `midstack-local.py finalize-analysis`; finalize-analysis appends the new
+- Treat runtime-generated `analysis.yaml` and `report.md` as authoritative.
+- Do not edit `analysis.yaml` or `report.md` after analyse in the default path.
+- Run `midstack-local.py finalize-analysis`; finalize-analysis appends the new
   reasoning segment when the latest analysis view changed.
 - Treat DNS probe `blocked` as an evidence gap and DNS probe `failed` as mechanism evidence only when the failed check contains DNS-layer error text.
 

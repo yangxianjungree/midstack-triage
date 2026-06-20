@@ -62,8 +62,8 @@ After analyse succeeds:
   deep analysis, not as permission to run live commands.
 - Read `reasoning-manifest.yaml` and the current `reasoning/*.yaml` segment when present before refining conclusions.
 - Do not edit or delete existing `reasoning/*.yaml` files.
-- Refine only the latest `analysis.yaml` and `report.md` views according to
-  `agent-reasoning-task.md`.
+- Treat runtime-generated `analysis.yaml` and `report.md` as authoritative.
+- Do not edit `analysis.yaml` or `report.md` after analyse in the default path.
 - Run `finalize-analysis`; finalize-analysis appends the new reasoning segment
   when the latest analysis view changed.
 

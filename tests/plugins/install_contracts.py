@@ -29,6 +29,8 @@ ANALYSE_COMMAND_CONTRACT_TOKENS = [
     "Read `deep-analysis.yaml` when present",
     "Read `reasoning-manifest.yaml` and the current `reasoning/*.yaml` segment when present",
     "Do not edit or delete existing `reasoning/*.yaml` files",
+    "Do not edit `analysis.yaml` or `report.md` after analyse in the default path",
+    "Treat runtime-generated `analysis.yaml` and `report.md` as authoritative",
     "finalize-analysis appends the new reasoning segment",
     "print `user_message` from `adapter-output.yaml` verbatim",
     "fixed Markdown table for the completed analysis response",

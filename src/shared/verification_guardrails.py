@@ -57,6 +57,8 @@ BLOCKED_MONGO_EVAL_TERMS = (
     "shutdownserver",
 )
 
+SHELL_CONTROL_TOKENS = {"|", "||", "&", "&&", ";", ">", ">>", "<", "<<", "2>", "2>>"}
+
 
 def ad_hoc_readonly_command_request(
     request_id: str,
@@ -113,11 +115,20 @@ def _guard_ad_hoc_readonly_request(item: Dict[str, Any], asset: Dict[str, Any]) 
     argv = asset.get("argv")
     if not _is_string_list(argv):
         changed = _mark_blocked(item, "ad hoc command must be structured argv with an allowed read-only prefix") or changed
+    elif shell_reason := _argv_shell_control_reason(argv):
+        changed = _mark_blocked(item, shell_reason) or changed
     elif mutation_reason := _argv_mutation_reason(argv):
         changed = _mark_blocked(item, mutation_reason) or changed
     elif not _argv_has_readonly_prefix(argv):
         changed = _mark_blocked(item, "ad hoc command must be structured argv with an allowed read-only prefix") or changed
     else:
+        if asset.get("type") != "ad_hoc_command":
+            asset["type"] = "ad_hoc_command"
+            changed = True
+        request_id = str(item.get("request_id") or "ad-hoc-command").strip() or "ad-hoc-command"
+        if not asset.get("id"):
+            asset["id"] = request_id
+            changed = True
         if item.get("asset_tier") != "ad_hoc_readonly":
             item["asset_tier"] = "ad_hoc_readonly"
             changed = True
@@ -160,6 +171,14 @@ def _argv_has_readonly_prefix(argv: List[str]) -> bool:
         if normalized[: len(prefix)] == prefix:
             return True
     return False
+
+
+def _argv_shell_control_reason(argv: List[str]) -> Optional[str]:
+    for item in argv:
+        token = item.strip()
+        if token in SHELL_CONTROL_TOKENS:
+            return "shell control token `%s` is not allowed in ad hoc structured argv" % token
+    return None
 
 
 def _argv_mutation_reason(argv: List[str]) -> Optional[str]:

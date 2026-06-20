@@ -60,6 +60,22 @@ def validate_default_collection_set(manifest_by_id: dict, shared_by_id: dict, er
         errors.append("legacy MongoDB kubectl log aliases must not be default MVP scripts: %s" % sorted(legacy_defaults))
 
 
+def validate_compatibility_aliases(manifest_by_id: dict, shared_by_id: dict, errors: list[str]) -> None:
+    known_ids = set(manifest_by_id) | set(shared_by_id)
+    for script_id, item in manifest_by_id.items():
+        if not isinstance(item, dict) or item.get("compatibility_alias") is not True:
+            continue
+        target = str(item.get("superseded_by") or "")
+        if item.get("mvp") is True:
+            errors.append("%s compatibility alias must not be an MVP script" % script_id)
+        if item.get("collection_tier") == "baseline":
+            errors.append("%s compatibility alias must not be a baseline script" % script_id)
+        if not target:
+            errors.append("%s compatibility alias must declare superseded_by" % script_id)
+        elif target not in known_ids:
+            errors.append("%s superseded_by target is not a known packaged asset: %s" % (script_id, target))
+
+
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate MongoDB script manifest and plugin runtime map.")
     parser.add_argument("--manifest", default="domains/mongodb/scripts/manifest.yaml")
@@ -82,6 +98,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     asset_ref_manifest_by_id = dict(manifest_by_id)
     asset_ref_manifest_by_id.update(shared_by_id)
     validate_default_collection_set(manifest_by_id, shared_by_id, errors)
+    validate_compatibility_aliases(manifest_by_id, shared_by_id, errors)
     runtime_by_id = validate_runtime_map(ROOT / args.runtime_map, manifest_by_id, errors)
     validate_context_example(ROOT / args.context_example, manifest_by_id, errors)
     validate_output_example(ROOT / args.output_example, manifest_by_id, taxonomies, errors)

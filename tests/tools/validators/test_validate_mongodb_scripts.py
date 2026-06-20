@@ -60,6 +60,34 @@ def test_default_mongodb_collection_set_uses_shared_kubernetes_logs():
     assert "mongodb.collect.logs.previous" not in default_ids
 
 
+def test_compatibility_aliases_must_not_be_default_collection_assets():
+    from mongodb_assets import cli as module
+
+    errors = []
+    module.validate_compatibility_aliases(
+        {
+            "mongodb.collect.logs.current": {
+                "compatibility_alias": True,
+                "mvp": True,
+                "collection_tier": "baseline",
+                "superseded_by": "kubernetes.collect.logs.current",
+            },
+            "mongodb.collect.logs.previous": {
+                "compatibility_alias": True,
+                "mvp": False,
+                "collection_tier": "directed",
+                "superseded_by": "kubernetes.collect.logs.missing",
+            },
+        },
+        {"kubernetes.collect.logs.current": {"script_id": "kubernetes.collect.logs.current"}},
+        errors,
+    )
+
+    assert "mongodb.collect.logs.current compatibility alias must not be an MVP script" in errors
+    assert "mongodb.collect.logs.current compatibility alias must not be a baseline script" in errors
+    assert "mongodb.collect.logs.previous superseded_by target is not a known packaged asset: kubernetes.collect.logs.missing" in errors
+
+
 def test_validate_mongodb_scripts_wrapper_stays_thin():
     text = CLI_PATH.read_text(encoding="utf-8")
 

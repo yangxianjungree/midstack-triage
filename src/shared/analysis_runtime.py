@@ -40,6 +40,65 @@ def analysis_next_action_texts(analysis: Dict[str, Any]) -> List[str]:
     return items
 
 
+def _materialized_deep_analysis_task_lines(output_dir: Path, analysis_file: Path, limit: int = 4) -> List[str]:
+    deep_analysis_file = output_dir / "deep-analysis.yaml"
+    if not deep_analysis_file.exists() or not analysis_file.exists():
+        return []
+    analysis = load_yaml(analysis_file)
+    results = analysis.get("deep_analysis_results") if isinstance(analysis, dict) else {}
+    if not isinstance(results, dict):
+        return []
+    summary = results.get("summary") if isinstance(results.get("summary"), dict) else {}
+    highlights = [item for item in as_list(results.get("highlights")) if isinstance(item, dict)]
+    if not summary and not highlights:
+        return []
+
+    lines = ["- `deep-analysis.yaml`: materialized read-only deep analysis results."]
+    total = summary.get("total_requests")
+    completed = summary.get("completed_requests")
+    capabilities = [str(item).strip() for item in as_list(summary.get("capabilities")) if str(item).strip()]
+    summary_parts = []
+    if completed is not None and total is not None:
+        summary_parts.append("completed=%s/%s" % (completed, total))
+    if capabilities:
+        summary_parts.append("capabilities=%s" % ",".join(capabilities))
+    if summary_parts:
+        lines.append("- `analysis.yaml.deep_analysis_results`: %s" % " ".join(summary_parts))
+
+    for item in highlights[:limit]:
+        request_id = str(item.get("request_id") or "deep-analysis").strip()
+        capability = str(item.get("capability") or "unknown").strip()
+        status = str(item.get("status") or "unknown").strip()
+        text = str(item.get("summary") or "").strip()
+        line = "- `%s` `%s` `%s`: %s" % (request_id, capability, status, text)
+        suffixes = []
+        violations = [str(value).strip() for value in as_list(item.get("violations")) if str(value).strip()]
+        replica_sets = [str(value).strip() for value in as_list(item.get("replica_sets")) if str(value).strip()]
+        supports = [str(value).strip() for value in as_list(item.get("supports")) if str(value).strip()]
+        refutes = [str(value).strip() for value in as_list(item.get("refutes")) if str(value).strip()]
+        missing_edges = [
+            "%s:%s" % (edge.get("request_id"), edge.get("status"))
+            for edge in as_list(item.get("missing_path_edges"))
+            if isinstance(edge, dict) and edge.get("request_id")
+        ]
+        if violations:
+            suffixes.append("violations=%s" % ",".join(violations))
+        if replica_sets:
+            suffixes.append("replica_sets=%s" % ",".join(replica_sets))
+        if supports:
+            suffixes.append("supports=%s" % ",".join(supports))
+        if refutes:
+            suffixes.append("refutes=%s" % ",".join(refutes))
+        if missing_edges:
+            suffixes.append("missing_edges=%s" % ",".join(missing_edges))
+        if suffixes:
+            line = "%s %s" % (line, " ".join(suffixes))
+        lines.append(line)
+    if len(highlights) > limit:
+        lines.append("- ... %s more deep-analysis highlight(s) omitted; see `deep-analysis.yaml`." % (len(highlights) - limit))
+    return lines
+
+
 def timeline_report_lines(analysis: Dict[str, Any], limit: int = 8) -> List[str]:
     timeline = analysis.get("reasoning_timeline") or {}
     events = as_list(timeline.get("events") if isinstance(timeline, dict) else [])
@@ -594,6 +653,7 @@ def write_agent_reasoning_task(
     for asset in input_data.get("matched_assets") or matched_asset_refs(middleware, matched_skills):
         if asset.get("path"):
             lines.append("- %s `%s` → `%s`" % (asset.get("type"), asset.get("id"), asset.get("path")))
+    materialized_deep_analysis_lines = _materialized_deep_analysis_task_lines(output_dir, analysis_file)
     lines.extend(
         [
             "",
@@ -604,6 +664,11 @@ def write_agent_reasoning_task(
             "- `signal_bundle.yaml`: curated abnormal signals, object links, and timeline hints.",
             "- `collection_report.yaml`: collection coverage, failures, and evidence gaps.",
             "- `%s`: current rules fallback analysis for reference only." % rules_fallback_file.name,
+        ]
+    )
+    lines.extend(materialized_deep_analysis_lines)
+    lines.extend(
+        [
             "",
             "## Required Output Files",
             "",

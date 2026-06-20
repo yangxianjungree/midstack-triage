@@ -249,6 +249,54 @@ def test_gate_marks_high_confidence_claude_candidate_eligible_with_current_evide
     assert gate["blockers"] == []
 
 
+def test_gate_selects_lower_confidence_eligible_candidate_when_top_candidate_is_invalid():
+    gate = evaluate_agent_conclusion_gate(
+        _analysis(
+            {
+                "runtime": {"selected_type": "claude", "model": "claude-sonnet-4-6"},
+                "hypotheses": [
+                    {
+                        "id": "h-bad",
+                        "statement": "Invalid high confidence candidate",
+                        "status": "supported",
+                        "confidence": 0.96,
+                        "evidence_refs": ["structured_record.details.replica_members"],
+                        "conclusion_candidate": {
+                            "statement": "Invalid candidate",
+                            "confidence": "certain",
+                            "deepest_supported_level": "root",
+                            "primary_cause_category": "invalid",
+                            "impact_scope": "replica set",
+                            "evidence": ["structured_record.details.replica_members"],
+                            "limitations": [],
+                        },
+                    },
+                    {
+                        "id": "h-good",
+                        "statement": "Eligible lower confidence candidate",
+                        "status": "supported",
+                        "confidence": 0.91,
+                        "evidence_refs": ["structured_record.details.replica_members"],
+                        "conclusion_candidate": {
+                            "statement": "Replica set rs0 has a split-brain mechanism.",
+                            "confidence": "medium",
+                            "deepest_supported_level": "mechanism",
+                            "primary_cause_category": "replica_set_split_brain",
+                            "impact_scope": "rs0 availability",
+                            "evidence": ["structured_record.details.replica_members"],
+                            "limitations": [],
+                        },
+                    },
+                ],
+            }
+        )
+    )
+
+    assert gate["decision"] == "eligible"
+    assert gate["selected_candidate"]["hypothesis_id"] == "h-good"
+    assert gate["blockers"] == []
+
+
 def test_gate_preserves_structured_conclusion_candidate_for_future_override():
     gate = evaluate_agent_conclusion_gate(
         _analysis(

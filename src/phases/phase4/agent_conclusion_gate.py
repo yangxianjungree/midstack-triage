@@ -43,17 +43,24 @@ def evaluate_agent_conclusion_gate(analysis: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(agent_reasoning, dict):
         return _gate_result(None, [_blocker("missing_agent_reasoning", "no agent reasoning draft is recorded")])
 
-    candidate = _best_candidate(agent_reasoning)
     blockers: List[Dict[str, str]] = []
     runtime = agent_reasoning.get("runtime") if isinstance(agent_reasoning.get("runtime"), dict) else {}
     selected_type = str(runtime.get("selected_type") or "").strip()
     if selected_type != "claude":
         blockers.append(_blocker("agent_runtime_not_claude", "agent runtime is `%s`, not `claude`" % (selected_type or "unknown")))
 
+    candidates = _ranked_candidates(agent_reasoning)
+    candidate = _first_eligible_candidate(candidates, analysis, blockers)
     if not candidate:
         blockers.append(_blocker("missing_supported_candidate", "no supported agent hypothesis is available"))
         return _gate_result(None, blockers)
 
+    blockers = blockers + _candidate_blockers(candidate, analysis)
+    return _gate_result(candidate, blockers)
+
+
+def _candidate_blockers(candidate: Dict[str, Any], analysis: Dict[str, Any]) -> List[Dict[str, str]]:
+    blockers: List[Dict[str, str]] = []
     if candidate["status"] != "supported":
         blockers.append(_blocker("candidate_not_supported", "selected agent candidate is not supported"))
     if candidate["confidence"] < MIN_AGENT_CONFIDENCE:
@@ -87,8 +94,7 @@ def evaluate_agent_conclusion_gate(analysis: Dict[str, Any]) -> Dict[str, Any]:
     invalid_candidate_fields = _invalid_conclusion_candidate_fields(candidate["conclusion_summary"])
     for code, message in invalid_candidate_fields:
         blockers.append(_blocker(code, message))
-
-    return _gate_result(candidate, blockers)
+    return blockers
 
 
 def apply_agent_conclusion_override(analysis: Dict[str, Any]) -> bool:
@@ -126,12 +132,25 @@ def _blocker(code: str, message: str) -> Dict[str, str]:
     return {"code": code, "message": message}
 
 
-def _best_candidate(agent_reasoning: Dict[str, Any]) -> Dict[str, Any] | None:
+def _ranked_candidates(agent_reasoning: Dict[str, Any]) -> List[Dict[str, Any]]:
     candidates = [_candidate_from_hypothesis(item) for item in _as_list(agent_reasoning.get("hypotheses")) if isinstance(item, dict)]
     candidates = [item for item in candidates if item["statement"] or item["status"] == "supported"]
+    return sorted(candidates, key=lambda item: (item["status"] == "supported", item["confidence"], item["statement"]), reverse=True)
+
+
+def _first_eligible_candidate(
+    candidates: List[Dict[str, Any]],
+    analysis: Dict[str, Any],
+    global_blockers: List[Dict[str, str]],
+) -> Dict[str, Any] | None:
     if not candidates:
         return None
-    return sorted(candidates, key=lambda item: (item["status"] == "supported", item["confidence"], item["statement"]), reverse=True)[0]
+    if global_blockers:
+        return candidates[0]
+    for candidate in candidates:
+        if not _candidate_blockers(candidate, analysis):
+            return candidate
+    return candidates[0]
 
 
 def _candidate_from_hypothesis(item: Dict[str, Any]) -> Dict[str, Any]:

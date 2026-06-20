@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .analysis_common import analysis_text, as_list
+from .verification_guardrails import apply_verification_request_guardrails
 from .workspace import load_yaml, now_iso, write_yaml
 
 
@@ -275,6 +276,8 @@ def apply_analysis_guardrails(analysis: Dict[str, Any], collection_report: Dict[
     if not isinstance(conclusion, dict):
         return False
     changed = False
+    if apply_verification_request_guardrails(analysis):
+        changed = True
     if enforce_split_brain_enabling_cause_guardrail(analysis):
         changed = True
     direct_root_cause_supported = direct_root_cause_terms_present(analysis, signal_bundle)

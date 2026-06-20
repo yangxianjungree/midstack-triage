@@ -44,8 +44,11 @@ verification_requests:
     asset:
       type: <script|command|ad_hoc_command>
       id: <asset id or generated command id>
+      argv:
+        - <required for ad_hoc_command; structured argv only, no shell string>
     risk_level: <read-only|low-risk|high-risk|destructive>
     execution_policy: <auto_allowed|approval_required|blocked>
+    guardrail_reason: <why blocked or normalized, if applicable>
     expected_evidence:
       - <field or artifact expected after execution>
     reason: <why this verification is needed>

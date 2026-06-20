@@ -8,6 +8,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from shared.analysis_runtime import apply_analysis_guardrails, write_report
+from shared.verification_guardrails import ad_hoc_readonly_command_request, apply_verification_request_guardrails
 
 
 def test_guardrails_do_not_allow_config_drift_hypothesis_supported_without_rs_conf():
@@ -54,6 +55,70 @@ def test_guardrails_do_not_allow_config_drift_hypothesis_supported_without_rs_co
     assert hypothesis["validation_result"] == "insufficient"
     assert analysis["conclusion_summary"]["primary_cause_category"] == "split_brain_enabling_cause_unproven"
     assert any("rs.conf() comparison" in item["gap"] for item in analysis["conclusion_summary"]["limitations"])
+
+
+def test_ad_hoc_readonly_command_request_requires_approval():
+    request = ad_hoc_readonly_command_request(
+        "vr-kubectl-get-events",
+        "H1",
+        "inspect namespace events",
+        ["kubectl", "get", "events", "-n", "psmdb-test"],
+        ["collection_report.events"],
+        "events may explain the transient failure",
+    )
+
+    assert request["asset_tier"] == "ad_hoc_readonly"
+    assert request["execution_policy"] == "approval_required"
+    assert request["risk_level"] == "read-only"
+    assert request["status"] == "planned"
+
+
+def test_verification_request_guardrail_blocks_unstructured_ad_hoc_shell():
+    analysis = {
+        "verification_requests": [
+            {
+                "request_id": "vr-shell",
+                "asset_tier": "ad_hoc_readonly",
+                "asset": {"type": "ad_hoc_command", "id": "vr-shell", "command": "kubectl get pods | xargs delete"},
+                "risk_level": "read-only",
+                "execution_policy": "approval_required",
+                "status": "planned",
+            }
+        ]
+    }
+
+    changed = apply_verification_request_guardrails(analysis)
+
+    request = analysis["verification_requests"][0]
+    assert changed is True
+    assert request["asset_tier"] == "blocked"
+    assert request["execution_policy"] == "blocked"
+    assert request["status"] == "blocked"
+    assert "structured argv" in request["guardrail_reason"]
+
+
+def test_analysis_guardrails_normalize_ad_hoc_readonly_commands():
+    analysis = {
+        "conclusion_summary": {"statement": "needs more evidence", "confidence": "medium"},
+        "verification_requests": [
+            {
+                "request_id": "vr-kubectl-logs",
+                "asset_tier": "ad_hoc_readonly",
+                "asset": {"type": "ad_hoc_command", "id": "vr-kubectl-logs", "argv": ["kubectl", "logs", "pod/mongo-0"]},
+                "risk_level": "low-risk",
+                "execution_policy": "auto_allowed",
+                "status": "executed",
+            }
+        ],
+    }
+
+    changed = apply_analysis_guardrails(analysis, {}, {})
+
+    request = analysis["verification_requests"][0]
+    assert changed is True
+    assert request["risk_level"] == "read-only"
+    assert request["execution_policy"] == "approval_required"
+    assert request["status"] == "planned"
 
 
 def test_write_report_includes_reasoning_timeline(tmp_path):

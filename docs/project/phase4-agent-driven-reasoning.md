@@ -82,7 +82,7 @@ Phase 4 可以提出验证请求，但验证请求分层处理。`verification_r
 | 层级 | 例子 | 策略 |
 | --- | --- | --- |
 | 一等只读资产 | `domains/*/scripts/manifest.yaml` 中声明为 `readonly: true` 的脚本或结构化 command | 可进入 `verification_requests`，允许标记 `execution_policy: auto_allowed`；在 `analyse` 编排中会自动进入 Phase 3 定向补采 |
-| 二等临时只读命令 | 临时 `kubectl get`、`mongosh` 只读查询、日志 tail | 必须先经过只读 guardrail，默认先记录为 planned |
+| 二等临时只读命令 | 临时 `kubectl get`、`mongosh` 只读查询、日志 tail | 必须使用结构化 `asset.argv`，经过只读 guardrail 后仍只能是 `approval_required`，默认先记录为 planned |
 | 改变环境的动作 | `rs.reconfig()`、删除 Pod、重启进程、修改 YAML、写文件 | 必须 `blocked`，不得由 Phase 4 自动执行 |
 
 自动补采不是 Phase 4 直接执行命令，而是控制面在 rules fallback 产出后调用 Phase 3 recollection 复用既有执行面。补采完成后 rules fallback 会基于更新后的证据重新物化 `analysis.yaml` 和 `report.md`。如果请求仍缺证据，它可以继续以 `planned` 形式保留；因此 `status: planned` 不能单独理解成“从未尝试过”。

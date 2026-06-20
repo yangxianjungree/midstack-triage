@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List
 
+from shared.verification_guardrails import ad_hoc_readonly_command_request
+
 
 def first_class_script_request(
     request_id: str,

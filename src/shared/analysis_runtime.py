@@ -221,6 +221,10 @@ def agent_conclusion_gate_report_lines(analysis: Dict[str, Any], limit: int = 6)
                 conclusion_candidate.get("impact_scope", ""),
             )
         )
+        evidence = [str(item).strip() for item in as_list(conclusion_candidate.get("evidence")) if str(item).strip()]
+        if evidence:
+            suffix = "" if len(evidence) <= 4 else ", ... %s more" % (len(evidence) - 4)
+            lines.append("- Candidate evidence: %s%s" % (", ".join(evidence[:4]), suffix))
     for item in as_list(gate.get("blockers"))[:limit]:
         if not isinstance(item, dict):
             continue

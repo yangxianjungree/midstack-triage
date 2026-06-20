@@ -617,6 +617,10 @@ def test_write_report_includes_agent_conclusion_gate(tmp_path):
                     "deepest_supported_level": "mechanism",
                     "primary_cause_category": "replica_set_split_brain",
                     "impact_scope": "shard replica set",
+                    "evidence": [
+                        "structured_record.details.replica_members",
+                        "deep_analysis_results.highlights",
+                    ],
                 },
             },
             "blockers": [
@@ -635,6 +639,7 @@ def test_write_report_includes_agent_conclusion_gate(tmp_path):
     assert "- Decision: `blocked` override_applied=`False`" in content
     assert "`h1` confidence=`0.84`: Replica set split-brain is plausible." in content
     assert "Conclusion candidate: `medium` `mechanism` `replica_set_split_brain` shard replica set" in content
+    assert "Candidate evidence: structured_record.details.replica_members, deep_analysis_results.highlights" in content
     assert "`unresolved_critical_gap` critical evidence gaps remain unresolved" in content
 
 

@@ -10,7 +10,7 @@ TOOLS_DIR = Path(__file__).resolve().parents[2]
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
-from support.common import ROOT  # noqa: E402
+from support.common import ROOT, load_yaml  # noqa: E402
 
 from .contracts import (  # noqa: E402
     load_scenarios,
@@ -24,6 +24,18 @@ from .contracts import (  # noqa: E402
     validate_runtime_map,
 )
 from .domain_assets import validate_domain_assets, validate_fixtures  # noqa: E402
+
+
+def shared_kubernetes_manifest_by_id() -> dict:
+    manifest = ROOT / "domains" / "kubernetes" / "scripts" / "manifest.yaml"
+    if not manifest.exists():
+        return {}
+    data = load_yaml(manifest)
+    return {
+        str(item.get("script_id")): item
+        for item in data.get("scripts") or []
+        if isinstance(item, dict) and str(item.get("script_id") or "").startswith("kubernetes.")
+    }
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -44,12 +56,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     taxonomies = load_taxonomies(ROOT / "core/taxonomies", errors)
     scenarios = load_scenarios(ROOT / "scenarios", "mongodb", errors)
     manifest_by_id = validate_manifest(ROOT / args.manifest, errors)
+    asset_ref_manifest_by_id = dict(manifest_by_id)
+    asset_ref_manifest_by_id.update(shared_kubernetes_manifest_by_id())
     runtime_by_id = validate_runtime_map(ROOT / args.runtime_map, manifest_by_id, errors)
     validate_context_example(ROOT / args.context_example, manifest_by_id, errors)
     validate_output_example(ROOT / args.output_example, manifest_by_id, taxonomies, errors)
     validate_remote_request(ROOT / args.remote_request, manifest_by_id, runtime_by_id, errors)
     validate_remote_result(ROOT / args.remote_result, manifest_by_id, taxonomies, errors)
-    validate_domain_assets(taxonomies, scenarios, manifest_by_id, errors)
+    validate_domain_assets(taxonomies, scenarios, asset_ref_manifest_by_id, errors)
     validate_fixtures(errors)
     validate_adapter_output(ROOT / args.adapter_output, taxonomies, errors)
     if errors:

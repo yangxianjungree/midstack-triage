@@ -9,18 +9,23 @@ from shared.workspace import runtime_root
 ROOT = runtime_root()
 
 
-def load_manifest_readonly_scripts(middleware: str) -> Set[str]:
-    manifest_path = ROOT / "domains" / middleware / "scripts" / "manifest.yaml"
-    if not manifest_path.exists():
-        return set()
-    data = load_yaml(manifest_path)
+def manifest_readonly_scripts(manifest_path: Path) -> Set[str]:
     readonly: Set[str] = set()
+    if not manifest_path.exists():
+        return readonly
+    data = load_yaml(manifest_path)
     for item in data.get("scripts") or []:
         if not isinstance(item, dict):
             continue
         script_id = str(item.get("script_id") or "")
         if script_id and bool(item.get("readonly", True)):
             readonly.add(script_id)
+    return readonly
+
+
+def load_manifest_readonly_scripts(middleware: str) -> Set[str]:
+    readonly = manifest_readonly_scripts(ROOT / "domains" / middleware / "scripts" / "manifest.yaml")
+    readonly.update(manifest_readonly_scripts(ROOT / "domains" / "kubernetes" / "scripts" / "manifest.yaml"))
     return readonly
 
 

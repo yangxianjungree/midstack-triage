@@ -29,6 +29,7 @@ workflow_phases:
 related_scripts:
   - mongodb.collect.pods.state
   - mongodb.collect.services.yaml
-  - mongodb.collect.logs.current
+  - kubernetes.collect.logs.current
+  - mongodb.normalize.logs.highlights
 related_skills:
   - mongodb-triage-connection-failure

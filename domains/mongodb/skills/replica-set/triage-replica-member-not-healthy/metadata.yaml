@@ -25,7 +25,9 @@ required_assets:
   - type: script
     id: mongodb.collect.replicaset.rs_status
   - type: script
-    id: mongodb.collect.logs.previous
+    id: kubernetes.collect.logs.previous
+  - type: script
+    id: mongodb.normalize.logs.highlights
   - type: script
     id: mongodb.collect.logs.discover_sink
   - type: script

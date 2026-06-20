@@ -24,7 +24,7 @@ required_assets:
   - type: script
     id: mongodb.collect.pods.state
   - type: script
-    id: mongodb.collect.logs.current
+    id: kubernetes.collect.logs.current
   - type: script
     id: mongodb.normalize.logs.highlights
 safety_constraints:

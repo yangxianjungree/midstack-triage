@@ -16,6 +16,7 @@ if str(SRC_DIR) not in sys.path:
 
 from shared.skill_resolver import (  # noqa: E402
     missing_required_scripts,
+    recollection_script_pool,
     script_collection_statuses,
 )
 
@@ -87,6 +88,11 @@ class SkillResolverTest(unittest.TestCase):
         statuses = script_collection_statuses(Path("/tmp/nonexistent"), collection_report)
         required = ["pulsar.collect.pods.state", "pulsar.collect.broker.topic_stats"]
         self.assertEqual(missing_required_scripts(required, statuses), ["pulsar.collect.broker.topic_stats"])
+
+    def test_recollection_script_pool_includes_shared_kubernetes_log_assets(self) -> None:
+        pool = recollection_script_pool("mongodb", "replica-inconsistency")
+
+        self.assertIn("kubernetes.collect.logs.previous", pool)
 
 
 if __name__ == "__main__":

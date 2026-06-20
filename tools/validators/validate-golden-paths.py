@@ -48,6 +48,17 @@ def load_manifest(middleware: str = "mongodb") -> Dict[str, Dict[str, Any]]:
     return by_id
 
 
+def load_asset_ref_manifest(middleware: str = "mongodb") -> Dict[str, Dict[str, Any]]:
+    by_id = load_manifest(middleware)
+    kubernetes_manifest = ROOT / "domains" / "kubernetes" / "scripts" / "manifest.yaml"
+    if kubernetes_manifest.exists():
+        data = load_yaml(kubernetes_manifest)
+        for item in data.get("scripts") or []:
+            if isinstance(item, dict) and str(item.get("script_id") or "").startswith("kubernetes."):
+                by_id[str(item["script_id"])] = item
+    return by_id
+
+
 def load_metadata_index(domain: str, asset_kind: str) -> Dict[str, Path]:
     index: Dict[str, Path] = {}
     root = ROOT / "domains" / domain / asset_kind
@@ -232,6 +243,7 @@ def validate_golden_path(path: Path, errors: List[str], live: bool) -> None:
     commands = load_metadata_index(middleware, "commands")
     skills = load_metadata_index(middleware, "skills")
     manifest_by_id = load_manifest(middleware)
+    asset_ref_manifest_by_id = load_asset_ref_manifest(middleware)
     scenarios = {p.parent.name for p in (ROOT / "scenarios").glob("*/scenario.yaml")}
 
     routing = data.get("routing") or {}
@@ -259,7 +271,7 @@ def validate_golden_path(path: Path, errors: List[str], live: bool) -> None:
             validate_structured_ref(
                 ref,
                 "%s skill required_assets" % path,
-                manifest_by_id,
+                asset_ref_manifest_by_id,
                 runbooks,
                 commands,
                 skills,
@@ -277,7 +289,7 @@ def validate_golden_path(path: Path, errors: List[str], live: bool) -> None:
             validate_structured_ref(
                 asset,
                 "%s asset_refs" % path,
-                manifest_by_id,
+                asset_ref_manifest_by_id,
                 runbooks,
                 commands,
                 skills,

@@ -28,7 +28,7 @@ workflow_phases:
   - 4
 related_scripts:
   - mongodb.collect.pods.state
-  - mongodb.collect.logs.current
+  - kubernetes.collect.logs.current
   - mongodb.normalize.logs.highlights
 related_skills:
   - mongodb-triage-latency-spike

@@ -26,7 +26,9 @@ required_assets:
   - type: script
     id: mongodb.collect.services.yaml
   - type: script
-    id: mongodb.collect.logs.current
+    id: kubernetes.collect.logs.current
+  - type: script
+    id: mongodb.normalize.logs.highlights
 safety_constraints:
   - default to read-only commands
   - do not restart Pods, change Services, edit Secrets, or modify network policy without explicit confirmation

@@ -36,7 +36,8 @@ Phase 4 应把这些分支写成候选假设，并用当前证据支持、反驳
 - `mongodb.collect.replicaset.rs_conf`：采集多个成员视角的 `rs.conf()`，比较 members、votes、priority、version、term 和 settings。
 - `mongodb.collect.network.overlay`：当存在网络或 DNS 症状时采集 overlay、DNS 和 pod connectivity。
 - `mongodb.collect.dns.coredns`：当存在服务解析、mongos startup DNS 错误或 kube-dns 连接异常时采集 DNS 证据。
-- `mongodb.collect.logs.previous`：采集重启前日志，寻找 election、heartbeat、startup 和 fatal 线索。
+- `kubernetes.collect.logs.previous`：采集重启前 Pod stdout/stderr 日志，是 Kubernetes 通用能力。
+- `mongodb.normalize.logs.highlights`：从已采日志中提取 MongoDB election、heartbeat、reconfig、startup 和 fatal 线索。
 - `mongodb.collect.logs.discover_sink`、`mongodb.collect.logs.file_tail`、`mongodb.collect.logs.node_file_tail`：当 `kubectl logs` 不足以覆盖 MongoDB 文件日志时使用。
 
 二等临时只读验证可包括：

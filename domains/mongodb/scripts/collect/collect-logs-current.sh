@@ -92,6 +92,12 @@ def make_action_id(script_id: str) -> str:
     return script_id.replace(".", "-")
 
 
+def domain_profile(script_id: str) -> str:
+    if script_id.startswith("mongodb."):
+        return "mongodb"
+    return "kubernetes"
+
+
 def safe_name(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", value)
 
@@ -129,12 +135,17 @@ def blocked_output(output_file: str, script_id: str, started_at: str, summary: s
     write_yaml(output_file, payload)
 
 
-def pod_score(pod: Dict[str, Any]) -> int:
+def pod_score(pod: Dict[str, Any], profile: str) -> int:
     metadata = pod.get("metadata") or {}
     name = str(metadata.get("name") or "").lower()
     labels = metadata.get("labels") or {}
     label_text = " ".join([str(k).lower() + "=" + str(v).lower() for k, v in labels.items()])
     score = 0
+    if profile != "mongodb":
+        score += 1
+        if str(((pod.get("status") or {}).get("phase") or "")) == "Running":
+            score += 10
+        return score
     if "bnmongo" in name or "mongodb" in label_text:
         score += 10
     if "configsvr" in name or "shard" in name or "mongos" in name:
@@ -144,7 +155,7 @@ def pod_score(pod: Dict[str, Any]) -> int:
     return score
 
 
-def resolve_target_pods(kubectl: str, namespace: str, target_refs: List[str], artifact_dir: str) -> List[str]:
+def resolve_target_pods(kubectl: str, namespace: str, target_refs: List[str], artifact_dir: str, profile: str) -> List[str]:
     if target_refs:
         return target_refs
     proc = subprocess.run([kubectl, "get", "pods", "-n", namespace, "-o", "json"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
@@ -155,8 +166,9 @@ def resolve_target_pods(kubectl: str, namespace: str, target_refs: List[str], ar
         fh.write(proc.stdout)
     payload = json.loads(proc.stdout or "{}")
     result: List[str] = []
-    for pod in sorted(payload.get("items") or [], key=pod_score, reverse=True):
-        if pod_score(pod) < 10:
+    min_score = 10 if profile == "mongodb" else 1
+    for pod in sorted(payload.get("items") or [], key=lambda item: pod_score(item, profile), reverse=True):
+        if pod_score(pod, profile) < min_score:
             continue
         name = str((pod.get("metadata") or {}).get("name") or "")
         if name and name not in result:
@@ -170,12 +182,36 @@ def line_count(text: str) -> int:
     return len(text.splitlines())
 
 
+def short_log_gap(pod: str, profile: str, sample_policy: Dict[str, Any]) -> Dict[str, Any]:
+    if profile == "mongodb":
+        return {
+            "gap": "kubectl logs are too short for pod/%s; MongoDB application log sink is unknown" % pod,
+            "gap_type": "critical_gap",
+            "gap_category": "log_sample_quality",
+            "related_stage": "signal_collection",
+            "why_important": "MongoDB startup failures often write the root cause to file-backed application logs rather than container stdout/stderr.",
+            "recommended_action": "run mongodb.collect.logs.discover_sink to inspect MongoDB log destination and path",
+            "sample_policy": sample_policy,
+            "affects": ["root_cause"],
+        }
+    return {
+        "gap": "kubectl logs are too short for pod/%s; container stdout/stderr may not include application logs" % pod,
+        "gap_type": "expected_gap",
+        "gap_category": "log_sample_quality",
+        "related_stage": "signal_collection",
+        "why_important": "Short container logs may hide the domain-specific application log sink or incident window.",
+        "recommended_action": "inspect domain-specific log sink when container stdout/stderr is insufficient",
+        "sample_policy": sample_policy,
+    }
+
+
 def main() -> int:
     context_file, output_file, artifact_dir = sys.argv[1:4]
     started_at = now_iso()
     context = load_yaml(context_file)
 
     script_id = str(context.get("script_id") or "mongodb.collect.logs.current")
+    profile = domain_profile(script_id)
     namespace = context.get("namespace") or ((context.get("targets") or {}).get("namespace"))
     if not namespace:
         raise ValueError("context-file missing namespace")
@@ -192,7 +228,7 @@ def main() -> int:
             started_at,
             "kubectl is not available in current runtime",
             ["capabilities.kubectl_available is false"],
-            [{"gap": "current pod logs not collected", "related_stage": "signal_collection", "why_important": "logs are required to identify MongoDB runtime errors"}],
+            [{"gap": "current pod logs not collected", "related_stage": "signal_collection", "why_important": "logs are required to identify runtime errors"}],
         )
         return 0
 
@@ -216,7 +252,7 @@ def main() -> int:
     log_dir_name = "logs-%s" % log_type
     logs_dir = os.path.join(artifact_dir, "raw", log_dir_name)
     os.makedirs(logs_dir, exist_ok=True)
-    candidate_pods = resolve_target_pods(kubectl, str(namespace), [str(item) for item in (targets.get("pod_refs") or [])], artifact_dir)
+    candidate_pods = resolve_target_pods(kubectl, str(namespace), [str(item) for item in (targets.get("pod_refs") or [])], artifact_dir, profile)
     target_pods = candidate_pods[:max_targets]
     sample_policy = {
         "tail_lines": tail_lines,
@@ -237,8 +273,8 @@ def main() -> int:
             script_id,
             started_at,
             "log target pods could not be resolved",
-            ["no MongoDB related pods were detected"],
-            [{"gap": "log target pods not resolved", "related_stage": "signal_collection", "why_important": "logs must be collected from target MongoDB Pods"}],
+            ["no target pods were detected"],
+            [{"gap": "log target pods not resolved", "related_stage": "signal_collection", "why_important": "logs must be collected from target Pods"}],
         )
         return 0
 
@@ -268,19 +304,8 @@ def main() -> int:
         current_line_count = line_count(proc.stdout)
         current_byte_size = len(proc.stdout.encode("utf-8"))
         if log_type == "current" and current_line_count <= 5:
-            blank_items.append({"item": "pod/%s current logs" % pod, "reason": "kubectl logs returned only %d line(s)" % current_line_count, "impact": "stdout/stderr may not contain MongoDB application logs"})
-            evidence_gaps.append(
-                {
-                    "gap": "kubectl logs are too short for pod/%s; MongoDB application log sink is unknown" % pod,
-                    "gap_type": "critical_gap",
-                    "gap_category": "log_sample_quality",
-                    "related_stage": "signal_collection",
-                    "why_important": "MongoDB startup failures often write the root cause to file-backed application logs rather than container stdout/stderr.",
-                    "recommended_action": "run mongodb.collect.logs.discover_sink to inspect MongoDB log destination and path",
-                    "sample_policy": sample_policy,
-                    "affects": ["root_cause"],
-                }
-            )
+            blank_items.append({"item": "pod/%s current logs" % pod, "reason": "kubectl logs returned only %d line(s)" % current_line_count, "impact": "stdout/stderr may not contain application logs"})
+            evidence_gaps.append(short_log_gap(pod, profile, sample_policy))
         log_records.append(
             {
                 "pod_ref": pod,

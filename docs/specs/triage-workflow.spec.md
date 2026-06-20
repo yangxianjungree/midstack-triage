@@ -356,6 +356,15 @@ domains/mongodb/scripts/
 - 两者一一对应，例如文件 `collect-replicaset-rs-status.sh` 对应 `script_id` `mongodb.collect.replicaset.rs_status`
 - `manifest.yaml` 以 `script_id` 为准登记，`source` 字段指向对应文件名
 
+### 日志采集边界
+
+`kubectl logs` 和 `kubectl logs --previous` 是 Kubernetes 通用采集能力，不属于 MongoDB 专有领域知识。当前过渡期内，`mongodb.collect.logs.current` 与 `mongodb.collect.logs.previous` 仍作为兼容入口保留，但脚本合同应支持通用 `kubernetes.collect.logs.current` / `kubernetes.collect.logs.previous` 语义。
+
+- 通用日志采集只负责 Pod/container stdout/stderr 采集、tail 策略、artifact 保存和 `structured_record.details.raw_logs`。
+- 中间件领域层负责日志格式、关键词、严重性、时间解析、log sink 发现和“日志太短意味着什么”的解释。
+- 当 `kubectl logs` 太短时，通用层只记录 stdout/stderr 不足；MongoDB、OceanBase 等领域层再根据启动参数、配置文件、挂载卷、数据盘或日志盘推理真实日志源。
+- 公共 manifest/runtime map 会在独立切片中落地；在此之前不得把 MongoDB log sink 规则复制到其他中间件。
+
 ### 第 3 段脚本最小调用合同
 
 当前建议第 3 段脚本统一采用以下 3 个入口参数：

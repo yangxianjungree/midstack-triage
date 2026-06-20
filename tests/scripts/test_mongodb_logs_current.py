@@ -43,7 +43,7 @@ raise SystemExit(1)
     kubectl.chmod(0o755)
 
 
-def run_logs_current(tmp_path: Path) -> tuple[subprocess.CompletedProcess, Path]:
+def run_logs_current(tmp_path: Path, script_id: str = "mongodb.collect.logs.current") -> tuple[subprocess.CompletedProcess, Path]:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     make_fake_kubectl(bin_dir)
@@ -53,7 +53,7 @@ def run_logs_current(tmp_path: Path) -> tuple[subprocess.CompletedProcess, Path]
     write_yaml(
         context_file,
         {
-            "script_id": "mongodb.collect.logs.current",
+            "script_id": script_id,
             "namespace": "psmdb-test",
             "capabilities": {"kubectl_available": True},
             "logs_query": {"tail_lines": 20, "max_targets": 2},
@@ -102,3 +102,18 @@ def test_logs_current_honors_max_targets_and_records_short_log_policy(tmp_path):
     assert gap["sample_policy"]["tail_lines"] == 20
     assert gap["sample_policy"]["max_targets"] == 2
     assert gap["recommended_action"] == "run mongodb.collect.logs.discover_sink to inspect MongoDB log destination and path"
+
+
+def test_kubernetes_logs_current_uses_domain_neutral_short_log_gap(tmp_path):
+    proc, output_file = run_logs_current(tmp_path, "kubernetes.collect.logs.current")
+
+    assert proc.returncode == 0, proc.stderr
+    output = yaml.safe_load(output_file.read_text(encoding="utf-8"))
+    gap = output["collection_report_patch"]["evidence_gaps"][0]
+
+    assert output["script_id"] == "kubernetes.collect.logs.current"
+    assert output["collection_report_patch"]["collection_actions"][0]["method"] == "kubectl logs"
+    assert "MongoDB" not in gap["gap"]
+    assert "MongoDB" not in gap["why_important"]
+    assert "mongodb.collect.logs.discover_sink" not in gap.get("recommended_action", "")
+    assert gap["recommended_action"] == "inspect domain-specific log sink when container stdout/stderr is insufficient"

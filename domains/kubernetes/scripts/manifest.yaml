@@ -1,0 +1,35 @@
+middleware: kubernetes
+scripts:
+  - script_id: kubernetes.collect.logs.current
+    source: ../../mongodb/scripts/collect/collect-logs-current.sh
+    phase: collect
+    target: logs
+    action: current
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: false
+    collection_tier: directed
+    signal_layer: logs
+    cost_class: medium
+    noise_class: high
+    sample_policy:
+      tail_lines: 1000
+      max_targets: 8
+
+  - script_id: kubernetes.collect.logs.previous
+    source: ../../mongodb/scripts/collect/collect-logs-current.sh
+    phase: collect
+    target: logs
+    action: previous
+    runtime: shell
+    readonly: true
+    default_packaged: true
+    mvp: false
+    collection_tier: directed
+    signal_layer: logs
+    cost_class: medium
+    noise_class: high
+    sample_policy:
+      tail_lines: 1000
+      max_targets: 8

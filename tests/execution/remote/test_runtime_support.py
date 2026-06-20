@@ -44,6 +44,80 @@ def test_load_config_reads_yaml_object(tmp_path):
     assert module.load_config(target) == {"status": "ok"}
 
 
+def test_load_script_entries_resolves_scripts_from_multiple_manifests(tmp_path):
+    module = importlib.import_module("execution.remote.runtime_support")
+    mongodb_manifest = tmp_path / "domains" / "mongodb" / "scripts" / "manifest.yaml"
+    kubernetes_manifest = tmp_path / "domains" / "kubernetes" / "scripts" / "manifest.yaml"
+    runtime_map = tmp_path / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
+    mongodb_script = mongodb_manifest.parent / "collect" / "collect-pods-state.sh"
+    kubernetes_script = kubernetes_manifest.parent / "collect" / "collect-logs-current.sh"
+    mongodb_script.parent.mkdir(parents=True)
+    kubernetes_script.parent.mkdir(parents=True)
+    runtime_map.parent.mkdir(parents=True)
+    mongodb_script.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    kubernetes_script.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    mongodb_manifest.write_text(
+        yaml.safe_dump(
+            {
+                "middleware": "mongodb",
+                "scripts": [
+                    {
+                        "script_id": "mongodb.collect.pods.state",
+                        "source": "collect/collect-pods-state.sh",
+                        "runtime": "shell",
+                        "readonly": True,
+                        "default_packaged": True,
+                        "mvp": True,
+                    }
+                ],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    kubernetes_manifest.write_text(
+        yaml.safe_dump(
+            {
+                "middleware": "kubernetes",
+                "scripts": [
+                    {
+                        "script_id": "kubernetes.collect.logs.current",
+                        "source": "collect/collect-logs-current.sh",
+                        "runtime": "shell",
+                        "readonly": True,
+                        "default_packaged": True,
+                        "mvp": True,
+                    }
+                ],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    runtime_map.write_text(
+        yaml.safe_dump(
+            {
+                "scripts": [
+                    {
+                        "script_id": "kubernetes.collect.logs.current",
+                        "runtime_path": "assets/scripts/kubernetes/collect-logs-current.sh",
+                        "runtime": "shell",
+                        "readonly": True,
+                    }
+                ]
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    entries = module.load_script_entries([mongodb_manifest, kubernetes_manifest], runtime_map, ["kubernetes.collect.logs.current"])
+
+    assert len(entries) == 1
+    assert entries[0]["script_id"] == "kubernetes.collect.logs.current"
+    assert entries[0]["source_path"] == kubernetes_script
+
+
 def test_local_access_from_config_defaults_node_access():
     cli = importlib.import_module("execution.remote.cli")
 

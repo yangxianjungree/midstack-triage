@@ -20,6 +20,7 @@ from execution.remote.contracts import (
 from execution.remote.runtime_support import (
     DEFAULT_LOCAL_OUTPUT,
     DEFAULT_MANIFEST,
+    DEFAULT_MANIFESTS,
     DEFAULT_PLUGIN_NAME,
     DEFAULT_REMOTE_ROOT,
     DEFAULT_RUNTIME_MAP,
@@ -112,7 +113,8 @@ def main(argv: List[str] | None = None) -> int:
             access = cfg["access"]
             transport = default_remote_transport()
         selected_ip = str(access.get("primary_ip") or "")
-        script_entries = load_script_entries(Path(args.manifest), Path(args.runtime_map), [str(item) for item in (args.script_id or []) if item])
+        manifest_paths = [Path(args.manifest)] if str(args.manifest or "") != str(DEFAULT_MANIFEST) else DEFAULT_MANIFESTS
+        script_entries = load_script_entries(manifest_paths, Path(args.runtime_map), [str(item) for item in (args.script_id or []) if item])
         script_ids = [str(item["script_id"]) for item in script_entries]
         capabilities_ok, capability_checks, capability_error = validate_executor_capabilities(access, transport=transport)
         write_yaml(local_dir / "capability-checks.yaml", {"checks": capability_checks, "error": capability_error})

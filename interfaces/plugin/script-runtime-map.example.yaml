@@ -57,6 +57,16 @@ scripts:
     runtime: shell
     readonly: true
 
+  - script_id: kubernetes.collect.logs.current
+    runtime_path: assets/scripts/kubernetes/collect-logs-current.sh
+    runtime: shell
+    readonly: true
+
+  - script_id: kubernetes.collect.logs.previous
+    runtime_path: assets/scripts/kubernetes/collect-logs-previous.sh
+    runtime: shell
+    readonly: true
+
   - script_id: mongodb.collect.logs.discover_sink
     runtime_path: assets/scripts/mongodb/collect-log-sink.sh
     runtime: shell

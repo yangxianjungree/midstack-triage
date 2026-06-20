@@ -50,14 +50,18 @@ def validate_multiline_ssh_quoting() -> None:
 
 def validate_runtime_map_resolution() -> None:
     module = load_remote_executor_module()
-    entries = module.load_script_entries(
+    manifest_paths = [
         ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml",
+        ROOT / "domains" / "kubernetes" / "scripts" / "manifest.yaml",
+    ]
+    entries = module.load_script_entries(
+        manifest_paths,
         ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml",
     )
     if len(entries) != 12:
         raise AssertionError("expected 12 runtime-map-backed script entries, got %d" % len(entries))
     directed_entries = module.load_script_entries(
-        ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml",
+        manifest_paths,
         ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml",
         [
             "mongodb.collect.logs.discover_sink",

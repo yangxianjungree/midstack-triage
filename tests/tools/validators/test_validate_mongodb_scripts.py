@@ -32,6 +32,17 @@ def test_validate_mongodb_scripts_passes_for_current_repo():
     assert module.main([]) == 0
 
 
+def test_runtime_map_includes_domain_neutral_kubernetes_log_assets():
+    runtime_map = yaml.safe_load((ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml").read_text(encoding="utf-8"))
+    manifest = yaml.safe_load((ROOT / "domains" / "kubernetes" / "scripts" / "manifest.yaml").read_text(encoding="utf-8"))
+
+    manifest_ids = {item["script_id"] for item in manifest["scripts"]}
+    runtime_ids = {item["script_id"] for item in runtime_map["scripts"]}
+
+    assert {"kubernetes.collect.logs.current", "kubernetes.collect.logs.previous"} <= manifest_ids
+    assert manifest_ids <= runtime_ids
+
+
 def test_validate_mongodb_scripts_wrapper_stays_thin():
     text = CLI_PATH.read_text(encoding="utf-8")
 

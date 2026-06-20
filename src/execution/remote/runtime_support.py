@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 
 from shared.io import load_yaml_object, now_iso as runtime_now_iso, write_json_object, write_yaml_object
 from shared.workspace import runtime_root
@@ -15,6 +15,10 @@ DEFAULT_LOCAL_OUTPUT = ROOT / ".local" / "remote-runs"
 DEFAULT_REMOTE_ROOT = "/tmp/midstack-triage"
 DEFAULT_RUNTIME_MAP = ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
 DEFAULT_MANIFEST = ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml"
+DEFAULT_MANIFESTS = [
+    ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml",
+    ROOT / "domains" / "kubernetes" / "scripts" / "manifest.yaml",
+]
 DEFAULT_PLUGIN_NAME = "midstack-triage"
 
 
@@ -46,15 +50,26 @@ def try_load_yaml(path: Path) -> Dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def load_script_entries(manifest_path: Path, runtime_map_path: Path, selected_script_ids: List[str] | None = None) -> List[Dict[str, Any]]:
-    manifest = load_config(manifest_path)
+def manifest_paths(value: Path | Sequence[Path]) -> List[Path]:
+    if isinstance(value, (list, tuple)):
+        return [Path(item) for item in value]
+    return [Path(value)]
+
+
+def load_script_entries(manifest_path: Path | Sequence[Path], runtime_map_path: Path, selected_script_ids: List[str] | None = None) -> List[Dict[str, Any]]:
     runtime_map = load_config(runtime_map_path)
-    manifest_root = manifest_path.parent
     source_by_id = {}
     selected = set(selected_script_ids or [])
-    for item in manifest.get("scripts") or []:
-        if isinstance(item, dict) and item.get("default_packaged") is True:
-            source_by_id[str(item.get("script_id") or "")] = item
+    for path in manifest_paths(manifest_path):
+        if not path.exists():
+            continue
+        manifest = load_config(path)
+        manifest_root = path.parent
+        for item in manifest.get("scripts") or []:
+            if isinstance(item, dict) and item.get("default_packaged") is True:
+                entry = dict(item)
+                entry["_manifest_root"] = manifest_root
+                source_by_id[str(item.get("script_id") or "")] = entry
 
     entries = []
     for item in runtime_map.get("scripts") or []:
@@ -70,6 +85,7 @@ def load_script_entries(manifest_path: Path, runtime_map_path: Path, selected_sc
         elif manifest_item.get("mvp") is not True:
             continue
         source = str(manifest_item.get("source") or "")
+        manifest_root = Path(manifest_item.get("_manifest_root") or "")
         entry = {
             "script_id": script_id,
             "source_path": manifest_root / source,

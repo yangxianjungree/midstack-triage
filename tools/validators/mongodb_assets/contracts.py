@@ -201,11 +201,11 @@ def validate_runtime_map(runtime_map_path: Path, manifest_by_id: Dict[str, Dict[
         runtime_path = str(item.get("runtime_path") or "")
         if os.path.isabs(runtime_path):
             fail(errors, "%s runtime_path must be runtime-relative" % script_id)
-        if not runtime_path.startswith("assets/scripts/mongodb/"):
+        if script_id.startswith("mongodb.") and not runtime_path.startswith("assets/scripts/mongodb/"):
             fail(errors, "%s runtime_path must start with assets/scripts/mongodb/" % script_id)
 
     packaged_ids = {script_id for script_id, item in manifest_by_id.items() if item.get("default_packaged") is True}
-    runtime_ids = set(runtime_by_id)
+    runtime_ids = {script_id for script_id in runtime_by_id if script_id.startswith("mongodb.")}
     if packaged_ids != runtime_ids:
         fail(errors, "runtime map ids differ from default_packaged manifest ids: missing=%s extra=%s" % (sorted(packaged_ids - runtime_ids), sorted(runtime_ids - packaged_ids)))
 

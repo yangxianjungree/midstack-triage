@@ -130,6 +130,18 @@ def validate_compatibility_aliases(manifest_by_id: dict, shared_by_id: dict, err
             errors.append("%s superseded_by target is not a known packaged asset: %s" % (script_id, target))
 
 
+def validate_shared_kubernetes_sources(shared_by_id: dict, errors: list[str]) -> None:
+    script_root = ROOT / "domains" / "kubernetes" / "scripts"
+    for script_id, item in shared_by_id.items():
+        source = str(item.get("source") or "")
+        if source.startswith("../"):
+            errors.append("%s shared Kubernetes asset source must stay under domains/kubernetes/scripts: %s" % (script_id, source))
+        if not source.startswith("collect/"):
+            errors.append("%s shared Kubernetes asset source must use the collect/ directory: %s" % (script_id, source))
+        if source and not (script_root / source).exists():
+            errors.append("%s shared Kubernetes asset source file does not exist: %s" % (script_id, source))
+
+
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate MongoDB script manifest and plugin runtime map.")
     parser.add_argument("--manifest", default="domains/mongodb/scripts/manifest.yaml")
@@ -153,6 +165,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     asset_ref_manifest_by_id.update(shared_by_id)
     validate_default_collection_set(manifest_by_id, shared_by_id, errors)
     validate_compatibility_aliases(manifest_by_id, shared_by_id, errors)
+    validate_shared_kubernetes_sources(shared_by_id, errors)
     runtime_by_id = validate_runtime_map(ROOT / args.runtime_map, manifest_by_id, errors)
     validate_documented_default_collection_set(default_collection_script_ids(manifest_by_id, shared_by_id, runtime_by_id), errors)
     validate_context_example(ROOT / args.context_example, manifest_by_id, errors)

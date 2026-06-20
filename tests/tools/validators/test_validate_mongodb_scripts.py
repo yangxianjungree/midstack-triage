@@ -43,6 +43,30 @@ def test_runtime_map_includes_domain_neutral_kubernetes_log_assets():
     assert manifest_ids <= runtime_ids
 
 
+def test_kubernetes_log_assets_use_kubernetes_domain_sources():
+    manifest = yaml.safe_load((ROOT / "domains" / "kubernetes" / "scripts" / "manifest.yaml").read_text(encoding="utf-8"))
+
+    log_assets = [item for item in manifest["scripts"] if item["script_id"].startswith("kubernetes.collect.logs.")]
+
+    assert log_assets
+    for item in log_assets:
+        assert item["source"].startswith("collect/")
+        assert not item["source"].startswith("../")
+        assert (ROOT / "domains" / "kubernetes" / "scripts" / item["source"]).exists()
+
+
+def test_kubernetes_shared_asset_validator_rejects_cross_domain_source():
+    from mongodb_assets import cli as module
+
+    errors = []
+    module.validate_shared_kubernetes_sources(
+        {"kubernetes.collect.logs.current": {"source": "../../mongodb/scripts/collect/collect-logs-current.sh"}},
+        errors,
+    )
+
+    assert any("shared Kubernetes asset source must stay under domains/kubernetes/scripts" in item for item in errors)
+
+
 def test_default_mongodb_collection_set_uses_shared_kubernetes_logs():
     mongodb_manifest = yaml.safe_load((ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml").read_text(encoding="utf-8"))
     kubernetes_manifest = yaml.safe_load((ROOT / "domains" / "kubernetes" / "scripts" / "manifest.yaml").read_text(encoding="utf-8"))

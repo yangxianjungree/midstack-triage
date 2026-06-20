@@ -1,7 +1,7 @@
 middleware: kubernetes
 scripts:
   - script_id: kubernetes.collect.logs.current
-    source: ../../mongodb/scripts/collect/collect-logs-current.sh
+    source: collect/collect-logs-current.sh
     phase: collect
     target: logs
     action: current
@@ -18,7 +18,7 @@ scripts:
       max_targets: 8
 
   - script_id: kubernetes.collect.logs.previous
-    source: ../../mongodb/scripts/collect/collect-logs-current.sh
+    source: collect/collect-logs-previous.sh
     phase: collect
     target: logs
     action: previous

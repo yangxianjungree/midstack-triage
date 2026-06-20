@@ -784,7 +784,7 @@ def test_directed_recollection_runs_auto_allowed_first_class_verification_reques
                     "asset_tier": "first_class",
                     "execution_policy": "auto_allowed",
                     "risk_level": "read-only",
-                    "asset": {"type": "script", "id": "mongodb.collect.logs.previous"},
+                    "asset": {"type": "script", "id": "kubernetes.collect.logs.previous"},
                 },
                 {
                     "request_id": "vr-mongodb-rs-conf-compare",
@@ -819,7 +819,7 @@ def test_directed_recollection_runs_auto_allowed_first_class_verification_reques
         (
             str(tmp_path / "remote.yaml"),
             output_dir / "directed-recollection",
-            ["mongodb.collect.logs.previous", "mongodb.collect.replicaset.rs_conf"],
+            ["kubernetes.collect.logs.previous", "mongodb.collect.replicaset.rs_conf"],
         )
     ]
 

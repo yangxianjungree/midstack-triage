@@ -157,8 +157,14 @@ def build_context(
         "normalize_query": {"per_file_highlight_limit": 50, "total_highlight_limit": 500},
         "inputs": {
             "log_artifact_dirs": {
-                "current": "%s/mongodb.collect.logs.current/artifacts" % run_root,
-                "previous": "%s/mongodb.collect.logs.previous/artifacts" % run_root,
+                "current": [
+                    "%s/mongodb.collect.logs.current/artifacts" % run_root,
+                    "%s/kubernetes.collect.logs.current/artifacts" % run_root,
+                ],
+                "previous": [
+                    "%s/mongodb.collect.logs.previous/artifacts" % run_root,
+                    "%s/kubernetes.collect.logs.previous/artifacts" % run_root,
+                ],
             },
             "script_output_files": {
                 upstream: "%s/%s/output.yaml" % (run_root, upstream)

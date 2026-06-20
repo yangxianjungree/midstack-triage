@@ -160,7 +160,7 @@ class MongoDBRulesTest(unittest.TestCase):
         hypothesis_ids = {item["hypothesis_id"] for item in result["hypotheses"]}
         requests = {item["asset"]["id"]: item for item in result["verification_requests"]}
         self.assertIn("mongodb.collect.replicaset.rs_status", requests)
-        self.assertIn("mongodb.collect.logs.previous", requests)
+        self.assertIn("kubernetes.collect.logs.previous", requests)
         for request in requests.values():
             self.assertIn(request["hypothesis_id"], hypothesis_ids)
             self.assertEqual(request["asset_tier"], "first_class")
@@ -473,7 +473,7 @@ class MongoDBRulesTest(unittest.TestCase):
         self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["execution_policy"], "auto_allowed")
         self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["risk_level"], "read-only")
         self.assertEqual(requests["vr-mongodb-rs-conf-compare"]["hypothesis_id"], "H3")
-        self.assertEqual(requests["vr-mongodb-election-logs"]["asset"]["id"], "mongodb.collect.logs.previous")
+        self.assertEqual(requests["vr-mongodb-election-logs"]["asset"]["id"], "kubernetes.collect.logs.previous")
         self.assertEqual(requests["vr-mongodb-election-logs"]["execution_policy"], "auto_allowed")
         self.assertEqual(requests["vr-mongodb-election-logs"]["hypothesis_id"], "H4")
 

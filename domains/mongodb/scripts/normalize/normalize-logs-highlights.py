@@ -88,20 +88,27 @@ def make_action_id(script_id: str) -> str:
     return script_id.replace(".", "-")
 
 
+def artifact_dirs(value: Any) -> List[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if item]
+    if value:
+        return [str(value)]
+    return []
+
+
 def iter_log_files(inputs: Dict[str, Any]) -> List[Tuple[str, str, str]]:
     result: List[Tuple[str, str, str]] = []
     dirs = ((inputs.get("log_artifact_dirs") or {}) if isinstance(inputs.get("log_artifact_dirs") or {}, dict) else {})
-    for log_type, artifact_dir in dirs.items():
-        if not artifact_dir:
-            continue
-        raw_dir = os.path.join(str(artifact_dir), "raw", "logs-%s" % log_type)
-        if not os.path.isdir(raw_dir):
-            continue
-        for name in sorted(os.listdir(raw_dir)):
-            if not name.endswith(".log"):
+    for log_type, configured_dirs in dirs.items():
+        for artifact_dir in artifact_dirs(configured_dirs):
+            raw_dir = os.path.join(artifact_dir, "raw", "logs-%s" % log_type)
+            if not os.path.isdir(raw_dir):
                 continue
-            pod_ref = name[:-4]
-            result.append((str(log_type), pod_ref, os.path.join(raw_dir, name)))
+            for name in sorted(os.listdir(raw_dir)):
+                if not name.endswith(".log"):
+                    continue
+                pod_ref = name[:-4]
+                result.append((str(log_type), pod_ref, os.path.join(raw_dir, name)))
     return result
 
 

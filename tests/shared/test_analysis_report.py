@@ -267,7 +267,7 @@ def test_write_report_includes_verification_requests(tmp_path):
                 "asset_tier": "first_class",
                 "asset": {
                     "type": "script",
-                    "id": "mongodb.collect.logs.previous",
+                    "id": "kubernetes.collect.logs.previous",
                 },
                 "risk_level": "read-only",
                 "execution_policy": "auto_allowed",
@@ -285,4 +285,4 @@ def test_write_report_includes_verification_requests(tmp_path):
     assert "asset=script/mongodb.collect.replicaset.rs_conf" in content
     assert "Configuration drift is a plausible enabling cause." in content
     assert "`planned` `read-only` `auto_allowed` `first_class` `vr-mongodb-election-logs` H4" in content
-    assert "asset=script/mongodb.collect.logs.previous" in content
+    assert "asset=script/kubernetes.collect.logs.previous" in content

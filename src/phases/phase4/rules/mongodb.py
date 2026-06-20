@@ -251,8 +251,8 @@ def verification_requests_for_gaps(
             first_class_script_request(
                 "vr-mongodb-previous-logs",
                 primary_hypothesis_id,
-                "collect previous MongoDB pod logs around restart",
-                "mongodb.collect.logs.previous",
+                "collect previous Kubernetes pod logs around restart",
+                "kubernetes.collect.logs.previous",
                 ["signal_bundle.log_highlights", "structured_record.details.processed_logs"],
                 "Crash or readiness evidence needs process log context before deepening the conclusion.",
             )
@@ -376,7 +376,7 @@ def verification_requests_from_deepening_findings(findings: List[Dict[str, Any]]
                 "vr-mongodb-election-logs",
                 history_hypothesis_id,
                 "collect MongoDB heartbeat election and reconfig logs",
-                "mongodb.collect.logs.previous",
+                "kubernetes.collect.logs.previous",
                 ["signal_bundle.log_highlights", "structured_record.details.processed_logs"],
                 "Historical heartbeat, election or reconfig evidence is needed to explain why split-brain formed.",
             )

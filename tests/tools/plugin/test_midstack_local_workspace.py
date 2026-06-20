@@ -981,12 +981,12 @@ def test_remote_analyse_runs_auto_allowed_verification_requests_after_rules(tmp_
                 "script_results": [],
             },
         )
-    directed_script_dir = directed_run_dir / "mongodb.collect.logs.previous"
+    directed_script_dir = directed_run_dir / "kubernetes.collect.logs.previous"
     directed_script_dir.mkdir()
     write_yaml(
         directed_script_dir / "remote-executor-result.yaml",
         {
-            "script_id": "mongodb.collect.logs.previous",
+            "script_id": "kubernetes.collect.logs.previous",
             "status": "success",
             "process": {"exit_code": 0},
         },
@@ -994,13 +994,13 @@ def test_remote_analyse_runs_auto_allowed_verification_requests_after_rules(tmp_
     write_yaml(
         directed_script_dir / "output.yaml",
         {
-            "script_id": "mongodb.collect.logs.previous",
+            "script_id": "kubernetes.collect.logs.previous",
             "status": "success",
             "summary": "previous logs collected",
             "collection_report_patch": {
                 "successful_items": [
                     {
-                        "item": "remote-executor/mongodb.collect.logs.previous",
+                        "item": "remote-executor/kubernetes.collect.logs.previous",
                         "source": "kubectl logs --previous",
                     }
                 ]
@@ -1030,7 +1030,7 @@ def test_remote_analyse_runs_auto_allowed_verification_requests_after_rules(tmp_
     def fake_generate_rule_analysis(middleware, output_dir):
         collection_report = load_yaml(output_dir / "collection_report.yaml")
         recollected = any(
-            item.get("item") == "remote-executor/mongodb.collect.logs.previous"
+            item.get("item") == "remote-executor/kubernetes.collect.logs.previous"
             for item in collection_report.get("successful_items") or []
         )
         return {
@@ -1051,7 +1051,7 @@ def test_remote_analyse_runs_auto_allowed_verification_requests_after_rules(tmp_
                     "asset_tier": "first_class",
                     "execution_policy": "auto_allowed",
                     "risk_level": "read-only",
-                    "asset": {"type": "script", "id": "mongodb.collect.logs.previous"},
+                    "asset": {"type": "script", "id": "kubernetes.collect.logs.previous"},
                     "status": "planned",
                 }
             ],
@@ -1081,7 +1081,7 @@ def test_remote_analyse_runs_auto_allowed_verification_requests_after_rules(tmp_
 
     assert calls == [
         ("mongodb-remote-ready", None),
-        ("directed-recollection", ["mongodb.collect.logs.previous"]),
+        ("directed-recollection", ["kubernetes.collect.logs.previous"]),
     ]
     analysis = load_yaml(incident_dir / "analysis.yaml")
     assert analysis["conclusion_summary"]["statement"] == "verified logs collected"

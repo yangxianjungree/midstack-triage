@@ -74,7 +74,6 @@ superseded_by: none
 - 增加更多 MongoDB 场景样例
 - 增加脚本资产样例，验证 `scripts/` 的组织方式
 - 按已确认规则补齐 `domains/mongodb/scripts/helpers/`
-- 明确第一版 `analyse` 已实现与未实现能力清单
 - `/plugin:analyse` 的 `scope` 参数设计与实现
 - `/plugin:analyse` 的 `force_recollect` 参数设计与实现
 
@@ -83,7 +82,7 @@ superseded_by: none
 - 明确密码、账号、入口 IP 等敏感信息的存储和展示规则
 - 明确哪些字段需要脱敏
 - 明确日志、记录文件和输出中的敏感信息处理策略
-- 实现 operator+CRD 场景下从 Kubernetes Secret 读取 MongoDB 认证信息
+- operator+CRD 场景下从 Kubernetes Secret 读取 MongoDB 认证信息已在核心采集脚本落地；后续仍需补完整拓扑适配和脱敏策略
 
 ### 6. Fixture 生命周期与脱敏治理
 
@@ -97,7 +96,7 @@ superseded_by: none
 - Elasticsearch
 - Kafka
 - Pulsar
-- `review` 评分与反馈能力的正式实现
+- `review` 评分权重和结果归档策略正式化
 
 ## 已完成但需后续复核
 

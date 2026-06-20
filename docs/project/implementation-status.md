@@ -1,6 +1,6 @@
 ---
 status: draft
-last_updated: 2026-06-16
+last_updated: 2026-06-20
 supersedes: none
 superseded_by: none
 ---
@@ -19,7 +19,12 @@ superseded_by: none
 - Cursor 适配器已支持 workspace-local runtime、命令/rule 投影、自检和 sandbox smoke
 - 本地仓库工具、validator、replay、`src/` runtime 和插件安装态 runtime 的最低版本为 Python 3.10+
 - `tools/plugin/midstack-local.py` 已收敛为本地 CLI 适配层，不再承载膨胀的正式实现
+- Phase 1/2 已支持 remote/local/offline 三类 intake 场景识别；remote 仍是默认主路径，local 已可基于本机 kubectl context 进入 live collection，offline 仍以已有 artifact 消费为主
+- 第 3 段默认日志采集已收敛到共享 `kubernetes.collect.logs.current` / `kubernetes.collect.logs.previous`；MongoDB 日志 alias 仅作兼容入口
 - 第 4 段多轨推理实现已收敛到 `src/phases/phase4/multitrack/`；当前 `/midstack:analyse` 的生产 `analysis.yaml` 仍由 rules fallback + guardrails 生成，multitrack 输出为辅助产物
+- 第 4/5 段已生成 append-only 推理历史：`reasoning-manifest.yaml` 和 `reasoning/*.yaml` segment；`analysis.yaml` / `report.md` 作为最新物化视图
+- Phase 4 rules 已输出 `reasoning_timeline`、`deepening_findings`、`verification_requests`、`retrieval_context`、`experience_matches` 和 `source_boundaries`；历史经验召回仍是预留字段，当前不接入真实向量库
+- 受控验证请求已分层：一等只读 `auto_allowed` 脚本可由 analyse 编排交回 Phase 3 定向补采；二等 ad hoc 只读命令必须结构化 argv、approval required；破坏性命令会被 guardrail 标记 blocked
 - Replay fixture 已拆分为 `tests/fixtures/active/` 与 `tests/fixtures/legacy/`，默认 replay、score 和仓库门禁只读取 active 样本
 - Fixture hygiene gate 已覆盖 active、legacy 和 golden-path fixtures，阻断运行时生成物、疑似密钥和公网 IP；内网 IP 当前作为 warning 暴露
 - 历史兼容层和旧入口目录已清理：`tools/lib/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tests/replay/`、`tests/tools/analyse/`
@@ -61,8 +66,12 @@ superseded_by: none
 - 支持"参数可选 + 交互补全"
 - 创建 `incident_id`
 - 创建 incident 目录和基础文件
+- 识别 remote / local / offline intake 场景
+- 在 remote 缺关键信息时记录本机 kubectl context 提示
 - 验证远程环境基础可达性
 - 验证基础 Kubernetes 操作能力
+- local 模式验证本机 kubectl context 和基础对象盘点，不走 SSH/sshpass
+- offline 模式可记录 artifact source 或 pasted evidence，但缺完整 artifact 时保持 blocked
 - 判断并输出 `ready / blocked`
 - 将新记录设为当前会话目标记录
 
@@ -76,6 +85,8 @@ superseded_by: none
   - `collection_report`
 - 执行第 4 段过程推理，生成 `reasoning-board.yaml` 和 `analysis.multitrack.yaml`
 - 通过 rules fallback + guardrails 生成生产 `analysis.yaml`
+- 生成 `reasoning-manifest.yaml` 和 append-only reasoning segment，记录本轮分析快照、自动补采审计和 hypothesis validation 隔离引用
+- 对一等只读 `verification_requests` 执行 Phase 3 定向补采并重新物化分析；对 ad hoc 请求只做 guardrail 归一化或 blocked，不自动执行
 - 输出第 5 段阶段性结论
 - 输出知识沉淀候选
 - 可直接消费：
@@ -83,6 +94,7 @@ superseded_by: none
   - `/start` 生成的 incident 目录
   - 已完成的 remote run 目录
 - 可通过 `.local` 远程环境配置调度真实 MongoDB 只读采集，然后继续分析
+- 可通过 ready local incident 的 `local-config.yaml` 使用本地 transport 调度同一批 Phase 3 采集脚本
 
 ### MongoDB
 
@@ -94,17 +106,23 @@ superseded_by: none
   - Node
 - 分片集群 / 副本集基础 topology 识别
 - `rs.status()` 基础成员状态采集
-- Pod 日志采集
+- `rs.conf()` 定向只读采集
+- Kubernetes Pod stdout/stderr 日志采集
   - 当前日志
   - 重启前日志（如可用）
+- MongoDB 应用日志 sink 发现和文件日志 tail 定向补采
+- DNS、网络 overlay、Pod describe 等定向补采能力
 - 基础信号治理
   - 时间对齐
   - 对象关联
   - 初步过滤降噪
+- replica set 多视角不变量 deepening
+- split-brain enabling-cause 候选假设和只读验证请求
+- MongoDB election、heartbeat、reconfig、startup、fatal 日志 highlight 归一化
 
 ### MongoDB 第一批脚本
 
-`/plugin:analyse` 的 MongoDB MVP 已完成 11 个第 3 段脚本的合同级实现（清单与执行顺序见[插件运行时规范](../specs/plugin-runtime.spec.md)，能力边界见 [Analyse MVP 规范](../specs/analyse-mvp.spec.md)）。
+`/plugin:analyse` 的 MongoDB MVP 已完成 11 个默认第 3 段采集/治理资产的合同级实现（清单与执行顺序见[插件运行时规范](../specs/plugin-runtime.spec.md)，能力边界见 [Analyse MVP 规范](../specs/analyse-mvp.spec.md)）。其中当前/previous Pod 日志通过共享 Kubernetes 资产采集，MongoDB `collect.logs.current/previous` 只保留兼容 alias。
 
 真实环境验证状态：
 
@@ -170,7 +188,7 @@ superseded_by: none
 - 更复杂的高级场景自动化分析
 - 节点系统日志的完整实现
 - 指标采集的完整实现
-- 日志系统接入的完整实现
+- 外部日志系统接入的完整实现
 
 ### 其他中间件
 

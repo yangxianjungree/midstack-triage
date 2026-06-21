@@ -48,6 +48,32 @@ For the architecture diagram, Phase 4 detail view, and legend, see [Architecture
 
 See [docs/concepts/triage-workflow.md](docs/concepts/triage-workflow.md) for the full workflow narrative.
 
+## Runtime prerequisites
+
+An installed Midstack plugin is not a single self-contained binary. Claude/Cursor adapters bundle the Midstack runtime, so the target workspace does not need another checkout of this repository, but the control plane and execution plane still depend on host, jump-host, and target-cluster capabilities.
+
+**Control plane**
+
+| Scope | Dependencies | Version / requirement |
+| --- | --- | --- |
+| Repository tools, `src/` runtime, validators, replay | Python, PyYAML | Python 3.10+ available as `python3`; Python `yaml` module required |
+| Installed Claude runtime payload | Python, PyYAML, `bash`, Claude Code CLI | Python 3.10+; Python `yaml` module required; Claude CLI version is not pinned by this repository |
+| Installed Cursor runtime payload | Python, PyYAML, `bash`, Cursor Agent environment | Python 3.10+; Python `yaml` module required; Cursor version is not pinned by this repository |
+| Real Phase 4 Claude API reasoning | `anthropic` Python SDK, `ANTHROPIC_API_KEY` | Optional; without it, the current default path uses mock/rules fallback reasoning |
+
+**Execution plane**
+
+| Scenario | Dependencies | Version / requirement |
+| --- | --- | --- |
+| Remote mode, local host to jump host | `sshpass`, `ssh`, `scp` | Version not pinned; must connect to the jump host with credentials captured by `/midstack:start` |
+| Local mode, direct collection from local host | Local shell, `kubectl` | No `sshpass` required; local kube context must reach the target cluster |
+| Jump-host/local collection environment | `bash`, `python3`, `kubectl` | Remote Phase 3 scripts keep a Python 3.6 compatibility boundary and do not require `PyYAML` by default; `kubectl version --client=true` and `kubectl get nodes` must pass |
+| Kubernetes permissions | kube context, RBAC | Read-only `get/list/describe/logs` style access is required; MongoDB deep collection requires `kubectl exec` permission |
+| MongoDB pod-internal tools | `mongosh` or `mongo`, container shell | Required only by rs.status/rs.conf/getShardMap style scripts; probed per script at runtime, version not pinned here |
+| Optional cluster capabilities | metrics-server, CoreDNS access, log-file paths | Affect only resource metric, DNS, and file-log scripts; missing capabilities should become evidence gaps rather than blocking all analysis |
+
+Remote Phase 3 collection scripts are a separate compatibility boundary. See the [plugin runtime spec](docs/specs/plugin-runtime.spec.md#脚本运行时依赖原则).
+
 ## Quick start
 
 Run the commands below from the `midstack-triage` repository root unless noted otherwise.

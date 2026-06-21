@@ -48,11 +48,35 @@ Midstack 当前对外保持 3 个主命令：
 
 流程解释见 [docs/concepts/triage-workflow.md](docs/concepts/triage-workflow.md)。
 
+## 运行依赖
+
+Midstack 安装态不是单二进制工具。Claude/Cursor 插件会打包 Midstack runtime，不需要目标工作区再 checkout 本仓库，但控制面和执行面仍依赖宿主机、跳板机和目标集群具备基础能力。
+
+**控制面**
+
+| 范围 | 依赖 | 版本/要求 |
+| --- | --- | --- |
+| 本地仓库工具、`src/` runtime、validator、replay | Python、PyYAML | Python 3.10+（以 `python3` 可执行）；需要 `yaml` Python module |
+| Claude 插件安装态 runtime | Python、PyYAML、`bash`、Claude Code CLI | Python 3.10+；需要 `yaml` Python module；Claude CLI 版本不在仓库内固定 |
+| Cursor 安装态 runtime | Python、PyYAML、`bash`、Cursor Agent 环境 | Python 3.10+；需要 `yaml` Python module；Cursor 版本不在仓库内固定 |
+| Phase 4 真实 Claude API 推理 | `anthropic` Python SDK、`ANTHROPIC_API_KEY` | 可选；未配置时当前默认走 mock/规则兜底路径 |
+
+**执行面**
+
+| 场景 | 依赖 | 版本/要求 |
+| --- | --- | --- |
+| remote 模式，本机到跳板机 | `sshpass`、`ssh`、`scp` | 版本不固定；必须能用 `/midstack:start` 记录的 SSH 凭据连通跳板机 |
+| local 模式，本机直接采集 | 本机 shell、`kubectl` | 不需要 `sshpass`；本机 kube context 必须可访问目标集群 |
+| 跳板机/本机采集环境 | `bash`、`python3`、`kubectl` | 远端第 3 段脚本按 Python 3.6 兼容边界编写，且不默认依赖 `PyYAML`；`kubectl version --client=true`、`kubectl get nodes` 需要通过 |
+| Kubernetes 权限 | kube context、RBAC | 需要允许 `get/list/describe/logs` 等只读动作；MongoDB 深入采集需要 `kubectl exec` 权限 |
+| MongoDB Pod 内工具 | `mongosh` 或 `mongo`、容器 shell | 仅 rs.status/rs.conf/getShardMap 等脚本需要；运行时会按脚本探测，版本不在仓库内固定 |
+| 可选集群能力 | metrics-server、CoreDNS 访问、日志文件路径 | 只影响对应资源指标、DNS、文件日志类脚本；缺失时应形成证据缺口而不是阻断全部分析 |
+
+远端第 3 段采集脚本是单独的兼容边界，详见 [插件运行时规范](docs/specs/plugin-runtime.spec.md#脚本运行时依赖原则)。
+
 ## 快速体验
 
 以下命令默认在 `midstack-triage` 仓库根目录执行。
-
-本地仓库工具、`src/` runtime、validator、replay 和 Claude/Cursor 插件安装态 runtime 要求 Python 3.10+ 与 PyYAML。远端第 3 段采集脚本仍按跳板机约束保持更低依赖边界，详见插件运行时规范。
 
 ### 安装到 Claude sandbox
 

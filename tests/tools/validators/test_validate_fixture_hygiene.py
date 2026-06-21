@@ -82,3 +82,17 @@ def test_hygiene_allows_documentation_networks(tmp_path):
 
     assert errors == []
     assert warnings == []
+
+
+def test_hygiene_allows_fixture_internal_kubernetes_networks(tmp_path):
+    module = load_module()
+    write_fixture(
+        tmp_path,
+        "tests/fixtures/active/mongodb/case/signal_bundle.yaml",
+        "dns: 10.96.0.10\npod: 10.244.1.10\npod_cidr: 10.244.1.0\n",
+    )
+
+    errors, warnings = module.validate_fixture_hygiene(tmp_path)
+
+    assert errors == []
+    assert warnings == []

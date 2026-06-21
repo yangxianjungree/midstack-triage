@@ -26,7 +26,7 @@ superseded_by: none
 - Phase 4 rules 已输出 `reasoning_timeline`、`deepening_findings`、`verification_requests`、`deep_analysis_requests`、`retrieval_context`、`experience_matches` 和 `source_boundaries`；MongoDB split-brain 已能把多视角不变量、当前 TCP 反证和 heartbeat/election/reconfig 日志 highlight 推入成因假设；历史经验召回仍是预留字段，当前不接入真实向量库
 - 受控验证请求已分层：一等只读 `auto_allowed` 脚本可由 analyse 编排交回 Phase 3 定向补采；二等 ad hoc 只读命令必须结构化 argv、approval required；破坏性命令会被 guardrail 标记 blocked
 - Replay fixture 已拆分为 `tests/fixtures/active/` 与 `tests/fixtures/legacy/`，默认 replay、score 和仓库门禁只读取 active 样本
-- Fixture hygiene gate 已覆盖 active、legacy 和 golden-path fixtures，阻断运行时生成物、疑似密钥和公网 IP；内网 IP 当前作为 warning 暴露
+- Fixture hygiene gate 已覆盖 active、legacy 和 golden-path fixtures，阻断运行时生成物、疑似密钥和公网 IP；RFC 文档示例网段与 fixture 内部 Kubernetes Service/Pod CIDR 不作为环境泄露 warning
 - 历史兼容层和旧入口目录已清理：`tools/lib/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tests/replay/`、`tests/tools/analyse/`
 
 ## 执行模式支持级别

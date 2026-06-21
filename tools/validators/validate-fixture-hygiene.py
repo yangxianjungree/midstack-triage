@@ -31,6 +31,13 @@ IP_PATTERN = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 ALLOWED_IPS = {
     "10.0.0.1",
 }
+FIXTURE_INTERNAL_NETWORKS = tuple(
+    ipaddress.ip_network(value)
+    for value in (
+        "10.96.0.0/12",
+        "10.244.0.0/16",
+    )
+)
 DOCUMENTATION_NETWORKS = tuple(
     ipaddress.ip_network(value)
     for value in (
@@ -64,6 +71,8 @@ def is_public_ip(value: str) -> bool:
         return False
     if value in ALLOWED_IPS:
         return False
+    if any(ip in network for network in FIXTURE_INTERNAL_NETWORKS):
+        return False
     if any(ip in network for network in DOCUMENTATION_NETWORKS):
         return False
     if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_unspecified:
@@ -77,6 +86,8 @@ def is_private_ip(value: str) -> bool:
     except ValueError:
         return False
     if value in ALLOWED_IPS:
+        return False
+    if any(ip in network for network in FIXTURE_INTERNAL_NETWORKS):
         return False
     if any(ip in network for network in DOCUMENTATION_NETWORKS):
         return False

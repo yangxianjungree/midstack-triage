@@ -8,6 +8,12 @@ Cursor runs Midstack from the workspace-local bundled runtime. Use `runtime_root
 
 Command boundary: `/midstack:start` only creates or recovers an incident record. It must not run analysis.
 
+No fallback manual triage: if the runtime command fails because Python,
+dependency, shell, permission, timeout, argument, or environment setup failed,
+stop and report that runtime failure. Do not switch to manual `kubectl`,
+`mongosh`, `mongo`, `ssh`, `sshpass`, `scp`, filesystem searches, or other
+diagnostic commands.
+
 Do not inspect plugin source files, repository code, or existing `.local/incidents` before running `start`.
 
 First hop: run the workspace-local Midstack runtime wrapper below after parsing

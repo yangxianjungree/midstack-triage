@@ -10,6 +10,12 @@ First hop: run the workspace-local Midstack runtime wrapper below. Do not
 implement triage directly in the slash command before the runtime command
 returns.
 
+No fallback manual triage: if the runtime command fails because Python,
+dependency, shell, permission, timeout, argument, or environment setup failed,
+stop and report that runtime failure. Do not switch to manual `kubectl`,
+`mongosh`, `mongo`, `ssh`, `sshpass`, `scp`, filesystem searches, or other
+diagnostic commands.
+
 Command boundary:
 
 - The first shell command must call `<workspace>/.cursor/midstack-triage-runtime/bin/midstack-local.py`.

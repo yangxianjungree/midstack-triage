@@ -167,6 +167,13 @@ midstack-triage/
 - [docs/project/implementation-status.md](docs/project/implementation-status.md)：实现进展
 - [docs/project/testing-and-install-gates.md](docs/project/testing-and-install-gates.md)：测试、安装与 sandbox 门禁
 
+## 贡献与安全
+
+- 贡献指南见 [CONTRIBUTING.md](CONTRIBUTING.md)
+- 支持范围和维护者响应预期见 [SUPPORT.md](SUPPORT.md)
+- 安全披露和敏感数据规则见 [SECURITY.md](SECURITY.md)
+- 公开 issue / PR 前不要粘贴真实凭据、kubeconfig、生产日志或 `.local/incidents/` 产物
+
 ## 设计边界
 
 - 不承担监控告警系统职责

@@ -170,6 +170,13 @@ Most detailed documentation is in Chinese. Entry points:
 
 Plugin READMEs ([Claude](plugins/claude/README.md), [Cursor](plugins/cursor/README.md)) are in English.
 
+## Contributing and Security
+
+- See [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull request guidance.
+- See [SUPPORT.md](SUPPORT.md) for support scope and maintainer response expectations.
+- See [SECURITY.md](SECURITY.md) for security reporting and sensitive data rules.
+- Do not paste real credentials, kubeconfigs, production logs, or `.local/incidents/` output into public issues or pull requests.
+
 ## Design boundaries
 
 - Not a monitoring or alerting system

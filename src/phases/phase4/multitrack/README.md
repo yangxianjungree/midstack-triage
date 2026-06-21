@@ -29,7 +29,6 @@
 
 - 设计提案：`docs/proposals/2026-06-12-phase4-reasoning-model/`
 - 集成说明：`docs/project/phase4-multitrack-integration.md`
-- 示例：`examples/phase4/`
 - 测试：`tests/phases/phase4/multitrack/`
 
 ## 核心组件
@@ -54,7 +53,7 @@ from pathlib import Path
 
 from phases.phase4.multitrack import LeadOrchestrator
 
-incident_dir = Path(".local/examples/phase4/basic")
+incident_dir = Path(".local/phase4-smoke/basic")
 incident_dir.mkdir(parents=True, exist_ok=True)
 
 hypotheses = ["假设A", "假设B", "假设C"]
@@ -72,6 +71,6 @@ pytest tests/phases/phase4/multitrack/e2e -v
 
 ## 工程约束
 
-- 示例和测试不要把输出写回仓库根目录或真实 fixture 目录。
+- 示例性调用和测试不要把输出写回仓库根目录或真实 fixture 目录。
 - 设计文档只留在 `docs/proposals/...`，不要再在仓库根目录放额外 `SPEC.md`。
 - Phase 4 的命令入口由 `src/commands/analyse.py` 编排；本地 CLI 调度在 `src/commands/plugin_cli.py`，`tools/plugin/midstack-local.py` 只保留启动壳。

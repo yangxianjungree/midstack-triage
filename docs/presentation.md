@@ -122,7 +122,7 @@ flowchart LR
 
 ### 3.4 Agent 平台策略
 
-项目不绑定单一 Agent 平台。当前以 Claude Code 插件标准作为设计基线，同时通过 `interfaces/` 和 `plugins/<agent>/` 方式适配不同运行环境。
+项目不绑定单一 Agent 平台。当前以 Claude Code 插件标准作为设计基线，同时通过 `core/interfaces/` 和 `plugins/<agent>/` 方式适配不同运行环境。
 
 
 | 平台          | 角色                                | 当前状态                |
@@ -201,7 +201,7 @@ flowchart LR
 
 - **场景层负责“是什么现象”**：`scenarios/` 只定义连接失败、资源耗尽、副本异常等跨中间件现象，不写产品专属步骤。
 - **领域层负责“怎么排查”**：`domains/<product>/` 存放某个中间件自己的 runbook、command、skill、script。
-- **接口层负责“怎么被 Agent 消费”**：`interfaces/` 让 Cursor、Claude Code、Codex 等平台消费同一套资产，不把知识写死在某个厂商实现里。
+- **接口层负责“怎么被 Agent 消费”**：`core/interfaces/` 让 Cursor、Claude Code、Codex 等平台消费同一套资产，不把知识写死在某个厂商实现里。
 
 这样设计的目的，是避免为 MongoDB、Kafka、Pulsar 各写一套完全割裂的排障系统。共性场景统一命名和路由，产品差异保留在各自领域资产中。
 
@@ -319,7 +319,7 @@ sequenceDiagram
 尤其需要明确两点：
 
 - 当前 `Analyse Runner` 是规则驱动 MVP，用于保底闭环和离线回归；设计上第 4 段仍然是 Agent 友好的推理诊断层，后续可引入 LLM 轻理解、多轮论证和代码级深入分析。
-- 当前 Cursor 是首个验证平台；设计上通过 `interfaces/` 保持平台无关，后续可以适配 Claude Code、Codex 或其他 Agent 运行环境。
+- 当前 Cursor 是首个验证平台；设计上通过 `core/interfaces/` 保持平台无关，后续可以适配 Claude Code、Codex 或其他 Agent 运行环境。
 
 ### 5.6 安全边界
 
@@ -423,7 +423,7 @@ flowchart LR
 
 除环境形态适配外，中间件覆盖也需要继续扩展。MongoDB 已跑通 MVP 主链路，Pulsar 仅作为领域样例完成结构骨架（非第一版正式支持），完整排障资产链路仍在补齐；后续应按同一套结构继续适配 Redis、Elasticsearch、Kafka 等中间件。
 
-扩展时不重新设计一套新系统，而是复用现有的 `scenarios/`、`domains/`、`core/` 和 `interfaces/`：
+扩展时不重新设计一套新系统，而是复用现有的 `scenarios/`、`domains/` 和 `core/`：
 
 - `scenarios/` 继续沉淀连接失败、资源耗尽、延迟升高、运行时异常等跨中间件场景。
 - `domains/mongodb` 先作为完整 MVP 链路打磨，`domains/pulsar` 补齐与 MongoDB 对齐的 runbook、command、skill、script 后，再扩展 `domains/redis`、`domains/elasticsearch` 等目录。

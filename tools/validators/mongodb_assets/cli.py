@@ -145,12 +145,12 @@ def validate_shared_kubernetes_sources(shared_by_id: dict, errors: list[str]) ->
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate MongoDB script manifest and plugin runtime map.")
     parser.add_argument("--manifest", default="domains/mongodb/scripts/manifest.yaml")
-    parser.add_argument("--runtime-map", default="interfaces/plugin/script-runtime-map.example.yaml")
+    parser.add_argument("--runtime-map", default="core/interfaces/plugin/script-runtime-map.example.yaml")
     parser.add_argument("--context-example", default="domains/mongodb/scripts/context.example.yaml")
     parser.add_argument("--output-example", default="domains/mongodb/scripts/output.example.yaml")
-    parser.add_argument("--remote-request", default="interfaces/plugin/remote-executor-request.example.yaml")
-    parser.add_argument("--remote-result", default="interfaces/plugin/remote-executor-result.example.yaml")
-    parser.add_argument("--adapter-output", default="interfaces/plugin/adapter-output.example.yaml")
+    parser.add_argument("--remote-request", default="core/interfaces/plugin/remote-executor-request.example.yaml")
+    parser.add_argument("--remote-result", default="core/interfaces/plugin/remote-executor-result.example.yaml")
+    parser.add_argument("--adapter-output", default="core/interfaces/plugin/adapter-output.example.yaml")
     return parser.parse_args(argv)
 
 

@@ -435,7 +435,7 @@ def test_uninstall_legacy_plugins_uses_local_scope(tmp_path, monkeypatch):
     ]
 
 
-def test_install_plugin_enables_local_plugin_after_update(tmp_path, monkeypatch):
+def test_install_plugin_reinstalls_local_plugin_to_refresh_cache(tmp_path, monkeypatch):
     module = load_claude_plugin_install()
     workspace = (tmp_path / "sandbox").resolve()
     plugin_id = "%s@%s" % (module.PLUGIN_NAME, module.MARKETPLACE_NAME)
@@ -456,12 +456,13 @@ def test_install_plugin_enables_local_plugin_after_update(tmp_path, monkeypatch)
     module.install_plugin(workspace)
 
     assert calls == [
-        (["claude", "plugin", "update", plugin_id, "--scope", "local"], workspace),
+        (["claude", "plugin", "uninstall", plugin_id, "--scope", "local"], workspace),
+        (["claude", "plugin", "install", plugin_id, "--scope", "local"], workspace),
         (["claude", "plugin", "enable", plugin_id, "--scope", "local"], workspace),
     ]
 
 
-def test_install_plugin_enables_local_plugin_after_install(tmp_path, monkeypatch):
+def test_install_plugin_ignores_missing_previous_install(tmp_path, monkeypatch):
     module = load_claude_plugin_install()
     workspace = (tmp_path / "sandbox").resolve()
     plugin_id = "%s@%s" % (module.PLUGIN_NAME, module.MARKETPLACE_NAME)
@@ -475,7 +476,7 @@ def test_install_plugin_enables_local_plugin_after_install(tmp_path, monkeypatch
 
     def fake_run(cmd, cwd):
         calls.append((cmd, cwd))
-        if cmd[:3] == ["claude", "plugin", "update"]:
+        if cmd[:3] == ["claude", "plugin", "uninstall"]:
             return Proc(1)
         return Proc(0)
 
@@ -485,7 +486,7 @@ def test_install_plugin_enables_local_plugin_after_install(tmp_path, monkeypatch
     module.install_plugin(workspace)
 
     assert calls == [
-        (["claude", "plugin", "update", plugin_id, "--scope", "local"], workspace),
+        (["claude", "plugin", "uninstall", plugin_id, "--scope", "local"], workspace),
         (["claude", "plugin", "install", plugin_id, "--scope", "local"], workspace),
         (["claude", "plugin", "enable", plugin_id, "--scope", "local"], workspace),
     ]
@@ -514,7 +515,8 @@ def test_install_plugin_treats_already_enabled_as_success(tmp_path, monkeypatch)
     module.install_plugin(workspace)
 
     assert calls == [
-        (["claude", "plugin", "update", plugin_id, "--scope", "local"], workspace),
+        (["claude", "plugin", "uninstall", plugin_id, "--scope", "local"], workspace),
+        (["claude", "plugin", "install", plugin_id, "--scope", "local"], workspace),
         (["claude", "plugin", "enable", plugin_id, "--scope", "local"], workspace),
     ]
 

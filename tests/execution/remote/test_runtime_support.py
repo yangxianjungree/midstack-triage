@@ -20,7 +20,7 @@ def test_runtime_root_env_overrides_repo_root(monkeypatch):
 
     assert module.ROOT == runtime_root
     assert module.DEFAULT_MANIFEST == runtime_root / "domains" / "mongodb" / "scripts" / "manifest.yaml"
-    assert module.DEFAULT_RUNTIME_MAP == runtime_root / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
+    assert module.DEFAULT_RUNTIME_MAP == runtime_root / "core" / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
 
     monkeypatch.delenv("MIDSTACK_TRIAGE_RUNTIME_ROOT", raising=False)
     importlib.reload(module)
@@ -33,7 +33,7 @@ def test_source_checkout_root_points_to_repo_root(monkeypatch):
 
     assert module.ROOT == ROOT
     assert module.DEFAULT_MANIFEST == ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml"
-    assert module.DEFAULT_RUNTIME_MAP == ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
+    assert module.DEFAULT_RUNTIME_MAP == ROOT / "core" / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
 
 
 def test_load_config_reads_yaml_object(tmp_path):
@@ -48,7 +48,7 @@ def test_load_script_entries_resolves_scripts_from_multiple_manifests(tmp_path):
     module = importlib.import_module("execution.remote.runtime_support")
     mongodb_manifest = tmp_path / "domains" / "mongodb" / "scripts" / "manifest.yaml"
     kubernetes_manifest = tmp_path / "domains" / "kubernetes" / "scripts" / "manifest.yaml"
-    runtime_map = tmp_path / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
+    runtime_map = tmp_path / "core" / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
     mongodb_script = mongodb_manifest.parent / "collect" / "collect-pods-state.sh"
     kubernetes_script = kubernetes_manifest.parent / "collect" / "collect-logs-current.sh"
     mongodb_script.parent.mkdir(parents=True)

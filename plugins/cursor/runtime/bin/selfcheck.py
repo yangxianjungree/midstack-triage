@@ -24,6 +24,7 @@ REQUIRED_MARKERS = (
     "src/shared/workspace.py",
     "domains/mongodb/scripts/manifest.yaml",
     "core/routing/scenario-signal-map.yaml",
+    "core/interfaces/plugin/script-runtime-map.example.yaml",
 )
 
 

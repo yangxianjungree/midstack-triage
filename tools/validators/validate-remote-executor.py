@@ -56,7 +56,7 @@ def validate_runtime_map_resolution() -> None:
     ]
     entries = module.load_script_entries(
         manifest_paths,
-        ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml",
+        ROOT / "core" / "interfaces" / "plugin" / "script-runtime-map.example.yaml",
     )
     if len(entries) != 12:
         raise AssertionError("expected 12 runtime-map-backed script entries, got %d" % len(entries))
@@ -69,7 +69,7 @@ def validate_runtime_map_resolution() -> None:
             raise AssertionError("legacy MongoDB kubectl log alias must not be a default script entry: %r" % entry_ids)
     directed_entries = module.load_script_entries(
         manifest_paths,
-        ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml",
+        ROOT / "core" / "interfaces" / "plugin" / "script-runtime-map.example.yaml",
         [
             "mongodb.collect.logs.discover_sink",
             "mongodb.collect.logs.file_tail",

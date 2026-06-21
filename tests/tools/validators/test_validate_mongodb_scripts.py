@@ -33,7 +33,7 @@ def test_validate_mongodb_scripts_passes_for_current_repo():
 
 
 def test_runtime_map_includes_domain_neutral_kubernetes_log_assets():
-    runtime_map = yaml.safe_load((ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml").read_text(encoding="utf-8"))
+    runtime_map = yaml.safe_load((ROOT / "core" / "interfaces" / "plugin" / "script-runtime-map.example.yaml").read_text(encoding="utf-8"))
     manifest = yaml.safe_load((ROOT / "domains" / "kubernetes" / "scripts" / "manifest.yaml").read_text(encoding="utf-8"))
 
     manifest_ids = {item["script_id"] for item in manifest["scripts"]}
@@ -90,7 +90,7 @@ def test_documented_default_collection_lists_match_runtime_order():
     errors = []
     manifest_by_id = module.validate_manifest(ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml", errors)
     shared_by_id = module.shared_kubernetes_manifest_by_id()
-    runtime_by_id = module.validate_runtime_map(ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml", manifest_by_id, errors)
+    runtime_by_id = module.validate_runtime_map(ROOT / "core" / "interfaces" / "plugin" / "script-runtime-map.example.yaml", manifest_by_id, errors)
     expected_ids = module.default_collection_script_ids(manifest_by_id, shared_by_id, runtime_by_id)
 
     module.validate_documented_default_collection_set(expected_ids, errors)

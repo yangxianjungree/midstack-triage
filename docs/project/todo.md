@@ -17,7 +17,7 @@ superseded_by: none
 
 - 是否需要在 `domains/` 下为不同中间件补齐统一骨架
 - `core/models/`、`core/templates/`、`core/taxonomies/` 的最终文件布局
-- `interfaces/plugin/` 下需要暴露哪些最小接口契约
+- `core/interfaces/plugin/` 下需要暴露哪些最小接口契约
 
 ### 2. 资产规范进一步收敛
 
@@ -32,7 +32,7 @@ superseded_by: none
 
 ### 4. 适配器策略
 
-- 主仓库保留 `interfaces/` 接口定义，同时在 `plugins/<agent>/` 保留适配器源实现是否继续稳定
+- 主仓库保留 `core/interfaces/` 接口定义，同时在 `plugins/<agent>/` 保留适配器源实现是否继续稳定
 - Claude Code、Codex、Cursor 的适配器后续是否拆为独立仓库
 - 各适配器与本仓库之间采用何种版本兼容策略
 
@@ -112,7 +112,7 @@ superseded_by: none
 - 已明确 `scenarios/` 只定义场景，不存产品专属 runbook
 - 已明确 `domains/<product>/` 只存具体中间件资产
 - 已明确 runbook 只存一份，物理上按组件组织，逻辑上按场景检索
-- 已明确 `interfaces/` 放跨适配器接口定义，`plugins/<agent>/` 放适配器源实现
+- 已明确 `core/interfaces/` 放跨适配器接口定义，`plugins/<agent>/` 放适配器源实现
 - 已明确源码仓库自己的 `.cursor/` 不作为 Midstack 插件安装投影
 - 已明确 `core/shared/` 四类目录的职责边界
 - 已明确 MongoDB 第一版脚本目录与命名规范
@@ -169,7 +169,7 @@ superseded_by: none
 - 已补充 `core/models/runbook.schema.yaml`、`core/models/command.schema.yaml`、`core/models/skill.schema.yaml` 轻量合同模型
 - 已补充 MongoDB runbook、command、skill metadata 的最小合同校验
 - 已补充 `core/models/adapter-output.schema.yaml` 轻量合同模型
-- 已补充 `interfaces/plugin/adapter-output.example.yaml` 示例
+- 已补充 `core/interfaces/plugin/adapter-output.example.yaml` 示例
 - 已补充 adapter output 的最小合同校验
 - 已补充 runbook、command、skill 的 metadata 和正文模板
 - 已补充风险等级、状态、场景类型、能力类型和标签规范枚举

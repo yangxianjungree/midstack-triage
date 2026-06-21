@@ -235,7 +235,7 @@ slash 命令与 5 阶段流程的简明说明见 [Slash 命令面说明](../proj
 
 接口样例：
 
-- [interfaces/plugin/adapter-output.example.yaml](../../interfaces/plugin/adapter-output.example.yaml)
+- [core/interfaces/plugin/adapter-output.example.yaml](../../core/interfaces/plugin/adapter-output.example.yaml)
 
 ## 8. 设计结论
 

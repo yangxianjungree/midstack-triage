@@ -157,12 +157,11 @@ midstack-triage/
 │   ├── phases/                   Five-phase control plane
 │   ├── execution/                Execution plane
 │   └── shared/                   Cross-phase shared capabilities
-├── core/                         Models, templates, taxonomies, shared diagnostics
+├── core/                         Models, interface examples, templates, taxonomies, shared diagnostics
 ├── domains/
 │   ├── mongodb/                  MongoDB-specific assets
 │   └── pulsar/                   Pulsar domain samples
 ├── scenarios/                    Cross-middleware standard scenario definitions
-├── interfaces/                   Cross-adapter interface contracts and examples
 ├── plugins/
 │   ├── claude/                   Claude Code plugin and bundled runtime
 │   └── cursor/                   Cursor projection adapter

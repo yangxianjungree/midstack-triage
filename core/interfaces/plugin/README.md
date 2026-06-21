@@ -7,17 +7,17 @@
 - 脚本运行时映射接口
   - 用于将主仓库脚本资产的 `script_id` 映射到插件包内部的真实脚本路径
   - 相关样例见 [script-runtime-map.example.yaml](script-runtime-map.example.yaml)
-  - 轻量模型见 [core/models/script-runtime-map.schema.yaml](../../core/models/script-runtime-map.schema.yaml)
+  - 轻量模型见 [core/models/script-runtime-map.schema.yaml](../../models/script-runtime-map.schema.yaml)
 - 远程执行器接口
   - 用于描述插件运行时如何进入用户提供的远程 K8s 环境、执行脚本并回收结果
   - 请求样例见 [remote-executor-request.example.yaml](remote-executor-request.example.yaml)
   - 结果样例见 [remote-executor-result.example.yaml](remote-executor-result.example.yaml)
-  - 请求模型见 [core/models/remote-executor-request.schema.yaml](../../core/models/remote-executor-request.schema.yaml)
-  - 结果模型见 [core/models/remote-executor-result.schema.yaml](../../core/models/remote-executor-result.schema.yaml)
+  - 请求模型见 [core/models/remote-executor-request.schema.yaml](../../models/remote-executor-request.schema.yaml)
+  - 结果模型见 [core/models/remote-executor-result.schema.yaml](../../models/remote-executor-result.schema.yaml)
 - 插件命令输出接口
   - 用于描述 `/start`、`/analyse`、`/review` 返回给用户或 Agent 平台的摘要输出
   - 输出样例见 [adapter-output.example.yaml](adapter-output.example.yaml)
-  - 输出模型见 [core/models/adapter-output.schema.yaml](../../core/models/adapter-output.schema.yaml)
+  - 输出模型见 [core/models/adapter-output.schema.yaml](../../models/adapter-output.schema.yaml)
 
 不在本仓库中实现以下内容：
 

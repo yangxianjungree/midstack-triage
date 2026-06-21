@@ -43,14 +43,14 @@ superseded_by: none
 1. plugin-local bundled runtime mode
    - 代表：Claude
    - 运行时位于已安装插件 payload 内
-   - 命令通过插件内部 wrapper 进入 bundled `src/`、`domains/`、`core/`、`interfaces/`
+   - 命令通过插件内部 wrapper 进入 bundled `src/`、`domains/`、`core/`
    - sandbox 不依赖单独的源仓库 checkout
 
 2. workspace-local runtime mode
    - 代表：Cursor
    - 运行时位于目标 workspace 的 `.cursor/midstack-triage-runtime/`
    - 工作区通过状态文件中的 `runtime_root` 定位 runtime payload
-   - 命令通过 workspace-local wrapper 进入 bundled `src/`、`domains/`、`core/`、`interfaces/`
+   - 命令通过 workspace-local wrapper 进入 bundled `src/`、`domains/`、`core/`
    - workspace 不依赖单独的源仓库 checkout
 
 两种模式都必须复用同一套正式 runtime 实现与 incident 合同；差异只允许出现在适配器入口、安装位置和运行时分发方式。
@@ -817,7 +817,7 @@ MongoDB 认证来源原则：
 
 接口样例：
 
-- [interfaces/plugin/remote-executor-request.example.yaml](../../interfaces/plugin/remote-executor-request.example.yaml)
+- [core/interfaces/plugin/remote-executor-request.example.yaml](../../core/interfaces/plugin/remote-executor-request.example.yaml)
 
 轻量合同模型：
 
@@ -863,7 +863,7 @@ MongoDB 认证来源原则：
 
 接口样例：
 
-- [interfaces/plugin/remote-executor-result.example.yaml](../../interfaces/plugin/remote-executor-result.example.yaml)
+- [core/interfaces/plugin/remote-executor-result.example.yaml](../../core/interfaces/plugin/remote-executor-result.example.yaml)
 
 轻量合同模型：
 

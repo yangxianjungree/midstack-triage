@@ -35,7 +35,6 @@ superseded_by: none
 - 正式阶段入口：`src/phases/phase4/reasoning.py`
 - 正式命令编排入口：`src/commands/analyse.py`
 - 设计提案和 review：`docs/proposals/2026-06-12-phase4-reasoning-model/`
-- 示例脚本：`examples/phase4/`
 - 测试：`tests/phases/phase4/multitrack/`
 
 不要把以下内容再放回仓库根目录：
@@ -85,14 +84,7 @@ pytest tests/phases/phase4/multitrack/unit -v
 pytest tests/phases/phase4/multitrack/e2e -v
 ```
 
-示例脚本：
-
-```bash
-python3 examples/phase4/basic_usage.py
-python3 examples/phase4/demo_mongodb_timeout.py
-```
-
-注意：示例脚本只往 `.local/examples/phase4/` 写输出，不应污染仓库根目录或真实 fixture。
+早期 `examples/phase4/` demo 脚本已删除；Phase 4 的公开验证入口以测试和 `/midstack:analyse` 主链路为准，避免过期 demo 被误认为正式 CLI 或生产分析入口。
 
 ## 当前限制
 

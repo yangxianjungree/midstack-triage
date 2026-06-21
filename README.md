@@ -178,6 +178,8 @@ midstack-triage/
 - 贡献指南见 [CONTRIBUTING.md](CONTRIBUTING.md)
 - 支持范围和维护者响应预期见 [SUPPORT.md](SUPPORT.md)
 - 安全披露和敏感数据规则见 [SECURITY.md](SECURITY.md)
+- 行为准则见 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- 版本变化见 [CHANGELOG.md](CHANGELOG.md)
 - 公开 issue / PR 前不要粘贴真实凭据、kubeconfig、生产日志或 `.local/incidents/` 产物
 
 ## 设计边界

@@ -41,7 +41,7 @@ Extract fields from the user's natural-language request:
 
 - `middleware`: use `mongodb` when the user says mongo, mongodb, mongos, mongod, shard, configsvr, or MongoDB.
 - `environment_ips`: extract all IPv4 addresses, keep the original order, and let the first IP be the jump host.
-- `username` and `password`: extract forms such as `root/123`, `账号密码是root/123`, or `username/password`.
+- `username` and `password`: extract forms such as `root/example-password`, `账号密码是root/example-password`, or `username/password`.
 - `customer_clue`: preserve the original symptom or fault clue from the user message when present.
 - `port`: default to `22` unless the user provides a different SSH port.
 - `artifact_source`: for offline mode, extract an existing local incident, fixture, or remote-run artifact directory when the user provides one.
@@ -68,10 +68,10 @@ Example shell (replace paths and secrets):
 export MIDSTACK_TRIAGE_WORKSPACE="/abs/path/to/workspace"
 python3 "/abs/path/to/workspace/.cursor/midstack-triage-runtime/bin/midstack-local.py" start \
   --middleware mongodb \
-  --customer-clue "我的192.168.154.251环境的一个mongo节点有问题" \
-  --environment-ip 192.168.154.251 \
+  --customer-clue "192.0.2.10 环境的一个 MongoDB 节点有问题" \
+  --environment-ip 192.0.2.10 \
   --username root \
-  --password '123' \
+  --password '<password>' \
   --port 22 \
   --output-root .local/incidents
 ```

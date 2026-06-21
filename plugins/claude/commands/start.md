@@ -33,7 +33,7 @@ Parse `$ARGUMENTS` for:
 
 - `middleware`: use `mongodb` for MongoDB, mongo, mongos, mongod, shard, configsvr.
 - `environment_ips`: all IPv4 addresses, original order. The first IP is the jump host.
-- `username` and `password`: support forms such as `root/123` or `账号密码是root/123`.
+- `username` and `password`: support forms such as `root/example-password` or `账号密码是root/example-password`.
 - `customer_clue`: preserve the original symptom text.
 - `port`: default `22` unless specified.
 - `environment_mode`: default `remote`; use `local` only when the runtime is already on the fault cluster/control host, or `offline` when the user only has existing artifacts or pasted command output.

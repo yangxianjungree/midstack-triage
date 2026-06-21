@@ -181,6 +181,8 @@ Plugin READMEs ([Claude](plugins/claude/README.md), [Cursor](plugins/cursor/READ
 - See [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull request guidance.
 - See [SUPPORT.md](SUPPORT.md) for support scope and maintainer response expectations.
 - See [SECURITY.md](SECURITY.md) for security reporting and sensitive data rules.
+- See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community behavior expectations.
+- See [CHANGELOG.md](CHANGELOG.md) for release notes.
 - Do not paste real credentials, kubeconfigs, production logs, or `.local/incidents/` output into public issues or pull requests.
 
 ## Design boundaries

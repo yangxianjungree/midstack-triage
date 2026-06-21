@@ -56,7 +56,7 @@ agent --workspace .
 Use slash commands as usual:
 
 ```text
-/midstack:start 我的192.168.154.251环境的一个mongo节点有问题，账号密码是root/<password>
+/midstack:start 192.0.2.10 环境的一个 MongoDB 节点有问题，账号密码是root/<password>
 /midstack:analyse
 ```
 

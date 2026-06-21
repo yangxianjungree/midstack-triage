@@ -26,7 +26,7 @@
 python3 tools/plugin/midstack-local.py start \
   --middleware mongodb \
   --customer-clue "运维巡检发现一个 MongoDB 节点异常。" \
-  --environment-ip 192.168.154.251 \
+  --environment-ip 192.0.2.10 \
   --username root \
   --password '<password>' \
   --port 22 \

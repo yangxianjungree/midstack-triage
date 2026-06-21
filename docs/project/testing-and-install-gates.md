@@ -121,7 +121,7 @@ Cursor installer/check 必须验证：
 
 - `.cursor/midstack-triage.workspace.json` 只包含 `runtime_root`，不包含 `engine_root`
 - `.cursor/commands/midstack:*.md` 和 `.cursor/rules/midstack-triage.mdc` 是 workspace-local copy
-- `.cursor/midstack-triage-runtime/` 包含 `bin/`、`tools/`、`src/`、`domains/`、`scenarios/`、`core/`、`interfaces/`
+- `.cursor/midstack-triage-runtime/` 包含 `bin/`、`tools/`、`src/`、`domains/`、`scenarios/`、`core/`
 - 命令和规则不包含源码 checkout 执行模式
 - smoke 的 cwd 使用目标 workspace，不借源码仓库 cwd 通过
 

@@ -18,7 +18,6 @@ RUNTIME_SOURCE_DIRS: Tuple[str, ...] = (
     "domains",
     "scenarios",
     "core",
-    "interfaces",
 )
 LICENSE_FILES: Tuple[str, ...] = ("LICENSE", "NOTICE")
 LOCAL_OUTPUTS_GITIGNORE_MARKER = "# Midstack Triage local runtime outputs"
@@ -54,7 +53,7 @@ COMMON_RUNTIME_MARKER_FILES: Tuple[str, ...] = (
     "src/shared/workspace.py",
     "domains/mongodb/scripts/manifest.yaml",
     "core/routing/scenario-signal-map.yaml",
-    "interfaces/plugin/script-runtime-map.example.yaml",
+    "core/interfaces/plugin/script-runtime-map.example.yaml",
 )
 
 

@@ -82,7 +82,7 @@ def main() -> int:
         (RUNTIME_ROOT / "src" / "shared" / "skill_resolver.py", "skill resolver library"),
         (RUNTIME_ROOT / "src" / "phases" / "phase4" / "multitrack" / "__init__.py", "phase4 package"),
         (RUNTIME_ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml", "mongodb script manifest"),
-        (RUNTIME_ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml", "script runtime map"),
+        (RUNTIME_ROOT / "core" / "interfaces" / "plugin" / "script-runtime-map.example.yaml", "script runtime map"),
         (RUNTIME_ROOT / "core" / "routing" / "scenario-signal-map.yaml", "scenario routing map"),
     ]
     path_checks = [path_status(path, label) for path, label in required_paths]

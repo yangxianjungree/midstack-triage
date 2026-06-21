@@ -65,7 +65,7 @@ Use `domains/mongodb/` as the complete reference. Keep product-specific content 
 
 1. Add read-only collection scripts under `domains/<middleware>/scripts/`.
 2. Add script entries to `domains/<middleware>/scripts/manifest.yaml`.
-3. Add runtime-map entries in `interfaces/plugin/script-runtime-map.example.yaml`.
+3. Add runtime-map entries in `core/interfaces/plugin/script-runtime-map.example.yaml`.
 4. Ensure script outputs follow `core/models/script-output.schema.yaml`.
 5. Add fixtures or golden paths that can be replayed without live customer data.
 6. Add validator coverage for manifest, runtime-map, context, output, and routing consistency.

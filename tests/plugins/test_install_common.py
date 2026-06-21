@@ -34,6 +34,7 @@ def test_runtime_markers_share_common_runtime_files_with_optional_prefix():
     assert "src/execution/remote/script_capabilities.py" in COMMON_RUNTIME_MARKER_FILES
     assert "src/execution/remote/script_output_contract.py" in COMMON_RUNTIME_MARKER_FILES
     assert "src/execution/remote/script_runner.py" in COMMON_RUNTIME_MARKER_FILES
+    assert "core/interfaces/plugin/script-runtime-map.example.yaml" in COMMON_RUNTIME_MARKER_FILES
     assert prefixed_runtime_markers("runtime")[:2] == (
         "runtime/tools/plugin/midstack-local.py",
         "runtime/tools/support/common.py",

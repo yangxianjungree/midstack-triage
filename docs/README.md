@@ -76,7 +76,7 @@ superseded_by: none
 | incident 文件、目录、文件职责 | [单次排障记录规范](specs/incident-record.spec.md) | 模板、analyse/review 规范、fixture |
 | 新中间件 | `domains/<product>/` + 必要的 `core/` 扩展 | 场景引用、资产 metadata、脚本 manifest |
 | 新故障场景 | `scenarios/<slug>/scenario.yaml` | 对应领域 runbook、command、skill、script 引用 |
-| 新适配器 | `interfaces/` 或 `plugins/<agent>/` | 插件运行时规范、安装/测试说明 |
+| 新适配器 | `core/interfaces/` 或 `plugins/<agent>/` | 插件运行时规范、安装/测试说明 |
 | 实现进展或验证状态 | `docs/project/implementation-status.md` | README 只保留状态摘要链接 |
 
 破坏性变更要求：

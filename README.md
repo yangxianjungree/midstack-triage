@@ -158,12 +158,11 @@ midstack-triage/
 │   ├── phases/                   5 段 control plane
 │   ├── execution/                execution plane
 │   └── shared/                   跨阶段复用能力
-├── core/                         模型、模板、taxonomy 与共享诊断能力
+├── core/                         模型、接口样例、模板、taxonomy 与共享诊断能力
 ├── domains/
 │   ├── mongodb/                  MongoDB 专属资产
 │   └── pulsar/                   Pulsar 领域样例与 contract path
 ├── scenarios/                    跨中间件标准场景定义
-├── interfaces/                   跨适配器接口定义与示例合同
 ├── plugins/
 │   ├── claude/                   Claude Code 插件与 bundled runtime
 │   └── cursor/                   Cursor 投影适配器

@@ -13,7 +13,7 @@ from shared.workspace import runtime_root
 ROOT = runtime_root()
 DEFAULT_LOCAL_OUTPUT = ROOT / ".local" / "remote-runs"
 DEFAULT_REMOTE_ROOT = "/tmp/midstack-triage"
-DEFAULT_RUNTIME_MAP = ROOT / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
+DEFAULT_RUNTIME_MAP = ROOT / "core" / "interfaces" / "plugin" / "script-runtime-map.example.yaml"
 DEFAULT_MANIFEST = ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml"
 DEFAULT_MANIFESTS = [
     ROOT / "domains" / "mongodb" / "scripts" / "manifest.yaml",

@@ -92,7 +92,7 @@ flowchart LR
 - `plugin-install.py --workspace-init`：写入 `.cursor/midstack-triage.workspace.json`，复制 `.cursor/commands/midstack:*.md` 与 `.cursor/rules/midstack-triage.mdc`，并复制 runtime payload 到 `.cursor/midstack-triage-runtime/`。
 - Plugin commands：Agent 执行 `python3 <runtime_root>/bin/midstack-local.py <subcommand> ...`。
 - `MIDSTACK_TRIAGE_WORKSPACE`：解析输入/输出相对路径（如 `.local/incidents`）。
-- runtime payload：从自身目录读取 `domains/`、`scenarios/`、`src/`、`core/`、`interfaces/`，不回到源码 checkout。
+- runtime payload：从自身目录读取 `domains/`、`scenarios/`、`src/`、`core/`，不回到源码 checkout。
 
 因此：只要 workspace 内 runtime payload 完整，`/midstack:start`、`/midstack:analyse`、`/midstack:review` 不需要访问 `/home/stephen/AI/midstack-triage`。
 
@@ -158,7 +158,6 @@ my-sandbox/
       domains/
       scenarios/
       core/
-      interfaces/
   .local/
     incidents/            # 运行时产出（gitignore）
   .gitignore              # 含 .local/
@@ -200,7 +199,7 @@ Always:
 - Cursor 安装态命令读取 `runtime_root`。
 - Cursor 安装态命令从 `.cursor/midstack-triage-runtime/bin/` 执行。
 - Smoke 测试 cwd 使用 workspace，不能借源码 cwd 通过。
-- Runtime payload 必须包含 `src/`、`domains/`、`scenarios/`、`core/`、`interfaces/` 和必要的 thin tools entrypoint。
+- Runtime payload 必须包含 `src/`、`domains/`、`scenarios/`、`core/` 和必要的 thin tools entrypoint。
 
 Never:
 

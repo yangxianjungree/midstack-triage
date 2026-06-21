@@ -65,14 +65,23 @@ An installed Midstack plugin is not a single self-contained binary. Claude/Curso
 
 | Scenario | Dependencies | Version / requirement |
 | --- | --- | --- |
-| Remote mode, local host to jump host | `sshpass`, `ssh`, `scp` | Version not pinned; must connect to the jump host with credentials captured by `/midstack:start` |
-| Local mode, direct collection from local host | Local shell, `kubectl` | No `sshpass` required; local kube context must reach the target cluster |
+| Remote main path, local host to jump host | `sshpass`, `ssh`, `scp` | Version not pinned; must connect to the jump host with credentials captured by `/midstack:start` |
+| Local experimental path, direct collection from local host | Local shell, `kubectl` | No `sshpass` required; local kube context must reach the target cluster |
 | Jump-host/local collection environment | `bash`, `python3`, `kubectl` | Remote Phase 3 scripts keep a Python 3.6 compatibility boundary and do not require `PyYAML` by default; `kubectl version --client=true` and `kubectl get nodes` must pass |
 | Kubernetes permissions | kube context, RBAC | Read-only `get/list/describe/logs` style access is required; MongoDB deep collection requires `kubectl exec` permission |
 | MongoDB pod-internal tools | `mongosh` or `mongo`, container shell | Required only by rs.status/rs.conf/getShardMap style scripts; probed per script at runtime, version not pinned here |
 | Optional cluster capabilities | metrics-server, CoreDNS access, log-file paths | Affect only resource metric, DNS, and file-log scripts; missing capabilities should become evidence gaps rather than blocking all analysis |
 
 Remote Phase 3 collection scripts are a separate compatibility boundary. See the [plugin runtime spec](docs/specs/plugin-runtime.spec.md#脚本运行时依赖原则).
+
+## Execution mode support
+
+| Scenario | Support level | Current boundary |
+| --- | --- | --- |
+| remote | Supported production main path | Default path for the MongoDB Active MVP; runs read-only Kubernetes/MongoDB collection through a jump host or target control host |
+| local | Partially supported, experimental | Only for cases where the Agent runtime already runs on the fault cluster or control host and the local kube context works; less mature than remote and not the default main path |
+| offline | Not supported as user-facing triage | Reserved contract and artifact-consumption skeleton only; can consume complete pre-collected incident, fixture, or remote-run artifacts, but pasted evidence and manual guided triage are not closed loop yet |
+| fixture replay | Supported maintainer path | Used for regression, scoring, and domain validation; not a normal zero-cluster quick-start experience for installed workspaces |
 
 ## Quick start
 

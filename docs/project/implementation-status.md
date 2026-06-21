@@ -1,6 +1,6 @@
 ---
 status: draft
-last_updated: 2026-06-20
+last_updated: 2026-06-21
 supersedes: none
 superseded_by: none
 ---
@@ -19,7 +19,7 @@ superseded_by: none
 - Cursor 适配器已支持 workspace-local runtime、命令/rule 投影、自检和 sandbox smoke
 - 本地仓库工具、validator、replay、`src/` runtime 和插件安装态 runtime 的最低版本为 Python 3.10+
 - `tools/plugin/midstack-local.py` 已收敛为本地 CLI 适配层，不再承载膨胀的正式实现
-- Phase 1/2 已支持 remote/local/offline 三类 intake 场景识别；remote 仍是默认主路径，local 已可基于本机 kubectl context 进入 live collection，offline 仍以已有 artifact 消费为主
+- Phase 1/2 已支持 remote/local/offline intake 识别，但三者不是同等成熟的用户执行模式：remote 是 MongoDB Active MVP 的生产主路径；local 是依赖本机 kube context 的实验性/部分支持路径；offline 目前仅是预留合同和完整 artifact 消费骨架，未形成用户-facing 闭环排障能力
 - 第 3 段默认日志采集已收敛到共享 `kubernetes.collect.logs.current` / `kubernetes.collect.logs.previous`；MongoDB 日志 alias 仅作兼容入口
 - 第 4 段多轨推理实现已收敛到 `src/phases/phase4/multitrack/`；默认 agent runtime 为 `auto`，可在 `ANTHROPIC_API_KEY` + `anthropic` SDK 可用时尝试 Claude 推理，否则降级 mock。当前 `/midstack:analyse` 的生产 `conclusion_summary` 默认由 rules fallback + guardrails 守底，multitrack 结果会以 `agent_reasoning` 辅助草稿进入 `analysis.yaml` 和 reasoning segment，并由 `agent_conclusion_gate` 基于 `evidence_refs`、`conclusion_candidate.evidence`、结构化 `conclusion_candidate`、deep analysis 物化状态和 critical gap 判断是否可覆盖；eligible 时会追加 `agent_conclusion_override` segment
 - 第 4/5 段已生成 append-only 推理历史：`reasoning-manifest.yaml` 和 `reasoning/*.yaml` segment；`analysis.yaml` / `report.md` 作为最新物化视图
@@ -28,6 +28,15 @@ superseded_by: none
 - Replay fixture 已拆分为 `tests/fixtures/active/` 与 `tests/fixtures/legacy/`，默认 replay、score 和仓库门禁只读取 active 样本
 - Fixture hygiene gate 已覆盖 active、legacy 和 golden-path fixtures，阻断运行时生成物、疑似密钥和公网 IP；内网 IP 当前作为 warning 暴露
 - 历史兼容层和旧入口目录已清理：`tools/lib/`、`tools/remote-executor/`、`tools/remote-smoke/`、`tests/replay/`、`tests/tools/analyse/`
+
+## 执行模式支持级别
+
+| 项 | 当前判断 | 说明 |
+| --- | --- | --- |
+| remote 主路径 | 已支持 | MongoDB Active MVP 的默认生产路径；通过 SSH/跳板机进入目标环境并执行只读采集 |
+| local 采集 | 部分支持 | 需要 runtime 所在机器已有可用 kube context；不走 SSH/sshpass；成熟度低于 remote |
+| 用户-facing offline 排障 | 未支持 | 仅保留 artifact 消费骨架；粘贴证据、手工排障和零集群快速体验尚未闭环 |
+| 维护者 fixture replay | 已支持 | 用于回归、评分、领域规则验证和开源样例维护，不作为普通用户执行模式承诺 |
 
 ## 当前结构状态
 
@@ -70,8 +79,8 @@ superseded_by: none
 - 在 remote 缺关键信息时记录本机 kubectl context 提示
 - 验证远程环境基础可达性
 - 验证基础 Kubernetes 操作能力
-- local 模式验证本机 kubectl context 和基础对象盘点，不走 SSH/sshpass
-- offline 模式可记录 artifact source 或 pasted evidence，但缺完整 artifact 时保持 blocked
+- local 模式可验证本机 kubectl context 和基础对象盘点，不走 SSH/sshpass；当前属于实验性/部分支持路径
+- offline 模式可记录完整 artifact source；pasted evidence 只保存原始材料，缺完整 artifact 时保持 blocked，尚不构成用户-facing 排障闭环
 - 判断并输出 `ready / blocked`
 - 将新记录设为当前会话目标记录
 

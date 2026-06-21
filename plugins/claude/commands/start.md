@@ -36,14 +36,15 @@ Parse `$ARGUMENTS` for:
 - `username` and `password`: support forms such as `root/example-password` or `账号密码是root/example-password`.
 - `customer_clue`: preserve the original symptom text.
 - `port`: default `22` unless specified.
-- `environment_mode`: default `remote`; use `local` only when the runtime is already on the fault cluster/control host, or `offline` when the user only has existing artifacts or pasted command output.
+- `environment_mode`: default `remote`; use experimental `local` only when the runtime is already on the fault cluster/control host, or `offline` when the user only has existing artifacts or pasted command output.
 - `artifact_source`: for `offline`, provide an existing local artifact directory when one exists.
 - `pasted_evidence`: for `offline`, pass pasted command output or screen text as raw evidence only.
 
 Default `remote` mode is the current main path and requires `--environment-ip`,
-`--username`, and `--password`. `local` is for runtimes already on the fault
-cluster or control host; Phase 2 validates the local kubectl context and writes
-`local-config.yaml` when ready. `offline` returns blocked guidance unless
+`--username`, and `--password`. `local` is a partially supported experimental
+path for runtimes already on the fault cluster or control host; Phase 2
+validates the local kubectl context and writes `local-config.yaml` when ready.
+`offline` returns blocked guidance unless
 `--artifact-source` points at a complete offline evidence directory.
 `--pasted-evidence` is preserved under `logs/raw/` but does not make the
 incident ready.

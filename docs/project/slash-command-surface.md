@@ -1,6 +1,6 @@
 ---
 status: draft
-last_updated: 2026-06-17
+last_updated: 2026-06-21
 supersedes: none
 superseded_by: none
 ---
@@ -30,7 +30,7 @@ superseded_by: none
 
 - `start` 负责把自然语言线索转成可执行 incident。
 - `analyse` 负责把 incident 推进到推理、结论和报告。
-- `analyse` 的默认执行方式是 `remote`；`offline` 只分析已有产物，`local` 针对 ready incident 通过本地 transport 执行同一批采集脚本。
+- `analyse` 的默认执行方式是 `remote`；`local` 是实验性/部分支持路径，针对 ready incident 通过本地 transport 执行同一批采集脚本；`offline` 只消费完整已有产物，尚不是用户-facing 闭环排障路径。
 - `review` 负责给已有分析打分，不替代 `analyse`。
 - `validate` 负责维护者安装态检查，不对外承诺排障效果。
 

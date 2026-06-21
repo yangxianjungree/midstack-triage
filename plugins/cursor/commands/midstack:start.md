@@ -49,7 +49,7 @@ Extract fields from the user's natural-language request:
 
 Default environment mode is `remote`, which means the runtime can SSH into a jump host or fault-domain host and then use remote `kubectl`.
 
-Use `--environment-mode local` only when the agent/runtime is already on the fault cluster or control host. The runtime validates the local kubectl context in Phase 2, writes `local-config.yaml` when ready, and later runs the same Phase 3 collection through the local transport without SSH.
+Use experimental `--environment-mode local` only when the agent/runtime is already on the fault cluster or control host. The runtime validates the local kubectl context in Phase 2, writes `local-config.yaml` when ready, and later runs the same Phase 3 collection through the local transport without SSH. This path is partially supported and less mature than the default remote path.
 
 Use `--environment-mode offline` when the user only has existing incident artifacts, remote-run output, logs, screenshots, or pasted command output. If the user provides an existing complete artifact directory, pass it as `--artifact-source`; if they paste command output or screen text, pass it as `--pasted-evidence`. Pasted evidence is stored raw and still returns blocked guidance.
 

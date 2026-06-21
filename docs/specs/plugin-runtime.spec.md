@@ -1,6 +1,6 @@
 ---
 status: authoritative
-last_updated: 2026-06-14
+last_updated: 2026-06-21
 supersedes: none
 superseded_by: none
 ---
@@ -178,7 +178,7 @@ superseded_by: none
 - 带显式 `incident_id` 再次执行 `/plugin:start` 时，表示继续补齐同一个 intake；runtime 会从既有 `input.yaml` / `remote-config.yaml` 继承未重新提供的字段
 - 不带 `incident_id` 的 `/plugin:start` 永远新建 incident
 - `remote` 是当前默认主路径，表示通过 SSH 进入跳板机或故障环境后执行只读采集
-- `local` 表示 runtime 已在故障集群或控制面机器上；`/start` 可在 Phase 2 通过本机 kubectl context 和对象盘点后返回 `ready`，`/analyse` 根据 incident 中的 `execution_mode: local` 读取 `local-config.yaml` 并通过本地 transport 复用 Phase 3 采集脚本
+- `local` 表示 runtime 已在故障集群或控制面机器上；`/start` 可在 Phase 2 通过本机 kubectl context 和对象盘点后返回 `ready`，`/analyse` 根据 incident 中的 `execution_mode: local` 读取 `local-config.yaml` 并通过本地 transport 复用 Phase 3 采集脚本。该合同不等同于用户路径成熟度承诺，当前状态口径以 [实现进展](../project/implementation-status.md) 为准
 - `local` 默认只承诺 Kubernetes API 级节点访问；`local-config.yaml.access.node_access.mode` 默认为 `kubernetes_api_only`，`ssh.enabled=false`，认证偏好为 `key_or_agent`。需要读节点主机文件时必须显式启用 node access；启用后优先使用 SSH key/agent 免密，只有配置 password 时才走 `sshpass`。否则脚本返回 blocked/evidence gap，不得猜测凭据 SSH 到节点
 - 当 `remote` 缺少环境 IP 或用户显式选择 `local` 时，`/start` 可记录轻量 `local_context` 探测结果，用于提示本机是否已有可用 kubectl context；显式 `local` 会在 Phase 2 重新探测 context，context 缺失或不可达时返回 blocked 追问
 - Phase 2 owns command-backed readiness checks: local context probing, remote SSH/kubectl validation, and MongoDB inventory blockers. Phase 1 owns incident creation/continuation and preserving the user's declared context.

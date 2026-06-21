@@ -148,7 +148,7 @@ def test_start_ready_output_points_to_midstack_analyse(tmp_path, monkeypatch):
         middleware="mongodb",
         incident_id="",
         customer_clue="mongo node may be unhealthy",
-        environment_ip=["192.168.154.251"],
+        environment_ip=["192.0.2.51"],
         username="root",
         password="123",
         port=22,
@@ -269,7 +269,7 @@ def test_start_ready_remote_does_not_probe_local_context(tmp_path, monkeypatch):
         middleware="mongodb",
         incident_id="remote-no-local-probe",
         customer_clue="mongo node may be unhealthy",
-        environment_ip=["192.168.154.251"],
+        environment_ip=["192.0.2.51"],
         username="root",
         password="123",
         port=22,
@@ -311,7 +311,7 @@ def test_start_can_continue_blocked_incident_with_missing_remote_answers(tmp_pat
         middleware="mongodb",
         incident_id="phase1-continue-demo",
         customer_clue="mongo node may be unhealthy",
-        environment_ip=["192.168.154.251"],
+        environment_ip=["192.0.2.51"],
         username="",
         password="",
         port=22022,
@@ -347,11 +347,11 @@ def test_start_can_continue_blocked_incident_with_missing_remote_answers(tmp_pat
     assert output["status"] == "ready"
     assert input_data["middleware"] == "mongodb"
     assert input_data["customer_clue"] == "mongo node may be unhealthy"
-    assert input_data["environment_ips"] == ["192.168.154.251"]
+    assert input_data["environment_ips"] == ["192.0.2.51"]
     assert remote_config["access"]["username"] == "root"
     assert remote_config["access"]["password"] == "123"
     assert remote_config["access"]["port"] == 22022
-    assert calls[-1]["primary_ip"] == "192.168.154.251"
+    assert calls[-1]["primary_ip"] == "192.0.2.51"
     assert calls[-1]["port"] == 22022
 
 
@@ -371,7 +371,7 @@ def test_start_remote_validation_failure_writes_follow_up_question(tmp_path, mon
         middleware="mongodb",
         incident_id="remote-validation-follow-up",
         customer_clue="mongo node may be unhealthy",
-        environment_ip=["192.168.154.251"],
+        environment_ip=["192.0.2.51"],
         username="root",
         password="bad",
         port=22,
@@ -408,7 +408,7 @@ def test_start_historical_resolved_incident_warns_but_allows_live_readiness(tmp_
         middleware="mongodb",
         incident_id="historical-resolved-incident",
         customer_clue="昨天 MongoDB 脑裂过一次，现在已经恢复了",
-        environment_ip=["192.168.154.251"],
+        environment_ip=["192.0.2.51"],
         username="root",
         password="123",
         port=22,
@@ -448,7 +448,7 @@ def test_start_ambiguous_mongodb_namespaces_writes_namespace_follow_up(tmp_path,
         middleware="mongodb",
         incident_id="namespace-ambiguous-follow-up",
         customer_clue="mongo node may be unhealthy",
-        environment_ip=["192.168.154.251"],
+        environment_ip=["192.0.2.51"],
         username="root",
         password="123",
         port=22,
@@ -486,7 +486,7 @@ def test_start_mongodb_namespace_not_found_writes_namespace_follow_up(tmp_path, 
         middleware="mongodb",
         incident_id="namespace-not-found-follow-up",
         customer_clue="mongo node may be unhealthy",
-        environment_ip=["192.168.154.251"],
+        environment_ip=["192.0.2.51"],
         username="root",
         password="123",
         port=22,
@@ -1035,7 +1035,7 @@ def test_remote_analyse_runs_auto_allowed_verification_requests_after_rules(tmp_
             "current_command": "start",
         },
     )
-    write_yaml(incident_dir / "remote-config.yaml", {"access": {"primary_ip": "192.168.154.251"}})
+    write_yaml(incident_dir / "remote-config.yaml", {"access": {"primary_ip": "192.0.2.51"}})
     baseline_run_dir = tmp_path / ".local" / "remote-runs" / "baseline-run"
     directed_run_dir = tmp_path / ".local" / "remote-runs" / "verification-run"
     for run_dir in (baseline_run_dir, directed_run_dir):
@@ -1047,7 +1047,7 @@ def test_remote_analyse_runs_auto_allowed_verification_requests_after_rules(tmp_
                 "middleware": "mongodb",
                 "status": "success",
                 "namespace": "psmdb-test",
-                "selected_ip": "192.168.154.251",
+                "selected_ip": "192.0.2.51",
                 "error": {"code": "", "message": ""},
                 "script_results": [],
             },

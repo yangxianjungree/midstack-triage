@@ -941,7 +941,7 @@ def test_build_incident_from_remote_run_merges_and_copies_outputs(tmp_path):
             "incident_id": "mongodb-remote-run",
             "namespace": "psmdb-test",
             "status": "success",
-            "selected_ip": "192.168.154.251",
+            "selected_ip": "192.0.2.51",
         },
     )
     write_yaml(
@@ -949,7 +949,7 @@ def test_build_incident_from_remote_run_merges_and_copies_outputs(tmp_path):
         {
             "script_id": "mongodb.collect.pods.state",
             "status": "success",
-            "selected_ip": "192.168.154.251",
+            "selected_ip": "192.0.2.51",
             "process": {"exit_code": 0},
         },
     )

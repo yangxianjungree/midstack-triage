@@ -176,7 +176,7 @@ kubectl get pod -n psmdb-test bnmongo-shard1-data-2 -o jsonpath='{.metadata.uid}
 
 ```bash
 PW="$(python3 scripts/env/read_ssh_password_from_local.py)"
-sshpass -p"$PW" ssh root@192.168.154.252
+sshpass -p"$PW" ssh root@192.0.2.52
 ```
 
 然后直接读取应用日志文件:

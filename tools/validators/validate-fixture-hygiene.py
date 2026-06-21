@@ -31,6 +31,14 @@ IP_PATTERN = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 ALLOWED_IPS = {
     "10.0.0.1",
 }
+DOCUMENTATION_NETWORKS = tuple(
+    ipaddress.ip_network(value)
+    for value in (
+        "192.0.2.0/24",
+        "198.51.100.0/24",
+        "203.0.113.0/24",
+    )
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -56,6 +64,8 @@ def is_public_ip(value: str) -> bool:
         return False
     if value in ALLOWED_IPS:
         return False
+    if any(ip in network for network in DOCUMENTATION_NETWORKS):
+        return False
     if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_unspecified:
         return False
     return True
@@ -66,7 +76,11 @@ def is_private_ip(value: str) -> bool:
         ip = ipaddress.ip_address(value)
     except ValueError:
         return False
-    return ip.version == 4 and ip.is_private and value not in ALLOWED_IPS
+    if value in ALLOWED_IPS:
+        return False
+    if any(ip in network for network in DOCUMENTATION_NETWORKS):
+        return False
+    return ip.version == 4 and ip.is_private
 
 
 def validate_fixture_hygiene(root: Path = ROOT) -> Tuple[List[str], List[str]]:

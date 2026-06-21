@@ -68,3 +68,17 @@ def test_hygiene_allows_test_values(tmp_path):
 
     assert errors == []
     assert warnings == []
+
+
+def test_hygiene_allows_documentation_networks(tmp_path):
+    module = load_module()
+    write_fixture(
+        tmp_path,
+        "tests/fixtures/active/mongodb/case/input.yaml",
+        "primary: 192.0.2.51\nsecondary: 198.51.100.52\ntertiary: 203.0.113.53\n",
+    )
+
+    errors, warnings = module.validate_fixture_hygiene(tmp_path)
+
+    assert errors == []
+    assert warnings == []

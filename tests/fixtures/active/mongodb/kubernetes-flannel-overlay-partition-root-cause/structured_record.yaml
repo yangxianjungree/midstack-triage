@@ -15,7 +15,7 @@ details:
   network_overlay:
     nodes:
       - node_ref: k8s-253
-        internal_ip: 192.168.154.253
+        internal_ip: 192.0.2.53
         pod_cidr: 10.244.1.0/24
         status: success
         flannel_state: DOWN

@@ -16,7 +16,7 @@ superseded_by: none
 |------|----------|--------|
 | `concepts/` | 解释（Explanation） | 架构、流程概览、设计模式——讲「为什么这么设计」 |
 | `specs/` | 规范（Reference） | 稳定的规范定义——与 `core/`（models/templates/taxonomies）共同构成 **L1 唯一事实源** |
-| `guides/` | 操作指南（How-to）·规划中（二期） | 本地校验、远程采集验证、安装等操作步骤；当前散在 README 与 `tools/*/README.md`，待抽取 |
+| `guides/` | 操作指南（How-to） | 新增中间件、安装、校验等任务导向步骤 |
 | `proposals/` | 变更提案 | 新需求、破坏性调整、跨文档结构变更的定稿前讨论稿 |
 | `project/` | 项目管理 | 实施计划、TODO——时效性内容，允许滞后 |
 | `analysis/` | 分析 | 领域对照等一次性分析快照 |
@@ -117,6 +117,7 @@ superseded_by: none
 
 ### 规范（specs/，唯一事实源）
 
+- [核心规范英文索引](specs/README.en.md)
 - [排障流程规范](specs/triage-workflow.spec.md)
 - [插件使用规范](specs/plugin-usage.spec.md)
 - [插件运行时规范](specs/plugin-runtime.spec.md)
@@ -136,6 +137,10 @@ superseded_by: none
 - [TODO](project/todo.md)
 - [Phase 4 集成说明](project/phase4-multitrack-integration.md)
 - [Phase 4 Agent 驱动推理流程](project/phase4-agent-driven-reasoning.md)
+
+### 操作指南（guides/）
+
+- [新增中间件 domain](guides/add-domain.md)
 
 ### 变更提案（proposals/）
 

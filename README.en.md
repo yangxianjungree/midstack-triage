@@ -78,6 +78,10 @@ Remote Phase 3 collection scripts are a separate compatibility boundary. See the
 
 Run the commands below from the `midstack-triage` repository root unless noted otherwise.
 
+```bash
+python3 -m pip install -r requirements-dev.txt
+```
+
 ### Install into a Claude sandbox
 
 ```bash
@@ -164,6 +168,8 @@ Most detailed documentation is in Chinese. Entry points:
 - [docs/README.md](docs/README.md) — documentation map and authority layers
 - [docs/concepts/architecture-overview.md](docs/concepts/architecture-overview.md) — architecture diagram and Phase 4 detail view
 - [docs/concepts/triage-workflow.md](docs/concepts/triage-workflow.md) — five-phase workflow
+- [docs/guides/add-domain.md](docs/guides/add-domain.md) — adding a middleware domain
+- [docs/specs/README.en.md](docs/specs/README.en.md) — English index for core specs
 - [docs/specs/plugin-runtime.spec.md](docs/specs/plugin-runtime.spec.md) — plugin runtime contract
 - [docs/project/implementation-status.md](docs/project/implementation-status.md) — implementation progress
 - [docs/project/testing-and-install-gates.md](docs/project/testing-and-install-gates.md) — testing, install, and sandbox gates
@@ -187,6 +193,7 @@ Plugin READMEs ([Claude](plugins/claude/README.md), [Cursor](plugins/cursor/READ
 ## Local validation
 
 ```bash
+python3 -m pip install -r requirements-dev.txt
 python3 tools/validators/validate-repo.py
 python3 tools/replay/mongodb-replay.py --run-analyse
 python3 tools/replay/mongodb-score.py --run-analyse --min-level medium

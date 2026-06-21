@@ -7,7 +7,7 @@ Thanks for considering a contribution. Midstack Triage is a production incident 
 Use Python 3.10+.
 
 ```bash
-python3 -m pip install PyYAML pytest
+python3 -m pip install -r requirements-dev.txt
 ```
 
 Optional dependencies:
@@ -24,7 +24,9 @@ Read these first:
 - [README.md](README.md)
 - [docs/README.md](docs/README.md)
 - [docs/concepts/architecture.md](docs/concepts/architecture.md)
+- [docs/guides/add-domain.md](docs/guides/add-domain.md)
 - [docs/specs/plugin-runtime.spec.md](docs/specs/plugin-runtime.spec.md)
+- [docs/specs/README.en.md](docs/specs/README.en.md)
 - [docs/project/testing-and-install-gates.md](docs/project/testing-and-install-gates.md)
 
 If the change affects schemas, templates, taxonomy values, command behavior, incident layout, runtime compatibility, or adapter contracts, update the L1 source of truth first as described in [docs/README.md](docs/README.md).
@@ -62,17 +64,7 @@ python3 tools/validators/validate-scenario-routing.py
 
 ## Adding a Middleware Domain
 
-Use the MongoDB domain as the current complete reference. A production-ready domain normally needs:
-
-- `domains/<middleware>/metadata.yaml`
-- runbooks, commands, skills, and scripts with metadata
-- scenario routing entries
-- script manifest entries and runtime-map entries
-- fixtures or golden paths
-- Phase 4 rules support, or a clear skeleton/non-production status
-- validator and replay coverage appropriate to risk
-
-Do not put product-specific runbooks or commands under top-level `scenarios/`.
+Use the MongoDB domain as the current complete reference. Follow [docs/guides/add-domain.md](docs/guides/add-domain.md) for skeleton, contract-path, and Active MVP expectations.
 
 ## Pull Requests
 

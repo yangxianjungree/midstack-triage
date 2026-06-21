@@ -78,6 +78,10 @@ Midstack 安装态不是单二进制工具。Claude/Cursor 插件会打包 Midst
 
 以下命令默认在 `midstack-triage` 仓库根目录执行。
 
+```bash
+python3 -m pip install -r requirements-dev.txt
+```
+
 ### 安装到 Claude sandbox
 
 ```bash
@@ -163,6 +167,8 @@ midstack-triage/
 - [docs/README.md](docs/README.md)：文档地图和权威分层
 - [docs/concepts/architecture-overview.md](docs/concepts/architecture-overview.md)：整体架构图和第 4 段展开图
 - [docs/concepts/triage-workflow.md](docs/concepts/triage-workflow.md)：5 段流程解释
+- [docs/guides/add-domain.md](docs/guides/add-domain.md)：新增中间件 domain 指南
+- [docs/specs/README.en.md](docs/specs/README.en.md)：核心规范英文索引
 - [docs/specs/plugin-runtime.spec.md](docs/specs/plugin-runtime.spec.md)：插件运行时合同
 - [docs/project/implementation-status.md](docs/project/implementation-status.md)：实现进展
 - [docs/project/testing-and-install-gates.md](docs/project/testing-and-install-gates.md)：测试、安装与 sandbox 门禁
@@ -184,6 +190,7 @@ midstack-triage/
 ## 本地校验
 
 ```bash
+python3 -m pip install -r requirements-dev.txt
 python3 tools/validators/validate-repo.py
 python3 tools/replay/mongodb-replay.py --run-analyse
 python3 tools/replay/mongodb-score.py --run-analyse --min-level medium

@@ -298,9 +298,8 @@ def ensure_marketplace(workspace: Path) -> None:
 
 def install_plugin(workspace: Path) -> None:
     plugin_id = "%s@%s" % (PLUGIN_NAME, MARKETPLACE_NAME)
-    update = run(["claude", "plugin", "update", plugin_id, "--scope", "local"], workspace)
-    if update.returncode != 0:
-        require_ok(["claude", "plugin", "install", plugin_id, "--scope", "local"], workspace)
+    run(["claude", "plugin", "uninstall", plugin_id, "--scope", "local"], workspace)
+    require_ok(["claude", "plugin", "install", plugin_id, "--scope", "local"], workspace)
     enable = run(["claude", "plugin", "enable", plugin_id, "--scope", "local"], workspace)
     combined = "\n".join(part for part in [enable.stdout, enable.stderr] if part)
     if enable.returncode != 0 and "already enabled" not in combined:

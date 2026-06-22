@@ -2,8 +2,9 @@
 
 | 文件 | 说明 |
 |---|---|
-| `architecture-overview.png` | 主架构图（作者原稿） |
-| `architecture-overview.svg` | 主图 SVG（内嵌 PNG） |
+| `architecture-overview.png` | 主架构图（中文版） |
+| `architecture-overview-en.png` | 主架构图（英文版；根 `README.md` 引用） |
+| `architecture-overview.svg` | 主图 SVG（内嵌中文版 PNG） |
 | `supplements/architecture-phase4-detail.*` | ④ 推理验证展开图 |
 
 ## 换主图

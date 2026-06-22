@@ -314,7 +314,7 @@ examples/        示例和演示
 
 | 子模块 | 当前路径 | 职责 |
 | --- | --- | --- |
-| README | `README.md`、`README.en.md` | 门面和快速入口 |
+| README | `README.md`、`README.zh.md` | 门面和快速入口（英文 / 中文） |
 | Concepts | `docs/concepts/` | 架构解释 |
 | Specs | `docs/specs/` | L1 事实源 |
 | Project docs | `docs/project/` | 当前状态、计划、门禁 |
